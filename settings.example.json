@@ -71,7 +71,8 @@
       "Read(~/.m2/settings.xml)",
       "Read(~/.gradle/gradle.properties)",
       "Bash(rm -rf *)",
-      "Bash(glab ci get *--with-variables*)"
+      "Bash(glab ci get *--with-variables*)",
+      "Bash(git diff *--output*)"
     ]
   }
 }

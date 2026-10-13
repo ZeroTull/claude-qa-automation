@@ -216,6 +216,12 @@ expect_failure "settings not an object" "misses deny rules" \
 expect_failure ".env template wildcard" "denies .env templates" \
   "edit settings.example.json -e 's|\"Read(\\*\\*/.env.local)\"|\"Read(**/.env.*)\"|'"
 
+expect_failure "personal entry in the QA repo" "unknown group 'personal'" \
+  "edit catalog.tsv -e 's/^pr-reviewer\tagent\tqa/pr-reviewer\tagent\tpersonal/'"
+expect_failure "machine path in settings.example.json" "settings.example.json contains a machine-specific /Users/ path" \
+  "edit settings.example.json -e 's|\"permissions\"|\"x\": \"/Users/me\", \"permissions\"|'"
+expect_failure "third-party skill that differs from the lock" "skills/vendored differs from third-party.lock" \
+  "cp -R skills/bug-ticket skills/vendored && edit skills/vendored/SKILL.md -e 's/^name: bug-ticket/name: vendored/' && printf 'vendored\tskill\tthird-party\thttps://example.com\n' >> catalog.tsv && printf '%s\n' '\`vendored\`' >> README.md && printf 'vendored\t0000\n' > third-party.lock"
 expect_failure "third-party entry without a lock file" "third-party.lock missing" \
   "cp -R skills/bug-ticket skills/vendored && edit skills/vendored/SKILL.md -e 's/^name: bug-ticket/name: vendored/' && printf 'vendored\tskill\tthird-party\thttps://example.com\n' >> catalog.tsv && printf '%s\n' '\`vendored\`' >> README.md"
 

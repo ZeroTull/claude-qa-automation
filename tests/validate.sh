@@ -16,6 +16,8 @@ import re
 import sys
 
 repo = sys.argv[1]
+# Catalog groups this repo may contain. claude-dev allows personal and third-party instead.
+ALLOWED_GROUPS = ("qa", "third-party")
 errors = []
 err = errors.append
 
@@ -261,7 +263,7 @@ else:
         if kind not in ("agent", "skill", "command"):
             err(f"{row}: unknown kind '{kind}'")
             continue
-        if group not in ("qa", "personal", "third-party"):
+        if group not in ALLOWED_GROUPS:
             err(f"{row}: unknown group '{group}'")
         if group == "third-party":
             if not source.startswith("https://"):
@@ -358,6 +360,8 @@ if example:
                 "Read(**/secrets/**/*.txt)",
                 "Read(~/.ssh/**)", "Read(~/.azure/**)", "Read(~/.config/gh/**)", "Read(**/*.pem)",
                 "Bash(glab ci get *--with-variables*)"]
+    if "/Users/" in json.dumps(example[0]):
+        err("settings.example.json contains a machine-specific /Users/ path")
     missing = [r for r in required if r not in deny]
     if missing:
         err(f"settings.example.json misses deny rules: {', '.join(missing)}")

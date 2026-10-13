@@ -2,7 +2,7 @@
 
 [Claude Code](https://claude.com/claude-code) agents and skills for QA test automation: writing UI and API tests from requirements, reviewing PRs, diagnosing CI failures, triaging flaky tests, and drafting test cases, bugs and PR descriptions. Works with Jira (Cloud and Data Center, Zephyr Scale), Azure DevOps, GitLab and GitHub, on Java test projects (TestNG/JUnit, Cucumber, Rest-Assured, Selenium/Selenide/Playwright).
 
-This repo is self-contained. It doesn't need any other setup, and it never takes over your global `~/.claude/CLAUDE.md` or `settings.json`, so it works next to any personal Claude Code configuration.
+This repo is self-contained and doesn't need any other setup. It never touches your global `~/.claude/CLAUDE.md`, and it changes `~/.claude/settings.json` only when you run `--settings`, and only to add deny rules after a backup. So it can sit next to a personal Claude Code configuration. If another setup already links an agent or skill with the same name, this install backs that link up and replaces it, and `--uninstall` puts it back.
 
 ## Install
 
@@ -15,8 +15,8 @@ cd ~/projects/claude-qa-automation
 ./install.sh --settings  # add the secret deny rules to ~/.claude/settings.json
 ```
 
-- **What `./install.sh` does:** it links each agent and skill into `~/.claude`, so `git pull` here updates them. Anything it replaces is moved to `~/.claude/backups/qa-<timestamp>-NNN/` first. At the end it reports whether your settings lack the secret deny rules and which optional tools are missing.
-- **What `--settings` does:** it adds only the missing deny rules and backs up your settings first. If your `settings.json` is a link into another repo, it doesn't write through the link: it lists the rules to add in that repo instead.
+- **What `./install.sh` does:** it links each agent and skill into `~/.claude`, so `git pull` here updates them. Anything it replaces (a file, a broken link, or a link from another setup) is moved to `~/.claude/backups/qa-<timestamp>-NNN/` first. It refuses to run if `~/.claude/agents` or `~/.claude/skills` is itself a link. At the end it reports whether your settings lack the secret deny rules and which optional tools are missing.
+- **What `--settings` does:** it adds only the missing deny rules and backs up your settings first. It stops without changes if `settings.json` isn't valid JSON or has an unexpected shape. If your `settings.json` is a link into another repo, it doesn't write through the link: it lists the rules to add in that repo instead.
 - **Uninstall:** `./install.sh --uninstall` removes the links and puts back what they replaced.
 
 Restart Claude Code afterwards, then check with `/agents` and by typing `/`.

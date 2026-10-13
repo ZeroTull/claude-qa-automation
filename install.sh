@@ -4,11 +4,18 @@
 #   ./install.sh --settings                  add this repo's secret deny rules to ~/.claude/settings.json
 #   ./install.sh --project <path> [--update] copy the agents and skills into <path>/.claude for a team
 #   ./install.sh --uninstall                 remove the links and restore what they replaced
-# It never takes over ~/.claude/CLAUDE.md or settings.json, so it works next to any other setup.
+# It never touches ~/.claude/CLAUDE.md, and changes settings.json only with --settings (after a backup).
 # Anything the user install replaces is moved to ~/.claude/backups/qa-<timestamp>-NNN/ first.
 set -euo pipefail
 
-REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# Resolve the script's real location, so running it through a symlink still finds the repo.
+SELF="${BASH_SOURCE[0]}"
+while [[ -L "$SELF" ]]; do
+  target="$(readlink "$SELF")"
+  [[ "$target" == /* ]] || target="$(dirname "$SELF")/$target"
+  SELF="$target"
+done
+REPO="$(cd "$(dirname "$SELF")" && pwd)"
 CLAUDE_HOME="${CLAUDE_HOME:-$HOME/.claude}"
 BACKUP_DIR=""
 
@@ -54,26 +61,42 @@ is_stale_link() {
   [[ "$(basename "$(dirname "$target")")" == "$(basename "$(dirname "$dest")")" ]]
 }
 
-# Links $CLAUDE_HOME/<rel> to $REPO/<rel>, backing up whatever was there.
+# Links $CLAUDE_HOME/<rel> to $REPO/<rel>. Whatever was there (a file, a folder, a link from another repo or a
+# broken link) is moved to the backup folder first, so --uninstall can put it back.
 link_one() {
-  local rel="$1" src="$REPO/$1" dest="$CLAUDE_HOME/$1"
+  local rel="$1" src="$REPO/$1" dest="$CLAUDE_HOME/$1" note=""
   if [[ -L "$dest" && "$(readlink "$dest")" == "$src" ]]; then
     echo "  ok        $rel"
     return
   fi
-  if is_stale_link "$dest"; then
-    rm "$dest"
-    echo "  relinked  $rel (old target was missing)"
-  elif [[ -e "$dest" || -L "$dest" ]]; then
+  if [[ -e "$dest" || -L "$dest" ]]; then
+    if is_stale_link "$dest"; then
+      note=" (was a broken link)"
+    elif [[ -L "$dest" ]]; then
+      note=" (was a link to $(readlink "$dest"))"
+    fi
     init_backup_dir
     mkdir -p "$BACKUP_DIR/$(dirname "$rel")"
     mv "$dest" "$BACKUP_DIR/$rel"
-    echo "  backed up $rel"
+    echo "  backed up $rel$note"
   else
     echo "  linked    $rel"
   fi
   mkdir -p "$(dirname "$dest")"
   ln -s "$src" "$dest"
+}
+
+# Refuses to install into an agents or skills folder that is itself a link, because the links would land
+# inside whatever repo that folder points to.
+check_target_dirs() {
+  local d
+  for d in agents skills; do
+    if [[ -L "$CLAUDE_HOME/$d" ]]; then
+      echo "error: $CLAUDE_HOME/$d is a link to $(readlink "$CLAUDE_HOME/$d"); installing would write into it." >&2
+      echo "       Replace it with a real folder first." >&2
+      exit 1
+    fi
+  done
 }
 
 # Prints every path the user install links, relative to the repo.
@@ -110,7 +133,9 @@ copy_one() {
 
 copy_if_absent() {
   local src="$1" dest="$2" hint="$3"
-  if [[ -e "$dest" ]]; then
+  if [[ -L "$dest" ]]; then
+    echo "  SKIP      $dest (is a symlink - remove it to install a copy)"
+  elif [[ -e "$dest" ]]; then
     echo "  SKIP      $dest (exists - $hint)"
   else
     cp "$src" "$dest"
@@ -118,16 +143,63 @@ copy_if_absent() {
   fi
 }
 
-# Prints the deny rules from settings.example.json that ~/.claude/settings.json lacks, one per line.
-missing_deny_rules() {
-  python3 - "$REPO/settings.example.json" "$CLAUDE_HOME/settings.json" <<'PY'
-import json, os, sys
-want = json.load(open(sys.argv[1]))["permissions"]["deny"]
-have = []
-if os.path.exists(sys.argv[2]):
-    data = json.load(open(sys.argv[2]))
-    have = ((data.get("permissions") or {}).get("deny") or []) if isinstance(data, dict) else []
-print("\n".join(r for r in want if r not in have))
+# True if a usable python3 is available. On macOS without Command Line Tools, /usr/bin/python3 is a stub that
+# opens an install dialog, so it is never run. The QA_* variables exist so tests can simulate that machine.
+have_python3() {
+  local py
+  py="$(command -v python3 || true)"
+  [[ -n "$py" ]] || return 1
+  if [[ "$py" == "${QA_PY_STUB:-/usr/bin/python3}" && "${QA_OS:-$(uname -s)}" == Darwin ]] &&
+    ! "${QA_XCODE_SELECT:-xcode-select}" -p >/dev/null 2>&1; then
+    return 1
+  fi
+}
+
+# settings_tool <check|merge>: check prints the deny rules from settings.example.json that ~/.claude/settings.json
+# lacks, one per line; merge adds them. Both fail with a one-line reason if settings.json can't be read or has an
+# unexpected shape, and merge writes atomically.
+settings_tool() {
+  python3 - "$1" "$REPO/settings.example.json" "$CLAUDE_HOME/settings.json" <<'PY'
+import json, os, sys, tempfile
+mode, example, target = sys.argv[1:4]
+
+def fail(msg):
+    print(msg, file=sys.stderr)
+    sys.exit(2)
+
+with open(example, encoding="utf-8") as f:
+    want = json.load(f)["permissions"]["deny"]
+data = {}
+if os.path.exists(target):
+    try:
+        with open(target, encoding="utf-8") as f:
+            data = json.load(f)
+    except ValueError as e:
+        fail(f"settings.json is not valid JSON ({e})")
+if not isinstance(data, dict):
+    fail("settings.json has an unexpected shape: the top level is not an object")
+perms = data.get("permissions")
+if perms is None:
+    perms = {}
+if not isinstance(perms, dict):
+    fail("settings.json has an unexpected shape at permissions")
+deny = perms.get("deny")
+if deny is None:
+    deny = []
+if not isinstance(deny, list):
+    fail("settings.json has an unexpected shape at permissions.deny")
+missing = [r for r in want if r not in deny]
+if mode == "check":
+    print("\n".join(missing))
+    sys.exit(0)
+data["permissions"] = perms
+perms["deny"] = deny + missing
+folder = os.path.dirname(target) or "."
+fd, tmp = tempfile.mkstemp(dir=folder, prefix=".settings.", suffix=".json")
+with os.fdopen(fd, "w", encoding="utf-8") as f:
+    json.dump(data, f, indent=2, ensure_ascii=False)
+    f.write("\n")
+os.replace(tmp, target)
 PY
 }
 
@@ -135,8 +207,12 @@ PY
 # because then the file belongs to another repo and the rules belong there.
 merge_settings() {
   local target="$CLAUDE_HOME/settings.json" missing
-  if ! missing="$(missing_deny_rules)"; then
-    echo "error: could not read the settings files with python3" >&2
+  if ! have_python3; then
+    echo "error: --settings needs a working python3" >&2
+    return 1
+  fi
+  if ! missing="$(settings_tool check)"; then
+    echo "error: settings.json was left unchanged" >&2
     return 1
   fi
   if [[ -z "$missing" ]]; then
@@ -156,16 +232,7 @@ merge_settings() {
     cp "$target" "$BACKUP_DIR/settings.json"
     echo "  backed up settings.json"
   fi
-  python3 - "$REPO/settings.example.json" "$target" <<'PY'
-import json, os, sys
-want = json.load(open(sys.argv[1]))["permissions"]["deny"]
-data = json.load(open(sys.argv[2])) if os.path.exists(sys.argv[2]) else {}
-deny = data.setdefault("permissions", {}).setdefault("deny", [])
-deny.extend(r for r in want if r not in deny)
-with open(sys.argv[2], "w") as f:
-    json.dump(data, f, indent=2, ensure_ascii=False)
-    f.write("\n")
-PY
+  settings_tool merge
   echo "  added     $(wc -l <<<"$missing" | tr -d ' ') deny rule(s) to settings.json"
 }
 
@@ -189,14 +256,9 @@ glab|GitLab MRs, issues and pipelines
 az|Azure DevOps work items, PRs and pipelines - or use the Azure DevOps MCP server
 jira|Jira Data Center issues (jira-cli) - Jira Cloud uses the Atlassian MCP server instead
 DEPS
-  local py
-  py="$(command -v python3 || true)"
-  # On macOS without Command Line Tools, /usr/bin/python3 is a stub that opens an install dialog.
-  # The QA_* variables exist so tests can simulate that machine.
-  if [[ "$py" == "${QA_PY_STUB:-/usr/bin/python3}" && "${QA_OS:-$(uname -s)}" == Darwin ]] &&
-    ! "${QA_XCODE_SELECT:-xcode-select}" -p >/dev/null 2>&1; then
+  if command -v python3 >/dev/null 2>&1 && ! have_python3; then
     echo "  missing   python3 (only the macOS stub is installed: xcode-select --install or brew install python)"
-  elif [[ -n "$py" ]] && ! "$py" -c "import openpyxl" >/dev/null 2>&1; then
+  elif have_python3 && ! python3 -c "import openpyxl" >/dev/null 2>&1; then
     echo "  missing   openpyxl (Excel requirements in /test-developer: pip3 install --user openpyxl)"
   fi
   # Checks the extension folder instead of running az, which can be slow to start.
@@ -240,14 +302,19 @@ case "${1:-}" in
   "")
     [[ $# -eq 0 ]] || die "unexpected arguments"
     echo "Linking QA agents and skills into $CLAUDE_HOME"
+    check_target_dirs
     mkdir -p "$CLAUDE_HOME"
     while IFS= read -r rel; do
       link_one "$rel"
     done < <(user_entries)
     [[ -z "$BACKUP_DIR" ]] || echo "Replaced entries were moved to $BACKUP_DIR."
-    if ! missing="$(missing_deny_rules 2>/dev/null)"; then
+    missing=""
+    if ! have_python3; then
       echo
-      echo "Could not check $CLAUDE_HOME/settings.json for the secret deny rules (python3 did not run)."
+      echo "Skipped the settings check: no working python3."
+    elif ! missing="$(settings_tool check 2>&1)"; then
+      echo
+      echo "Could not check $CLAUDE_HOME/settings.json for the secret deny rules: $missing"
       missing=""
     fi
     if [[ -n "$missing" ]]; then

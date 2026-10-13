@@ -62,10 +62,15 @@ assert "reports missing azure-devops extension" grep -q "missing .*az azure-devo
 assert "does not run az" test ! -e "$TMP/az-called"
 assert "reports missing openpyxl" grep -q "missing .*openpyxl" <<<"$out"
 assert "still links when python3 cannot run" test "$(count_links "$TMP/deps/agents")" = "$n_agents"
-assert "says the settings check was skipped" grep -q "Could not check .* (python3 did not run)" <<<"$out"
-out="$(CLAUDE_HOME="$TMP/deps" PATH="$stubs:$PATH" QA_PY_STUB="$stubs/python3" QA_OS=Darwin QA_XCODE_SELECT="$stubs/xcode-none" "$REPO/install.sh" 2>&1)"
-assert "reports the macOS python3 stub without running it" grep -q "only the macOS stub is installed" <<<"$out"
-assert "skips the openpyxl probe on the stub" out_lacks "openpyxl"
+assert "says the settings check failed" grep -q "Could not check .*settings.json for the secret deny rules" <<<"$out"
+printf '#!/bin/sh\ntouch "%s/stub-called"\nexit 1\n' "$TMP" >"$stubs/py-stub"
+chmod +x "$stubs/py-stub"
+mkdir -p "$TMP/stubpath"
+ln -s "$stubs/py-stub" "$TMP/stubpath/python3"
+out="$(CLAUDE_HOME="$TMP/deps" PATH="$TMP/stubpath:$PATH" QA_PY_STUB="$TMP/stubpath/python3" QA_OS=Darwin QA_XCODE_SELECT="$stubs/xcode-none" "$REPO/install.sh" 2>&1)"
+assert "reports the macOS python3 stub" grep -q "only the macOS stub is installed" <<<"$out"
+assert "skips the settings check on the stub" grep -q "Skipped the settings check: no working python3" <<<"$out"
+assert "never runs the stub" test ! -e "$TMP/stub-called"
 
 echo "re-run is idempotent"
 run
@@ -90,6 +95,27 @@ echo "--settings on a fresh machine"
 out="$(CLAUDE_HOME="$TMP/fresh" "$REPO/install.sh" --settings 2>&1)"; rc=$?
 assert "exits 0" test "$rc" = 0
 assert "creates settings.json with the deny rules" test "$(deny_count "$TMP/fresh/settings.json")" = "$n_deny"
+
+echo "--settings with broken input changes nothing"
+broken="$TMP/broken"
+mkdir -p "$broken"
+for content in '{not json' '[]' '{"permissions": []}' '{"permissions": {"deny": "x"}}'; do
+  printf '%s' "$content" >"$broken/settings.json"
+  out="$(CLAUDE_HOME="$broken" "$REPO/install.sh" --settings 2>&1)"; rc=$?
+  assert "rejects $content" test "$rc" = 1
+  assert "explains $content" grep -Eq "not valid JSON|unexpected shape" <<<"$out"
+  assert "leaves $content unchanged" test "$(cat "$broken/settings.json")" = "$content"
+done
+assert "makes no backup for broken input" test ! -d "$broken/backups"
+printf '{"permissions": null}' >"$broken/settings.json"
+out="$(CLAUDE_HOME="$broken" "$REPO/install.sh" --settings 2>&1)"; rc=$?
+assert "treats permissions: null as empty" test "$(deny_count "$broken/settings.json")" = "$n_deny"
+printf '{}' >"$broken/settings.json"
+out="$(CLAUDE_HOME="$broken" PATH="$stubs:$PATH" "$REPO/install.sh" --settings 2>&1)"; rc=$?
+assert "fails when python3 fails" test "$rc" = 1
+assert "leaves settings.json unchanged when python3 fails" test "$(cat "$broken/settings.json")" = '{}'
+out="$(CLAUDE_HOME="$broken" PATH="$TMP/stubpath:$PATH" QA_PY_STUB="$TMP/stubpath/python3" QA_OS=Darwin QA_XCODE_SELECT="$stubs/xcode-none" "$REPO/install.sh" --settings 2>&1)"; rc=$?
+assert "refuses on the macOS stub" grep -q "needs a working python3" <<<"$out"
 
 echo "--settings does not write through a link"
 mkdir -p "$TMP/other-repo"
@@ -131,7 +157,8 @@ echo "replaces links left by a moved clone"
 rm "$CLAUDE_HOME/agents/$agent2"
 ln -s "/old/place/agents/$agent2" "$CLAUDE_HOME/agents/$agent2"
 run
-assert "reports relink" grep -q "relinked  agents/$agent2" <<<"$out"
+assert "backs up the broken link" grep -q "backed up agents/$agent2 (was a broken link)" <<<"$out"
+assert "relinks it to this repo" test "$(readlink "$CLAUDE_HOME/agents/$agent2")" = "$REPO/agents/$agent2"
 
 echo "uninstall"
 ln -s /tmp/elsewhere "$CLAUDE_HOME/agents/other.md"
@@ -145,6 +172,15 @@ assert "keeps foreign links" test -L "$CLAUDE_HOME/agents/other.md"
 assert "keeps Claude-managed folders" test -d "$CLAUDE_HOME/skills/synced"
 assert "leaves settings.json alone" test -L "$CLAUDE_HOME/settings.json"
 
+echo "refuses a linked agents folder"
+linked="$TMP/linked"
+mkdir -p "$linked" "$TMP/elsewhere-agents"
+ln -s "$TMP/elsewhere-agents" "$linked/agents"
+out="$(CLAUDE_HOME="$linked" "$REPO/install.sh" 2>&1)"; rc=$?
+assert "exits 1" test "$rc" = 1
+assert "explains why" grep -q "agents is a link to" <<<"$out"
+assert "writes nothing into the linked folder" test -z "$(ls -A "$TMP/elsewhere-agents")"
+
 echo "project install"
 proj="$TMP/proj"
 mkdir -p "$proj"
@@ -155,6 +191,15 @@ assert "copies every agent and skill" test "$(find "$proj/.claude/agents" "$proj
 assert "copies, does not link" test ! -L "$proj/.claude/agents/$agent"
 assert "creates settings.json from the example" cmp -s "$proj/.claude/settings.json" "$REPO/settings.example.json"
 assert "keeps existing CLAUDE.md" test "$(cat "$proj/CLAUDE.md")" = "# existing"
+echo "custom" >"$proj/.claude/settings.json"
+run --project "$proj"
+assert "keeps an existing settings.json" test "$(cat "$proj/.claude/settings.json")" = "custom"
+proj2="$TMP/proj2"
+mkdir -p "$proj2/.claude"
+ln -s "$TMP/proj2-target.json" "$proj2/.claude/settings.json"
+run --project "$proj2"
+assert "skips a dangling settings.json link" grep -q "SKIP .*settings.json (is a symlink" <<<"$out"
+assert "does not create the link target" test ! -e "$TMP/proj2-target.json"
 echo "local edit" >>"$proj/.claude/agents/$agent"
 run --project "$proj"
 assert "reports a changed agent" grep -q "DIFFERS .*agents/$agent" <<<"$out"
