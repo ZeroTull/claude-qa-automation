@@ -13,6 +13,7 @@ Read `.ai/context/conventions.md` before drafting tickets, test cases, PR text o
 | Audit / clean up the test framework | `test-maintainer` agent |
 | Pipeline failed | `ci-failure-diagnoser` agent |
 | Test fails intermittently | `flaky-test-triager` agent |
+| Plan a test strategy or design a framework | `senior-automation-qa-engineer` agent |
 | Test cases for ADO Test Plans | `/test-cases` |
 | File a bug from a failure | `/bug-ticket` |
 | Check a ticket is ready for dev | `/ticket-review` |
