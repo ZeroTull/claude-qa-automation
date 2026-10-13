@@ -86,13 +86,13 @@ link_one() {
   ln -s "$src" "$dest"
 }
 
-# Refuses to install into an agents or skills folder that is itself a link, because the links would land
-# inside whatever repo that folder points to.
+# Refuses to install into an agents or skills folder under <base> that is itself a link, because the entries
+# would land inside whatever that folder points to.
 check_target_dirs() {
-  local d
+  local base="$1" d
   for d in agents skills; do
-    if [[ -L "$CLAUDE_HOME/$d" ]]; then
-      echo "error: $CLAUDE_HOME/$d is a link to $(readlink "$CLAUDE_HOME/$d"); installing would write into it." >&2
+    if [[ -L "$base/$d" ]]; then
+      echo "error: $base/$d is a link to $(readlink "$base/$d"); installing would write into it." >&2
       echo "       Replace it with a real folder first." >&2
       exit 1
     fi
@@ -160,7 +160,7 @@ have_python3() {
 # unexpected shape, and merge writes atomically.
 settings_tool() {
   python3 - "$1" "$REPO/settings.example.json" "$CLAUDE_HOME/settings.json" <<'PY'
-import json, os, sys, tempfile
+import json, os, stat, sys, tempfile
 mode, example, target = sys.argv[1:4]
 
 def fail(msg):
@@ -196,6 +196,8 @@ data["permissions"] = perms
 perms["deny"] = deny + missing
 folder = os.path.dirname(target) or "."
 fd, tmp = tempfile.mkstemp(dir=folder, prefix=".settings.", suffix=".json")
+# mkstemp creates the file as 0600; keep the existing file's permissions (or the usual 0644 for a new one).
+os.chmod(tmp, stat.S_IMODE(os.stat(target).st_mode) if os.path.exists(target) else 0o644)
 with os.fdopen(fd, "w", encoding="utf-8") as f:
     json.dump(data, f, indent=2, ensure_ascii=False)
     f.write("\n")
@@ -302,7 +304,7 @@ case "${1:-}" in
   "")
     [[ $# -eq 0 ]] || die "unexpected arguments"
     echo "Linking QA agents and skills into $CLAUDE_HOME"
-    check_target_dirs
+    check_target_dirs "$CLAUDE_HOME"
     mkdir -p "$CLAUDE_HOME"
     while IFS= read -r rel; do
       link_one "$rel"
@@ -312,10 +314,14 @@ case "${1:-}" in
     if ! have_python3; then
       echo
       echo "Skipped the settings check: no working python3."
-    elif ! missing="$(settings_tool check 2>&1)"; then
-      echo
-      echo "Could not check $CLAUDE_HOME/settings.json for the secret deny rules: $missing"
-      missing=""
+    else
+      errfile="$(mktemp)"
+      if ! missing="$(settings_tool check 2>"$errfile")"; then
+        echo
+        echo "Could not check $CLAUDE_HOME/settings.json for the secret deny rules: $(tail -n 1 "$errfile")"
+        missing=""
+      fi
+      rm -f "$errfile"
     fi
     if [[ -n "$missing" ]]; then
       echo
@@ -339,6 +345,11 @@ case "${1:-}" in
       die "unexpected arguments after --project $2"
     fi
     project="$(cd "$2" && pwd)"
+    if [[ -L "$project/.claude" ]]; then
+      echo "error: $project/.claude is a link to $(readlink "$project/.claude"); installing would write into it." >&2
+      exit 1
+    fi
+    check_target_dirs "$project/.claude"
     mkdir -p "$project/.claude/agents" "$project/.claude/skills"
     echo "QA agents and skills -> $project/.claude"
     for f in "$REPO"/agents/*.md; do copy_one "$f" "$project/.claude/agents/$(basename "$f")" "$update"; done

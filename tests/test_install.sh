@@ -80,12 +80,14 @@ assert "no new links" test "$(count_links "$CLAUDE_HOME/agents")" = "$n_agents"
 
 echo "--settings"
 echo '{"theme": "dark", "permissions": {"allow": ["Read"], "deny": ["Bash(rm -rf *)"]}}' >"$CLAUDE_HOME/settings.json"
+chmod 644 "$CLAUDE_HOME/settings.json"
 run --settings
 assert "exits 0" test "$rc" = 0
 assert "keeps other settings" python3 -c 'import json,sys; d=json.load(open(sys.argv[1])); assert d["theme"] == "dark" and d["permissions"]["allow"] == ["Read"]' "$CLAUDE_HOME/settings.json"
 assert "adds every missing deny rule" python3 -c 'import json,sys; have=json.load(open(sys.argv[1]))["permissions"]["deny"]; want=json.load(open(sys.argv[2]))["permissions"]["deny"]; assert all(r in have for r in want)' "$CLAUDE_HOME/settings.json" "$REPO/settings.example.json"
 assert "keeps an existing deny rule once" test "$(grep -c 'rm -rf' "$CLAUDE_HOME/settings.json")" = 1
 assert "backs up the old settings" grep -q '"theme": "dark"' "$(latest_backup_dir)/settings.json"
+assert "keeps the file mode" test "$(python3 -c 'import os,stat,sys; print(oct(stat.S_IMODE(os.stat(sys.argv[1]).st_mode)))' "$CLAUDE_HOME/settings.json")" = "$(python3 -c 'import os,stat,sys; print(oct(stat.S_IMODE(os.stat(sys.argv[1]).st_mode)))' "$(latest_backup_dir)/settings.json")"
 run --settings
 assert "second run reports ok" grep -q "already has every deny rule" <<<"$out"
 run
@@ -95,6 +97,7 @@ echo "--settings on a fresh machine"
 out="$(CLAUDE_HOME="$TMP/fresh" "$REPO/install.sh" --settings 2>&1)"; rc=$?
 assert "exits 0" test "$rc" = 0
 assert "creates settings.json with the deny rules" test "$(deny_count "$TMP/fresh/settings.json")" = "$n_deny"
+assert "creates it readable (0644)" test "$(python3 -c 'import os,stat,sys; print(oct(stat.S_IMODE(os.stat(sys.argv[1]).st_mode)))' "$TMP/fresh/settings.json")" = 0o644
 
 echo "--settings with broken input changes nothing"
 broken="$TMP/broken"
@@ -180,6 +183,29 @@ out="$(CLAUDE_HOME="$linked" "$REPO/install.sh" 2>&1)"; rc=$?
 assert "exits 1" test "$rc" = 1
 assert "explains why" grep -q "agents is a link to" <<<"$out"
 assert "writes nothing into the linked folder" test -z "$(ls -A "$TMP/elsewhere-agents")"
+
+echo "--project refuses linked folders"
+for d in agents skills; do
+  pl="$TMP/proj-linked-$d"
+  mkdir -p "$pl/.claude" "$TMP/target-$d"
+  ln -s "$TMP/target-$d" "$pl/.claude/$d"
+  run --project "$pl"
+  assert "exits 1 for a linked .claude/$d" test "$rc" = 1
+  assert "writes nothing into the linked $d folder" test -z "$(ls -A "$TMP/target-$d")"
+done
+pl="$TMP/proj-linked-claude"
+mkdir -p "$pl" "$TMP/target-claude"
+ln -s "$TMP/target-claude" "$pl/.claude"
+run --project "$pl"
+assert "exits 1 for a linked .claude folder" test "$rc" = 1
+assert "writes nothing into the linked .claude folder" test -z "$(ls -A "$TMP/target-claude")"
+
+echo "runs through a symlink to the script"
+mkdir -p "$TMP/bin"
+ln -s "$REPO/install.sh" "$TMP/bin/qa-install"
+out="$(CLAUDE_HOME="$TMP/via-link" "$TMP/bin/qa-install" 2>&1)"; rc=$?
+assert "exits 0" test "$rc" = 0
+assert "links into the real repo" test "$(readlink "$TMP/via-link/agents/$agent")" = "$REPO/agents/$agent"
 
 echo "project install"
 proj="$TMP/proj"
