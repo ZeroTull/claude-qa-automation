@@ -93,6 +93,13 @@ assert "second run reports ok" grep -q "already has every deny rule" <<<"$out"
 run
 assert "plain install no longer reports missing rules" out_lacks "lacks"
 
+echo "default run explains why the settings check failed"
+mkdir -p "$TMP/badjson"
+printf '{not json' >"$TMP/badjson/settings.json"
+out="$(CLAUDE_HOME="$TMP/badjson" "$REPO/install.sh" 2>&1)"; rc=$?
+assert "exits 0" test "$rc" = 0
+assert "shows the reason" grep -q "Could not check .*: settings.json is not valid JSON" <<<"$out"
+
 echo "--settings on a fresh machine"
 out="$(CLAUDE_HOME="$TMP/fresh" "$REPO/install.sh" --settings 2>&1)"; rc=$?
 assert "exits 0" test "$rc" = 0

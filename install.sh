@@ -316,6 +316,7 @@ case "${1:-}" in
       echo "Skipped the settings check: no working python3."
     else
       errfile="$(mktemp)"
+      trap 'rm -f "$errfile"' EXIT
       if ! missing="$(settings_tool check 2>"$errfile")"; then
         echo
         echo "Could not check $CLAUDE_HOME/settings.json for the secret deny rules: $(tail -n 1 "$errfile")"
