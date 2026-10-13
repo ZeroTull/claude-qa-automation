@@ -1,6 +1,6 @@
 ---
 name: senior-automation-qa-engineer
-description: "Use for test strategy and framework design: choosing which test layers to invest in, designing a new automation framework, planning contract, performance or E2E strategy. For other QA work use the specialists: pr-reviewer (review a PR), test-maintainer (audit an existing suite), flaky-test-triager (intermittent failures), ci-failure-diagnoser (red pipeline), /test-developer (write tests from requirements)."
+description: "Use for test strategy and framework design, when the question is what to build or where to invest: which test layers, a new automation framework, contract, performance or E2E strategy. Read-only - advises, the main session applies approved changes. For what is wrong with an existing suite use test-maintainer; for other QA work: pr-reviewer (review a PR), flaky-test-triager (intermittent failures), ci-failure-diagnoser (red pipeline), /test-developer (write tests from requirements)."
 color: green
 disallowedTools: Write, Edit, NotebookEdit
 ---
