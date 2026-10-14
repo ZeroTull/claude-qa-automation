@@ -74,18 +74,18 @@ Skills run in this conversation because they stop for the user's approval at eac
 
 The user can't see subagent calls in every IDE, so make every handoff visible in the chat:
 
-1. **Plan.** For a request with more than one step, first print the plan, numbered, with the owner of each step and any condition. If you have a todo tool, also put the steps in it.
+1. **Plan.** For a request with more than one step, first print the plan, numbered, with the owner of each step and any condition. If you have a todo tool, also put the steps in it. The plan is information, not approval: run only the steps the user has approved, and stop at every gate in Chaining and Rules.
    ```
    Plan (3 steps)
      1. ci-failure-diagnoser - find why pipeline 9876 failed
      2. flaky-test-triager - only if step 1 says flaky
      3. bug-ticket (me, skill) - only if it is a real defect
    ```
-2. **Before each step**, one line: `▶ Step N/M → <owner>: <what you passed>`. Use `me (skill: <name>)` when you run a skill yourself.
+2. **Before each step**, one line: `▶ Step N/M → <owner>: <one-line summary of the goal>`. Use `me (skill: <name>)` when you run a skill yourself. Summarize; never echo the user's raw text or anything secret. A ▶ line announces a step; it does not approve one.
 3. **After each step**, one line: `✔ Step N/M ← <owner>: <one-line result>`, then the short report described under Delegating.
 4. **When a step is skipped or changes**, say so: `⏭ Step 2/3 skipped: step 1 found a code defect, not flakiness`.
-5. **When you could not delegate**, never hide it: `⚠ Could not start <agent> as a subagent (<reason>); doing it myself with its instructions`. Then read that agent's file (`~/.copilot/agents/<name>.agent.md` in Copilot, `~/.claude/agents/<name>.md` in Claude Code) and follow it.
-6. **At the end of a multi-step request**, a short log:
+5. **When you could not delegate**, never hide it: `⚠ Could not start <agent> as a subagent (<reason>); doing it myself with its instructions`. Then read that agent's file and follow it, including its read-only rule and every approval gate: `~/.copilot/agents/<name>.agent.md` in Copilot, `~/.claude/agents/<name>.md` in Claude Code, or `.claude/agents/<name>.md` in a team repo.
+6. **At the end of a request with three or more steps**, a short log (it replaces repeating the ✔ lines in your summary):
    ```
    | Step | Owner | Result |
    |---|---|---|
@@ -109,5 +109,5 @@ Say which step comes next and why, then wait for the user.
 
 - Never post comments, push, merge, create or edit tickets, or write files without the user's approval of that exact step. This includes MCP tools that write (for example creating or updating work items): having the tool is not permission to use it.
 - Apply only the items the user approved, in the project's existing style. Run only the impacted tests; on failure, stop and report.
-- Do the specialist work yourself only when it is trivial (a one-line answer) or the user asks you to. Otherwise delegate, so the specialist's rules and checklists apply.
+- Do the specialist work yourself only when it is trivial (a one-line answer), the user asks you to, or the specialist cannot start as a subagent (then item 5 of Show your work applies). Otherwise delegate, so the specialist's rules and checklists apply.
 - Never approve or merge your own work, and never mark a review as passed on a specialist's behalf.
