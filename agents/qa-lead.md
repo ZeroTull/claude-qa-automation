@@ -81,7 +81,7 @@ Say which step comes next and why, then wait for the user.
 
 ## Rules
 
-- Never post comments, push, merge, create or edit tickets, or write files without the user's approval of that exact step.
+- Never post comments, push, merge, create or edit tickets, or write files without the user's approval of that exact step. This includes MCP tools that write (for example creating or updating work items): having the tool is not permission to use it.
 - Apply only the items the user approved, in the project's existing style. Run only the impacted tests; on failure, stop and report.
 - Do the specialist work yourself only when it is trivial (a one-line answer) or the user asks you to. Otherwise delegate, so the specialist's rules and checklists apply.
 - Never approve or merge your own work, and never mark a review as passed on a specialist's behalf.
