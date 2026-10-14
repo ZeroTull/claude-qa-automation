@@ -293,6 +293,18 @@ assert "adds MCP servers to the allowlist" grep -qx "tools: \['read', 'search', 
 out="$(COPILOT_HOME="$cop" COPILOT_MCP_SERVERS='bad;name' "$REPO/install.sh" --copilot 2>&1)"; rc=$?
 assert "rejects an invalid MCP server name" test "$rc" = 1
 
+echo "--copilot: qa-lead can delegate, specialists stay read-only"
+lead="$cop/agents/qa-lead.agent.md"
+assert "qa-lead gets edit and agent tools" grep -q "^tools: \['read', 'search', 'execute', 'web', 'todo'.*, 'edit', 'agent'\]$" "$lead"
+others="$(find "$REPO/agents" -maxdepth 1 -name '*.md' ! -name qa-lead.md -exec basename {} .md \; | sort | sed "s/.*/'&'/" | paste -sd, - | sed 's/,/, /g')"
+assert "qa-lead lists every other agent as a subagent" grep -qxF "agents: [$others]" "$lead"
+assert "qa-lead does not list itself" out_lacks_file "'qa-lead'" "$lead"
+for f in "$cop"/agents/*.agent.md; do
+  [[ "$f" == "$lead" ]] && continue
+  assert "$(basename "$f") has no edit tool" out_lacks_file "'edit'" "$f"
+  assert "$(basename "$f") has no agents list" out_lacks_file "agents:" "$f"
+done
+
 echo "--copilot validates before writing"
 mkdir -p "$TMP/globdir" && touch "$TMP/globdir/install.sh" "$TMP/globdir/README.md"
 out="$(cd "$TMP/globdir" && COPILOT_HOME="$TMP/cop-glob" COPILOT_MCP_SERVERS='*' "$REPO/install.sh" --copilot 2>&1)"; rc=$?
