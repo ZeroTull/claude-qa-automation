@@ -262,7 +262,10 @@ assert "keeps the instructions unchanged" diff <(awk 'f;/^---$/{c++; if(c==2) f=
 assert "frontmatter parses as the YAML subset" python3 - "$gen" <<'PY'
 import re, sys
 fm = re.match(r"\A---\n(.*?)\n---\n", open(sys.argv[1]).read(), re.S).group(1)
-assert [l.split(":")[0] for l in fm.splitlines()] == ["name", "description", "tools"]
+lines = fm.splitlines()
+assert [l.split(":")[0] for l in lines] == ["name", "description", "tools"]
+desc = lines[1].split(":", 1)[1].strip()
+assert len(desc) > 40 and not desc.startswith(("'", "[", "{")), desc
 PY
 assert "does not touch ~/.claude" test ! -e "$TMP/claude-untouched"
 assert "says how to update" grep -q "run ./install.sh --copilot again" <<<"$out"
@@ -276,6 +279,47 @@ out="$(COPILOT_HOME="$cop" COPILOT_MCP_SERVERS="atlassian azure-devops" "$REPO/i
 assert "adds MCP servers to the allowlist" grep -qx "tools: \['read', 'search', 'execute', 'web', 'todo', 'atlassian/\*', 'azure-devops/\*'\]" "$gen"
 out="$(COPILOT_HOME="$cop" COPILOT_MCP_SERVERS='bad;name' "$REPO/install.sh" --copilot 2>&1)"; rc=$?
 assert "rejects an invalid MCP server name" test "$rc" = 1
+
+echo "--copilot validates before writing"
+mkdir -p "$TMP/globdir" && touch "$TMP/globdir/install.sh" "$TMP/globdir/README.md"
+out="$(cd "$TMP/globdir" && COPILOT_HOME="$TMP/cop-glob" COPILOT_MCP_SERVERS='*' "$REPO/install.sh" --copilot 2>&1)"; rc=$?
+assert "rejects a glob as an MCP server name" test "$rc" = 1
+assert "reports the literal glob, not expanded file names" grep -qF "invalid server name '*'" <<<"$out"
+assert "writes nothing for an invalid MCP list" test ! -e "$TMP/cop-glob"
+out="$(COPILOT_HOME="$TMP/cop-bad" COPILOT_MCP_SERVERS='ok bad;name' "$REPO/install.sh" --copilot 2>&1)"; rc=$?
+assert "rejects an invalid name in a list" test "$rc" = 1
+assert "writes nothing when one name is invalid" test ! -e "$TMP/cop-bad"
+out="$(COPILOT_HOME="$TMP/cop-help" "$REPO/install.sh" --copilot --help 2>&1)"; rc=$?
+assert "--copilot --help exits 0" test "$rc" = 0
+assert "--copilot --help prints usage" grep -q -- "--copilot" <<<"$out"
+
+echo "--copilot converts unusual sources"
+src="$TMP/src-repo"
+mkdir -p "$src" && (cd "$REPO" && tar cf - --exclude .git .) | (cd "$src" && tar xf -)
+sed 's/$/\r/' "$src/agents/$agent" >"$src/agents/$agent.tmp" && mv "$src/agents/$agent.tmp" "$src/agents/$agent"
+printf '%s\n' "---" "name: folded" "description: >" "  First line of a folded description" "  and its second line." "model: opus" "---" "" "Body." >"$src/agents/folded.md"
+out="$(COPILOT_HOME="$TMP/cop-src" "$src/install.sh" --copilot 2>&1)"; rc=$?
+assert "exits 0" test "$rc" = 0
+crlf_gen="$TMP/cop-src/agents/${agent%.md}.agent.md"
+assert "converts a CRLF source" grep -q "^name: ${agent%.md}$" "$crlf_gen"
+assert "drops the carriage returns" out_lacks_file $'\r' "$crlf_gen"
+assert "keeps the CRLF agent's body" test "$(wc -l <"$crlf_gen")" -gt 10
+assert "keeps a folded description" grep -q "^  and its second line.$" "$TMP/cop-src/agents/folded.agent.md"
+assert "drops model from the folded agent" out_lacks_file "model:" "$TMP/cop-src/agents/folded.agent.md"
+printf '%s\n' "# no frontmatter" >"$src/agents/broken.md"
+out="$(COPILOT_HOME="$TMP/cop-broken" "$src/install.sh" --copilot 2>&1)"; rc=$?
+assert "fails on a source without frontmatter" test "$rc" = 1
+assert "names the broken source" grep -q "cannot convert .*broken.md" <<<"$out"
+assert "writes nothing when a source is broken" test ! -e "$TMP/cop-broken"
+printf '%s\n' "---" "name: nodesc" "---" "Body." >"$src/agents/broken.md"
+out="$(COPILOT_HOME="$TMP/cop-broken" "$src/install.sh" --copilot 2>&1)"; rc=$?
+assert "fails on a source without a description" test "$rc" = 1
+
+echo "--copilot removes links to skills that left the repo"
+ln -s "$REPO/skills/moved-skill" "$cop/skills/moved-skill"
+out="$(COPILOT_HOME="$cop" "$REPO/install.sh" --copilot 2>&1)"
+assert "removes the dead skill link" test ! -L "$cop/skills/moved-skill"
+assert "reports it" grep -q "removed   skills/moved-skill (no longer in this repo" <<<"$out"
 
 echo "--copilot keeps foreign agents and cleans up removed ones"
 cop2="$TMP/copilot2"
@@ -293,6 +337,7 @@ assert "uninstall restores the foreign agent" test "$(cat "$cop2/agents/${agent%
 assert "uninstall removes the other generated agents" test -z "$(find "$cop2/agents" -name '*.agent.md' ! -name "${agent%.md}.agent.md" ! -name unrelated.agent.md)"
 assert "uninstall removes the skill links" test "$(count_links "$cop2/skills")" = 0
 assert "uninstall keeps unrelated agents" test -f "$cop2/agents/unrelated.agent.md"
+assert "uninstall does not mention settings.json" out_lacks "settings.json"
 run --copilot --settings
 assert "--copilot rejects other options" test "$rc" = 1
 

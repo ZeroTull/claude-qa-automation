@@ -27,15 +27,22 @@ Restart Claude Code afterwards, then check with `/agents` and by typing `/`.
 ./install.sh --copilot
 ```
 
-This installs into `~/.copilot`, the personal folder Copilot reads in VS Code and IntelliJ. It doesn't touch `~/.claude`.
+This installs into `~/.copilot` and doesn't touch `~/.claude`.
 
+- **Where Copilot finds the files:**
+  - VS Code reads personal agents from `~/.copilot/agents` and personal skills from `~/.copilot/skills` ([custom agents](https://code.visualstudio.com/docs/copilot/customization/custom-agents), [agent skills](https://code.visualstudio.com/docs/copilot/customization/agent-skills)).
+  - Copilot for JetBrains IDEs reads global agents from `~/.copilot/agents` ([changelog, May 2026](https://github.blog/changelog/2026-05-14-introducing-copilot-cli-agent-and-unified-sessions-view-in-github-copilot-for-jetbrains-ides/)).
+  - `~/.copilot/skills` is GitHub's documented personal skills folder ([customization cheat sheet](https://docs.github.com/en/copilot/reference/customization-cheat-sheet)), but no JetBrains-specific source confirms it yet. If the skills don't show up in IntelliJ, that's the likely reason.
 - **Skills** are linked unchanged, because Copilot uses the same `SKILL.md` format. Type `/` in Copilot Chat to run one, such as `/test-developer`.
-- **Agents** are converted into Copilot's `.agent.md` format. Pick one in the Copilot Chat agent picker. Copilot has no `disallowedTools`, so read-only becomes a tools allowlist (`read`, `search`, `execute`, `web`, `todo`; no `edit`). The `model` and `color` fields are dropped (you pick the model in Copilot), and the instructions are unchanged. The agents are generated copies, so after `git pull` (or a fresh ZIP) run `./install.sh --copilot` again.
-- **MCP servers:** if you added MCP servers to Copilot, such as the Atlassian (Jira Cloud) or Azure DevOps server, name them so the agents may use them: `COPILOT_MCP_SERVERS="atlassian azure-devops" ./install.sh --copilot`. The names must match your Copilot MCP configuration. Without MCP servers, the agents use `jira`, `glab`, `gh` and `az` in the terminal.
-- **IntelliJ:** custom agents and skills are in preview in Copilot for JetBrains. Turn them on in **Settings > GitHub Copilot > Chat > Agent**.
-- **Not for Copilot:** `--settings`, because Copilot doesn't use Claude Code's deny rules. The safety rules written into every agent and skill still apply, and Copilot asks before it runs terminal commands unless you allowed them.
+- **Agents** are converted into Copilot's `.agent.md` format. Pick one in the Copilot Chat agent picker.
+  - The tools list leaves out the edit tool: `read`, `search`, `execute`, `web`, `todo` ([tool aliases](https://docs.github.com/en/copilot/reference/custom-agents-configuration)). `execute` still runs shell commands, so, as with Claude Code, read-only is a rule in the agents' instructions, not something Copilot enforces.
+  - The `model` and `color` fields are dropped (you pick the model in Copilot), and the instructions are unchanged.
+  - The agents are generated copies: after `git pull` (or a fresh ZIP) run `./install.sh --copilot` again. That also replaces any local edits to them.
+- **MCP servers:** if you added MCP servers to Copilot, such as the Atlassian (Jira Cloud) or Azure DevOps server, name them so the agents may use them: `COPILOT_MCP_SERVERS="atlassian azure-devops" ./install.sh --copilot`. The names must match your Copilot MCP configuration. `<server>/*` grants all of that server's tools, including any that write. Without MCP servers, the agents use `jira`, `glab`, `gh` and `az` in the terminal.
+- **IntelliJ:** custom agents and agent skills are in preview in Copilot for JetBrains. Turn them on in **Settings > GitHub Copilot > Chat > Agent**. On Copilot Business or Enterprise, an administrator must also enable the **Editor preview features** policy ([changelog, February 2026](https://github.blog/changelog/2026-02-13-new-features-and-improvements-in-github-copilot-in-jetbrains-ides-2)).
+- **Not for Copilot:** `--settings`, because Copilot doesn't use Claude Code's deny rules. The safety rules written into every agent and skill still apply, and Copilot's own settings decide which terminal commands need your confirmation.
 - **Uninstall:** `./install.sh --copilot --uninstall` removes the generated agents and skill links and restores what they replaced.
-- **VS Code with Claude Code installed too:** use the plain `./install.sh`. VS Code Copilot also reads `~/.claude/agents` and `~/.claude/skills`, so installing both would show every agent twice.
+- **With Claude Code installed too, in VS Code:** use the plain `./install.sh`. VS Code also reads `~/.claude/skills` and `~/.claude/agents`, so installing into both folders would list each skill twice, and likely each agent too.
 
 ### Install into a team repo
 
