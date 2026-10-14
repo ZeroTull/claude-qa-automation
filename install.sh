@@ -323,7 +323,8 @@ init_copilot_tools() {
   COPILOT_TOOLS="'read', 'search', 'execute', 'web', 'todo'"
   IFS=' ' read -r -a servers <<<"${COPILOT_MCP_SERVERS:-}"
   for server in ${servers[@]+"${servers[@]}"}; do
-    [[ "$server" =~ ^[A-Za-z0-9._-]+$ ]] || die "COPILOT_MCP_SERVERS: invalid server name '$server'"
+    # Real names can look like mcp.dev.azure.com/sc-ado; quotes, globs and other shell or YAML specials are rejected.
+    [[ "$server" =~ ^[A-Za-z0-9._@:/-]+$ ]] || die "COPILOT_MCP_SERVERS: invalid server name '$server'"
     COPILOT_TOOLS="$COPILOT_TOOLS, '$server/*'"
   done
 }
@@ -331,8 +332,9 @@ init_copilot_tools() {
 # Prints the Copilot version of an agent: name and description (with any indented continuation lines) are kept,
 # the tools allowlist replaces disallowedTools/tools, model and color are dropped, and the body is unchanged.
 # Every agent gets the read-only allowlist, except one whose frontmatter has the comment line
-# "# copilot: orchestrator" (qa-lead): it also gets the edit and agent tools and an agents list naming every other
-# agent, so it can delegate to the specialists. A YAML comment, so Claude Code ignores it.
+# "# copilot: orchestrator" (qa-lead): it gets no tools list, which Copilot treats as every tool (including the
+# agent tool and all MCP servers), and an agents list naming every other agent, so it can delegate to the
+# specialists. A YAML comment, so Claude Code ignores it.
 # Windows line endings are removed. Fails if the file has no closed frontmatter or lacks name or description.
 copilot_agent() {
   local src="$1" others="" f
@@ -340,15 +342,15 @@ copilot_agent() {
     [[ "$(basename "$f" .md)" == "$(basename "$src" .md)" ]] && continue
     others="${others:+$others, }'$(basename "$f" .md)'"
   done
-  awk -v marker="$COPILOT_MARKER$(basename "$src") -->" -v tools="$COPILOT_TOOLS" -v others="$others" \
-    -v writer_tools="'edit', 'agent'" '
+  awk -v marker="$COPILOT_MARKER$(basename "$src") -->" -v tools="$COPILOT_TOOLS" -v others="$others" '
     { sub(/\r$/, "") }
     NR == 1 { if ($0 != "---") exit 2; print; fm = 1; next }
     fm && $0 == "---" {
       if (!orchestrator) {
         print "tools: [" tools "]"
       } else {
-        print "tools: [" tools ", " writer_tools "]"
+        # No tools list: the lead is the main conversation, like the default Agent mode, and gets every tool,
+        # including all MCP servers.
         print "agents: [" others "]"
       }
       print "---"
@@ -448,6 +450,12 @@ install_copilot() {
   done < <(generated_copilot_agents)
   [[ -z "$BACKUP_DIR" ]] || echo "Replaced entries were moved to $BACKUP_DIR."
   check_dependencies
+  echo
+  if [[ -z "${COPILOT_MCP_SERVERS:-}" ]]; then
+    echo
+    echo "MCP: qa-lead can use all your Copilot MCP servers. The specialist agents can use only the servers you name:"
+    echo "  COPILOT_MCP_SERVERS=\"mcp.dev.azure.com/sc-ado\" ./install.sh --copilot   (names as shown by MCP: List Servers)"
+  fi
   echo
   echo "Done. Agents are generated copies: after git pull, run ./install.sh --copilot again to update them."
   echo

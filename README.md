@@ -38,7 +38,12 @@ This installs into `~/.copilot` and doesn't touch `~/.claude`.
   - The tools list leaves out the edit tool: `read`, `search`, `execute`, `web`, `todo` ([tool aliases](https://docs.github.com/en/copilot/reference/custom-agents-configuration)). `execute` still runs shell commands, so, as with Claude Code, read-only is a rule in the agents' instructions, not something Copilot enforces.
   - The `model` and `color` fields are dropped (you pick the model in Copilot), and the instructions are unchanged.
   - The agents are generated copies: after `git pull` (or a fresh ZIP) run `./install.sh --copilot` again. That also replaces any local edits to them.
-- **MCP servers:** if you added MCP servers to Copilot, such as the Atlassian (Jira Cloud) or Azure DevOps server, name them so the agents may use them: `COPILOT_MCP_SERVERS="atlassian azure-devops" ./install.sh --copilot`. The names must match your Copilot MCP configuration. `<server>/*` grants all of that server's tools, including any that write. Without MCP servers, the agents use `jira`, `glab`, `gh` and `az` in the terminal.
+- **MCP servers** (such as the Azure DevOps or Atlassian server):
+  - `qa-lead` gets no tools list, so like the default Agent mode it can use every tool, including all your MCP servers. Nothing to configure.
+  - The specialist agents have a tools allowlist, so they can use only the servers you name: `COPILOT_MCP_SERVERS="mcp.dev.azure.com/sc-ado" ./install.sh --copilot`. Separate several names with spaces.
+  - Find the exact names with **MCP: List Servers** (Command Palette) or in the Chat tools picker (wrench icon).
+  - `<server>/*` grants all of that server's tools, including any that write.
+  - Without MCP servers, the agents use `jira`, `glab`, `gh` and `az` in the terminal.
 - **VS Code:** no setting is needed ([custom agents](https://code.visualstudio.com/docs/copilot/customization/custom-agents), [agent skills](https://code.visualstudio.com/docs/copilot/customization/agent-skills)).
   - **Agents:** in Copilot Chat, pick one in the **Agent** dropdown of the chat input. To see which folder an agent came from, hover over it in **Configure Custom Agents** (in the same dropdown).
   - **Skills:** type `/` to run one; `/skills` opens the **Configure Skills** menu.
@@ -69,7 +74,7 @@ Then, in the work repo, start `claude` and run `/qa-conventions`.
 
 | Agent | Use it for |
 |---|---|
-| `qa-lead` | **One agent for everything.** Select it once and give it any QA task. It sends review, audit, CI-failure, flaky-test and strategy work to the specialists below. It runs the workflows (writing tests, test cases, bugs, ticket reviews, PR descriptions) itself, stopping for your approval at each step, and applies only the changes you approve. Unlike the specialists, it can edit files. |
+| `qa-lead` | **One agent for everything.** Select it once and give it any QA task. It sends review, audit, CI-failure, flaky-test and strategy work to the specialists below. It runs the workflows (writing tests, test cases, bugs, ticket reviews, PR descriptions) itself, stopping for your approval at each step, and applies only the changes you approve. Unlike the specialists, it can edit files and use all your MCP servers. |
 | `pr-reviewer` | Review a Java PR or MR (Azure DevOps, GitHub or GitLab): correctness, conventions, performance, security, concurrency, tests. Missing tests for changed behavior block approval. Findings with severity, confidence and a fix plan. |
 | `test-maintainer` | Audit a test framework for flakiness, duplication, weak assertions, dead code, slow setup, test-layer balance, contract/performance testing and CI quality gates. Gives a health report and an improvement plan. |
 | `ci-failure-diagnoser` | Find the root cause of a failed pipeline run (Azure Pipelines, GitHub Actions or GitLab CI), with log evidence. |
@@ -92,7 +97,7 @@ Then, in the work repo, start `claude` and run `/qa-conventions`.
 
 Instead of switching agents, select `qa-lead` and work through it. It decides which specialist or workflow handles each request, chains them when a task needs several (for example a red pipeline, then flaky-test triage, then a bug draft), and stops at every approval gate.
 
-- **GitHub Copilot:** pick `qa-lead` in the Agent dropdown. The Copilot install gives it the `agent` tool and lists the specialists in its `agents` field, so it can run them as subagents ([custom agents](https://code.visualstudio.com/docs/copilot/customization/custom-agents)).
+- **GitHub Copilot:** pick `qa-lead` in the Agent dropdown. The Copilot install gives it no tools list (every tool, including your MCP servers and the `agent` tool) and lists the specialists in its `agents` field, so it can run them as subagents ([custom agents](https://code.visualstudio.com/docs/copilot/customization/custom-agents)).
 - **Claude Code:** start the session as the lead with `claude --agent qa-lead`, or make it the default for a project with `"agent": "qa-lead"` in that project's `.claude/settings.json` ([subagents](https://code.claude.com/docs/en/sub-agents)). Run as the main session, it can start the specialist agents and wait for your answers. Its instructions then replace Claude Code's default system prompt for that session, so start a plain `claude` session for work outside QA.
 
 ### How approvals work

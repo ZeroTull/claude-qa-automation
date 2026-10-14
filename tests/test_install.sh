@@ -6,6 +6,8 @@ REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
 export CLAUDE_HOME="$TMP/home"
+# Never let a test fall back to the real ~/.copilot.
+export COPILOT_HOME="$TMP/copilot-default"
 fail=0
 
 assert() {
@@ -270,6 +272,7 @@ assert desc == [l for l in src.splitlines() if l.startswith("description:")][0].
 PY
 assert "does not touch ~/.claude" test ! -e "$TMP/claude-untouched"
 assert "says how to update" grep -q "run ./install.sh --copilot again" <<<"$out"
+assert "explains MCP access when no servers are named" grep -q "The specialist agents can use only the servers you name" <<<"$out"
 assert "VS Code tip: no setting needed" grep -q "^VS Code:  no setting needed" <<<"$out"
 assert "VS Code tip: agent dropdown" grep -q "pick an agent in the Agent dropdown" <<<"$out"
 assert "VS Code tip: Configure Skills menu" grep -q "/skills opens the Configure Skills menu" <<<"$out"
@@ -290,12 +293,25 @@ assert "re-run updates a changed generated agent" grep -q "updated   agents/$(ba
 assert "updated agent matches the source again" out_lacks_file "edited" "$gen"
 out="$(COPILOT_HOME="$cop" COPILOT_MCP_SERVERS="atlassian azure-devops" "$REPO/install.sh" --copilot 2>&1)"
 assert "adds MCP servers to the allowlist" grep -qx "tools: \['read', 'search', 'execute', 'web', 'todo', 'atlassian/\*', 'azure-devops/\*'\]" "$gen"
+out="$(COPILOT_HOME="$cop" COPILOT_MCP_SERVERS="mcp.dev.azure.com/sc-ado" "$REPO/install.sh" --copilot 2>&1)"; rc=$?
+assert "exits 0 for a registry-style MCP server name" test "$rc" = 0
+assert "accepts a registry-style MCP server name" grep -qx "tools: \['read', 'search', 'execute', 'web', 'todo', 'mcp.dev.azure.com/sc-ado/\*'\]" "$gen"
+assert "no MCP hint when servers are named" out_lacks "The specialist agents can use only the servers you name"
+# Literal shell syntax is the test data here.
+# shellcheck disable=SC2016
+for bad in "bad;name" "it's" 'a"b' 'x\y' '$(id)' 'a`b' 'a,b' 'a#b'; do
+  out="$(COPILOT_HOME="$TMP/cop-reject" COPILOT_MCP_SERVERS="$bad" "$REPO/install.sh" --copilot 2>&1)"; rc=$?
+  assert "rejects MCP server name $bad" test "$rc" = 1
+done
+assert "writes nothing for rejected names" test ! -e "$TMP/cop-reject"
 out="$(COPILOT_HOME="$cop" COPILOT_MCP_SERVERS='bad;name' "$REPO/install.sh" --copilot 2>&1)"; rc=$?
 assert "rejects an invalid MCP server name" test "$rc" = 1
 
 echo "--copilot: qa-lead can delegate, specialists stay read-only"
 lead="$cop/agents/qa-lead.agent.md"
-assert "qa-lead gets edit and agent tools" grep -q "^tools: \['read', 'search', 'execute', 'web', 'todo'.*, 'edit', 'agent'\]$" "$lead"
+# $1 is expanded by the inner bash.
+# shellcheck disable=SC2016
+assert "qa-lead has no tools list (all tools, including every MCP server)" bash -c '! grep -q "^tools:" "$1"' _ "$lead"
 others="$(find "$REPO/agents" -maxdepth 1 -name '*.md' ! -name qa-lead.md -exec basename {} .md \; | sort | sed "s/.*/'&'/" | paste -sd, - | sed 's/,/, /g')"
 assert "qa-lead lists every other agent as a subagent" grep -qxF "agents: [$others]" "$lead"
 assert "qa-lead does not list itself" out_lacks_file "'qa-lead'" "$lead"
