@@ -8,6 +8,7 @@ Read `.ai/context/conventions.md` before drafting tickets, test cases, PR text o
 
 | Task | Use |
 |---|---|
+| Anything QA, or not sure which one | `qa-lead` agent (routes to the others) |
 | Write automated tests from requirements | `/test-developer` |
 | Review a pull request | `pr-reviewer` agent |
 | Audit / clean up the test framework | `test-maintainer` agent |
