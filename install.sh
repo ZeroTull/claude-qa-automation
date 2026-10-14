@@ -391,7 +391,9 @@ generated_copilot_agents() {
 prune_dead_skill_links() {
   local link rel
   for link in "$TARGET_HOME"/skills/*; do
-    if [[ -L "$link" && ! -e "$link" && "$(readlink "$link")" == "$REPO/"* ]]; then
+    [[ -L "$link" && ! -e "$link" ]] || continue
+    # Ours if it points into this repo, or into a moved clone (same skills/<name> path), for a skill we no longer ship.
+    if [[ "$(readlink "$link")" == "$REPO/"* ]] || { is_stale_link "$link" && [[ ! -d "$REPO/skills/$(basename "$link")" ]]; }; then
       rel="skills/$(basename "$link")"
       init_backup_dir
       mkdir -p "$BACKUP_DIR/skills"
@@ -406,7 +408,10 @@ install_copilot() {
   init_copilot_tools
   # Convert every agent before writing anything, so a broken source leaves the install untouched.
   for f in "$REPO"/agents/*.md; do
-    copilot_agent "$f" >/dev/null || die "cannot convert $f: it needs a frontmatter block with name and description"
+    if ! copilot_agent "$f" >/dev/null; then
+      echo "error: cannot convert $f: it needs a frontmatter block with name and description. Nothing was installed." >&2
+      exit 1
+    fi
   done
   echo "Installing QA agents and skills for GitHub Copilot into $TARGET_HOME"
   check_target_dirs "$TARGET_HOME"

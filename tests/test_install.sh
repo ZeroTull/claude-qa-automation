@@ -259,13 +259,14 @@ assert "drops the model field" out_lacks_file "model:" "$gen"
 assert "drops the color field" out_lacks_file "color:" "$gen"
 assert "drops disallowedTools" out_lacks_file "disallowedTools:" "$gen"
 assert "keeps the instructions unchanged" diff <(awk 'f;/^---$/{c++; if(c==2) f=1}' "$REPO/agents/$agent") <(awk 'f;/^<!-- Generated/{f=1}' "$gen")
-assert "frontmatter parses as the YAML subset" python3 - "$gen" <<'PY'
+assert "frontmatter keeps the source description exactly" python3 - "$gen" "$REPO/agents/$agent" <<'PY'
 import re, sys
 fm = re.match(r"\A---\n(.*?)\n---\n", open(sys.argv[1]).read(), re.S).group(1)
 lines = fm.splitlines()
 assert [l.split(":")[0] for l in lines] == ["name", "description", "tools"]
 desc = lines[1].split(":", 1)[1].strip()
-assert len(desc) > 40 and not desc.startswith(("'", "[", "{")), desc
+src = re.match(r"\A---\n(.*?)\n---\n", open(sys.argv[2]).read(), re.S).group(1)
+assert desc == [l for l in src.splitlines() if l.startswith("description:")][0].split(":", 1)[1].strip(), desc
 PY
 assert "does not touch ~/.claude" test ! -e "$TMP/claude-untouched"
 assert "says how to update" grep -q "run ./install.sh --copilot again" <<<"$out"
@@ -303,13 +304,14 @@ assert "exits 0" test "$rc" = 0
 crlf_gen="$TMP/cop-src/agents/${agent%.md}.agent.md"
 assert "converts a CRLF source" grep -q "^name: ${agent%.md}$" "$crlf_gen"
 assert "drops the carriage returns" out_lacks_file $'\r' "$crlf_gen"
-assert "keeps the CRLF agent's body" test "$(wc -l <"$crlf_gen")" -gt 10
+assert "keeps the CRLF agent's body" diff <(awk 'f;/^---$/{c++; if(c==2) f=1}' "$REPO/agents/$agent") <(awk 'f;/^<!-- Generated/{f=1}' "$crlf_gen")
 assert "keeps a folded description" grep -q "^  and its second line.$" "$TMP/cop-src/agents/folded.agent.md"
 assert "drops model from the folded agent" out_lacks_file "model:" "$TMP/cop-src/agents/folded.agent.md"
 printf '%s\n' "# no frontmatter" >"$src/agents/broken.md"
 out="$(COPILOT_HOME="$TMP/cop-broken" "$src/install.sh" --copilot 2>&1)"; rc=$?
 assert "fails on a source without frontmatter" test "$rc" = 1
 assert "names the broken source" grep -q "cannot convert .*broken.md" <<<"$out"
+assert "prints no usage text after the error" out_lacks "Installs the QA agents"
 assert "writes nothing when a source is broken" test ! -e "$TMP/cop-broken"
 printf '%s\n' "---" "name: nodesc" "---" "Body." >"$src/agents/broken.md"
 out="$(COPILOT_HOME="$TMP/cop-broken" "$src/install.sh" --copilot 2>&1)"; rc=$?
@@ -320,6 +322,11 @@ ln -s "$REPO/skills/moved-skill" "$cop/skills/moved-skill"
 out="$(COPILOT_HOME="$cop" "$REPO/install.sh" --copilot 2>&1)"
 assert "removes the dead skill link" test ! -L "$cop/skills/moved-skill"
 assert "reports it" grep -q "removed   skills/moved-skill (no longer in this repo" <<<"$out"
+ln -s "/old/clone/skills/old-skill" "$cop/skills/old-skill"
+ln -s "/old/clone/skills/${skill}" "$cop/skills/keep-me"
+out="$(COPILOT_HOME="$cop" "$REPO/install.sh" --copilot 2>&1)"
+assert "removes a moved clone's link to a skill no longer shipped" test ! -L "$cop/skills/old-skill"
+assert "keeps a broken link whose name does not match its target" test -L "$cop/skills/keep-me"
 
 echo "--copilot keeps foreign agents and cleans up removed ones"
 cop2="$TMP/copilot2"
