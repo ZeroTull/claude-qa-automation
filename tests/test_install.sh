@@ -270,6 +270,18 @@ assert desc == [l for l in src.splitlines() if l.startswith("description:")][0].
 PY
 assert "does not touch ~/.claude" test ! -e "$TMP/claude-untouched"
 assert "says how to update" grep -q "run ./install.sh --copilot again" <<<"$out"
+assert "VS Code tip: no setting needed" grep -q "^VS Code:  no setting needed" <<<"$out"
+assert "VS Code tip: agent dropdown" grep -q "pick an agent in the Agent dropdown" <<<"$out"
+assert "VS Code tip: Configure Skills menu" grep -q "/skills opens the Configure Skills menu" <<<"$out"
+assert "VS Code tip: Diagnostics" grep -q "right-click in the Chat view > Diagnostics" <<<"$out"
+assert "IntelliJ tip: setting" grep -q "^IntelliJ: turn on Settings > GitHub Copilot > Chat > Agent" <<<"$out"
+assert "IntelliJ tip: admin policy" grep -q "Editor preview features policy" <<<"$out"
+assert "IntelliJ tip: agent dropdown" grep -q "pick an agent in the agent dropdown" <<<"$out"
+assert "no undocumented reload step" out_lacks "Reload Window"
+for phrase in "Configure Custom Agents" "Configure Skills" "Diagnostics" "Settings > GitHub Copilot > Chat > Agent" "Editor preview features"; do
+  assert "README mentions $phrase" grep -qF "$phrase" "$REPO/README.md"
+done
+assert "README has no undocumented reload step" out_lacks_file "Reload Window" "$REPO/README.md"
 out="$(COPILOT_HOME="$cop" "$REPO/install.sh" --copilot 2>&1)"
 assert "re-run reports ok" grep -q "ok        agents/$(basename "$gen")" <<<"$out"
 echo "edited" >>"$gen"

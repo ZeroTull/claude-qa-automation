@@ -39,7 +39,14 @@ This installs into `~/.copilot` and doesn't touch `~/.claude`.
   - The `model` and `color` fields are dropped (you pick the model in Copilot), and the instructions are unchanged.
   - The agents are generated copies: after `git pull` (or a fresh ZIP) run `./install.sh --copilot` again. That also replaces any local edits to them.
 - **MCP servers:** if you added MCP servers to Copilot, such as the Atlassian (Jira Cloud) or Azure DevOps server, name them so the agents may use them: `COPILOT_MCP_SERVERS="atlassian azure-devops" ./install.sh --copilot`. The names must match your Copilot MCP configuration. `<server>/*` grants all of that server's tools, including any that write. Without MCP servers, the agents use `jira`, `glab`, `gh` and `az` in the terminal.
-- **IntelliJ:** custom agents and agent skills are in preview in Copilot for JetBrains. Turn them on in **Settings > GitHub Copilot > Chat > Agent**. On Copilot Business or Enterprise, an administrator must also enable the **Editor preview features** policy ([changelog, February 2026](https://github.blog/changelog/2026-02-13-new-features-and-improvements-in-github-copilot-in-jetbrains-ides-2)).
+- **VS Code:** no setting is needed ([custom agents](https://code.visualstudio.com/docs/copilot/customization/custom-agents), [agent skills](https://code.visualstudio.com/docs/copilot/customization/agent-skills)).
+  - **Agents:** in Copilot Chat, pick one in the **Agent** dropdown of the chat input. To see which folder an agent came from, hover over it in **Configure Custom Agents** (in the same dropdown).
+  - **Skills:** type `/` to run one; `/skills` opens the **Configure Skills** menu.
+  - **If one is missing:** right-click in the Chat view and select **Diagnostics**, which lists every loaded agent and skill with any errors.
+- **IntelliJ:** custom agents and agent skills are in preview in Copilot for JetBrains.
+  - **Turn them on** in **Settings > GitHub Copilot > Chat > Agent**. On Copilot Business or Enterprise, an administrator must also enable the **Editor preview features** policy ([changelog, February 2026](https://github.blog/changelog/2026-02-13-new-features-and-improvements-in-github-copilot-in-jetbrains-ides-2)).
+  - **Agents:** in Copilot Chat, pick one in the agent dropdown.
+  - **Skills:** type `/` to run one.
 - **Not for Copilot:** `--settings`, because Copilot doesn't use Claude Code's deny rules. The safety rules written into every agent and skill still apply; whether Copilot asks before running a terminal command depends on your Copilot settings.
 - **Uninstall:** `./install.sh --copilot --uninstall` removes the generated agents and skill links and restores what they replaced.
 - **With Claude Code installed too, in VS Code:** use the plain `./install.sh`. VS Code also reads `~/.claude/skills` and `~/.claude/agents`, so installing into both folders would list each skill twice, and likely each agent too.
