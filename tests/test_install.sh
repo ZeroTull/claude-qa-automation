@@ -305,6 +305,20 @@ for f in "$cop"/agents/*.agent.md; do
   assert "$(basename "$f") has no agents list" out_lacks_file "agents:" "$f"
 done
 
+echo "--copilot: write access is opt-in"
+src2="$TMP/src-noflag"
+mkdir -p "$src2" && (cd "$REPO" && tar cf - --exclude .git .) | (cd "$src2" && tar xf -)
+sed '/^disallowedTools:/d' "$src2/agents/pr-reviewer.md" >"$src2/agents/x.md" && mv "$src2/agents/x.md" "$src2/agents/pr-reviewer.md"
+out="$(COPILOT_HOME="$TMP/cop-noflag" "$src2/install.sh" --copilot 2>&1)"
+assert "an agent without the orchestrator marker stays read-only" out_lacks_file "'edit'" "$TMP/cop-noflag/agents/pr-reviewer.agent.md"
+assert "the marker itself is not copied" out_lacks_file "# copilot: orchestrator" "$TMP/cop-noflag/agents/qa-lead.agent.md"
+sed -n '/^copilot_agent() {/,/^}/p' "$src2/install.sh" >"$TMP/copilot_agent.sh"
+# Variables are expanded by the inner bash.
+# shellcheck disable=SC2016
+(cd "$src2" && bash -c '. "$1"; REPO=.; COPILOT_TOOLS="x"; COPILOT_MARKER="m"; copilot_agent agents/qa-lead.md' _ "$TMP/copilot_agent.sh" >"$TMP/rel-lead.md")
+assert "the converter ran with a relative path" grep -q "^agents: \[" "$TMP/rel-lead.md"
+assert "a relative source path does not list the lead as its own subagent" out_lacks_file "'qa-lead'" "$TMP/rel-lead.md"
+
 echo "--copilot validates before writing"
 mkdir -p "$TMP/globdir" && touch "$TMP/globdir/install.sh" "$TMP/globdir/README.md"
 out="$(cd "$TMP/globdir" && COPILOT_HOME="$TMP/cop-glob" COPILOT_MCP_SERVERS='*' "$REPO/install.sh" --copilot 2>&1)"; rc=$?

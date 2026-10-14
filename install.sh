@@ -330,13 +330,14 @@ init_copilot_tools() {
 
 # Prints the Copilot version of an agent: name and description (with any indented continuation lines) are kept,
 # the tools allowlist replaces disallowedTools/tools, model and color are dropped, and the body is unchanged.
-# Agents with disallowedTools are read-only specialists. Agents without it (the qa-lead orchestrator) also get
-# the edit and agent tools and an agents list naming every other agent, so they can delegate to the specialists.
+# Every agent gets the read-only allowlist, except one whose frontmatter has the comment line
+# "# copilot: orchestrator" (qa-lead): it also gets the edit and agent tools and an agents list naming every other
+# agent, so it can delegate to the specialists. A YAML comment, so Claude Code ignores it.
 # Windows line endings are removed. Fails if the file has no closed frontmatter or lacks name or description.
 copilot_agent() {
   local src="$1" others="" f
   for f in "$REPO"/agents/*.md; do
-    [[ "$f" == "$src" ]] && continue
+    [[ "$(basename "$f" .md)" == "$(basename "$src" .md)" ]] && continue
     others="${others:+$others, }'$(basename "$f" .md)'"
   done
   awk -v marker="$COPILOT_MARKER$(basename "$src") -->" -v tools="$COPILOT_TOOLS" -v others="$others" \
@@ -344,7 +345,7 @@ copilot_agent() {
     { sub(/\r$/, "") }
     NR == 1 { if ($0 != "---") exit 2; print; fm = 1; next }
     fm && $0 == "---" {
-      if (readonly) {
+      if (!orchestrator) {
         print "tools: [" tools "]"
       } else {
         print "tools: [" tools ", " writer_tools "]"
@@ -355,7 +356,7 @@ copilot_agent() {
       print marker
       fm = 0; body = 1; closed = 1; next
     }
-    fm && /^disallowedTools:/ { readonly = 1 }
+    fm && $0 == "# copilot: orchestrator" { orchestrator = 1; next }
     fm && /^(name|description):/ { keep = 1; if ($0 ~ /^name:/) has_name = 1; else has_desc = 1; print; next }
     fm && /^[ \t]/ && keep { print; next }
     fm { keep = 0; next }

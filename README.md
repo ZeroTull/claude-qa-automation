@@ -93,7 +93,7 @@ Then, in the work repo, start `claude` and run `/qa-conventions`.
 Instead of switching agents, select `qa-lead` and work through it. It decides which specialist or workflow handles each request, chains them when a task needs several (for example a red pipeline, then flaky-test triage, then a bug draft), and stops at every approval gate.
 
 - **GitHub Copilot:** pick `qa-lead` in the Agent dropdown. The Copilot install gives it the `agent` tool and lists the specialists in its `agents` field, so it can run them as subagents ([custom agents](https://code.visualstudio.com/docs/copilot/customization/custom-agents)).
-- **Claude Code:** start the session as the lead with `claude --agent qa-lead`, or make it the default for a project with `"agent": "qa-lead"` in that project's `.claude/settings.json` ([subagents](https://code.claude.com/docs/en/sub-agents)). Run as the main session, it can start the specialist agents and wait for your answers.
+- **Claude Code:** start the session as the lead with `claude --agent qa-lead`, or make it the default for a project with `"agent": "qa-lead"` in that project's `.claude/settings.json` ([subagents](https://code.claude.com/docs/en/sub-agents)). Run as the main session, it can start the specialist agents and wait for your answers. Its instructions then replace Claude Code's default system prompt for that session, so start a plain `claude` session for work outside QA.
 
 ### How approvals work
 

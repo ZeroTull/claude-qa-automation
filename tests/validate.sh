@@ -290,6 +290,14 @@ else:
         if group == "qa" and platforms not in read(file):
             err(f"{rel(file)}: does not contain the block from templates/platforms.md verbatim")
 
+# The qa-lead orchestrator must route every other agent and every skill, so nothing becomes unreachable.
+lead_text = read(f"{repo}/agents/qa-lead.md")
+if lead_text:
+    for key in sorted(cataloged):
+        kind, _, name = key.partition(":")
+        if kind in ("agent", "skill") and name != "qa-lead" and f"`{name}`" not in lead_text:
+            err(f"agents/qa-lead.md does not route {kind} `{name}`")
+
 # Third-party skills are vendored unchanged: their content must match third-party.lock.
 if third_party and not has_lock:
     err("third-party.lock missing")

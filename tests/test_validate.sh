@@ -216,6 +216,10 @@ expect_failure "settings not an object" "misses deny rules" \
 expect_failure ".env template wildcard" "denies .env templates" \
   "edit settings.example.json -e 's|\"Read(\\*\\*/.env.local)\"|\"Read(**/.env.*)\"|'"
 
+expect_failure "agent the lead does not route" "agents/qa-lead.md does not route agent \`new-agent\`" \
+  "sed 's/^name: pr-reviewer/name: new-agent/' agents/pr-reviewer.md > agents/new-agent.md && printf 'new-agent\tagent\tqa\t-\n' >> catalog.tsv && printf '%s\n' '\`new-agent\`' >> templates/CLAUDE.md README.md"
+expect_failure "skill the lead does not route" "agents/qa-lead.md does not route skill \`test-cases\`" \
+  "edit agents/qa-lead.md -e 's/\`test-cases\`/\`x\`/g'"
 expect_failure "personal entry in the QA repo" "unknown group 'personal'" \
   "edit catalog.tsv -e 's/^pr-reviewer\tagent\tqa/pr-reviewer\tagent\tpersonal/'"
 expect_failure "machine path in settings.example.json" "settings.example.json contains a machine-specific /Users/ path" \
