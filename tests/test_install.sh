@@ -307,12 +307,27 @@ assert "writes nothing for rejected names" test ! -e "$TMP/cop-reject"
 out="$(COPILOT_HOME="$cop" COPILOT_MCP_SERVERS='bad;name' "$REPO/install.sh" --copilot 2>&1)"; rc=$?
 assert "rejects an invalid MCP server name" test "$rc" = 1
 
+CLAUDE_HOME="$TMP/home3-claude" "$REPO/install.sh" >/dev/null 2>&1
 echo "--copilot: qa-lead can delegate, specialists stay read-only"
 lead="$cop/agents/qa-lead.agent.md"
 # $1 is expanded by the inner bash.
 # shellcheck disable=SC2016
 assert "qa-lead has no tools list (all tools, including every MCP server)" bash -c '! grep -q "^tools:" "$1"' _ "$lead"
 others="$(find "$REPO/agents" -maxdepth 1 -name '*.md' ! -name qa-lead.md -exec basename {} .md \; | sort | sed "s/.*/'&'/" | paste -sd, - | sed 's/,/, /g')"
+assert "qa-lead keeps Show your work" grep -q "^## Show your work$" "$lead"
+for rule in "The plan is information, not approval" "A ▶ line announces a step; it does not approve one" \
+  "never echo the user's raw text or anything secret" "Could not start <agent> as a subagent" \
+  "the specialist cannot start as a subagent (then item 5 of Show your work applies)"; do
+  assert "qa-lead Show your work: $rule" grep -qF "$rule" "$lead"
+done
+# The fallback paths in qa-lead must match where the installers put the agent files.
+# Literal paths as written in qa-lead.md, not expanded.
+# shellcheck disable=SC2088
+for path in '~/.copilot/agents/<name>.agent.md' '~/.claude/agents/<name>.md' '.claude/agents/<name>.md'; do
+  assert "qa-lead names fallback path $path" grep -qF "\`$path\`" "$lead"
+done
+assert "Copilot install writes agents to ~/.copilot/agents/<name>.agent.md" test -f "$cop/agents/pr-reviewer.agent.md"
+assert "Claude install links agents to ~/.claude/agents/<name>.md" test -L "$TMP/home3-claude/agents/pr-reviewer.md"
 assert "qa-lead lists every other agent as a subagent" grep -qxF "agents: [$others]" "$lead"
 assert "qa-lead does not list itself" out_lacks_file "'qa-lead'" "$lead"
 for f in "$cop"/agents/*.agent.md; do
