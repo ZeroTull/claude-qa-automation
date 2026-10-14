@@ -313,6 +313,8 @@ lead="$cop/agents/qa-lead.agent.md"
 # shellcheck disable=SC2016
 assert "qa-lead has no tools list (all tools, including every MCP server)" bash -c '! grep -q "^tools:" "$1"' _ "$lead"
 others="$(find "$REPO/agents" -maxdepth 1 -name '*.md' ! -name qa-lead.md -exec basename {} .md \; | sort | sed "s/.*/'&'/" | paste -sd, - | sed 's/,/, /g')"
+assert "qa-lead keeps the delegation trace instructions" grep -q "^## Show your work$" "$lead"
+assert "qa-lead must announce when it could not delegate" grep -qF "Could not start <agent> as a subagent" "$lead"
 assert "qa-lead lists every other agent as a subagent" grep -qxF "agents: [$others]" "$lead"
 assert "qa-lead does not list itself" out_lacks_file "'qa-lead'" "$lead"
 for f in "$cop"/agents/*.agent.md; do

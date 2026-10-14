@@ -97,6 +97,20 @@ Then, in the work repo, start `claude` and run `/qa-conventions`.
 
 Instead of switching agents, select `qa-lead` and work through it. It decides which specialist or workflow handles each request, chains them when a task needs several (for example a red pipeline, then flaky-test triage, then a bug draft), and stops at every approval gate.
 
+It shows each handoff in the chat, so you can follow who does what:
+
+```
+Plan (3 steps)
+  1. ci-failure-diagnoser - find why pipeline 9876 failed
+  2. flaky-test-triager - only if step 1 says flaky
+  3. bug-ticket (me, skill) - only if it is a real defect
+
+▶ Step 1/3 → ci-failure-diagnoser: pipeline 9876, branch main
+✔ Step 1/3 ← ci-failure-diagnoser: flaky/environment - LoginTest timed out on agent pool B
+```
+
+It ends a multi-step request with a short table of steps, owners and results. If it can't start a specialist as a subagent, it says so (`⚠ Could not start ...`) and follows that specialist's instructions itself.
+
 - **GitHub Copilot:** pick `qa-lead` in the Agent dropdown. The Copilot install gives it no tools list (every tool, including your MCP servers and the `agent` tool) and lists the specialists in its `agents` field, so it can run them as subagents ([custom agents](https://code.visualstudio.com/docs/copilot/customization/custom-agents)).
 - **Claude Code:** start the session as the lead with `claude --agent qa-lead`, or make it the default for a project with `"agent": "qa-lead"` in that project's `.claude/settings.json` ([subagents](https://code.claude.com/docs/en/sub-agents)). Run as the main session, it can start the specialist agents and wait for your answers. Its instructions then replace Claude Code's default system prompt for that session, so start a plain `claude` session for work outside QA.
 

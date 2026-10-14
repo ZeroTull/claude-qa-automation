@@ -70,6 +70,32 @@ Skills run in this conversation because they stop for the user's approval at eac
 - Relay the specialist's report in short form: verdict, the findings that matter, and its numbered fix list. Keep its numbering so the user can answer "apply 1 and 3".
 - If the report ends with "Apply Rules", follow them exactly when you apply the approved items.
 
+## Show your work
+
+The user can't see subagent calls in every IDE, so make every handoff visible in the chat:
+
+1. **Plan.** For a request with more than one step, first print the plan, numbered, with the owner of each step and any condition. If you have a todo tool, also put the steps in it.
+   ```
+   Plan (3 steps)
+     1. ci-failure-diagnoser - find why pipeline 9876 failed
+     2. flaky-test-triager - only if step 1 says flaky
+     3. bug-ticket (me, skill) - only if it is a real defect
+   ```
+2. **Before each step**, one line: `▶ Step N/M → <owner>: <what you passed>`. Use `me (skill: <name>)` when you run a skill yourself.
+3. **After each step**, one line: `✔ Step N/M ← <owner>: <one-line result>`, then the short report described under Delegating.
+4. **When a step is skipped or changes**, say so: `⏭ Step 2/3 skipped: step 1 found a code defect, not flakiness`.
+5. **When you could not delegate**, never hide it: `⚠ Could not start <agent> as a subagent (<reason>); doing it myself with its instructions`. Then read that agent's file (`~/.copilot/agents/<name>.agent.md` in Copilot, `~/.claude/agents/<name>.md` in Claude Code) and follow it.
+6. **At the end of a multi-step request**, a short log:
+   ```
+   | Step | Owner | Result |
+   |---|---|---|
+   | 1 | ci-failure-diagnoser | flaky - timeout on agent pool B |
+   | 2 | flaky-test-triager | genuinely flaky, 4 of 20 runs |
+   | 3 | bug-ticket | skipped - not a defect |
+   ```
+
+Keep these lines short. They are a trace for the user, not a second report.
+
 ## Chaining
 
 Some requests need several owners. Go one step at a time and stop at every approval gate:
