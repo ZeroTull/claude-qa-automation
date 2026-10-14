@@ -1,12 +1,12 @@
 # claude-qa-automation
 
-[Claude Code](https://claude.com/claude-code) agents and skills for QA test automation: writing UI and API tests from requirements, reviewing PRs, diagnosing CI failures, triaging flaky tests, and drafting test cases, bugs and PR descriptions. Works with Jira (Cloud and Data Center, Zephyr Scale), Azure DevOps, GitLab and GitHub, on Java test projects (TestNG/JUnit, Cucumber, Rest-Assured, Selenium/Selenide/Playwright).
+[Claude Code](https://claude.com/claude-code) and [GitHub Copilot](https://github.com/features/copilot) agents and skills for QA test automation: writing UI and API tests from requirements, reviewing PRs, diagnosing CI failures, triaging flaky tests, and drafting test cases, bugs and PR descriptions. Works with Jira (Cloud and Data Center, Zephyr Scale), Azure DevOps, GitLab and GitHub, on Java test projects (TestNG/JUnit, Cucumber, Rest-Assured, Selenium/Selenide/Playwright).
 
 This repo is self-contained and doesn't need any other setup. It never touches your global `~/.claude/CLAUDE.md`, and it changes `~/.claude/settings.json` only when you run `--settings`, and only to add deny rules after a backup. So it can sit next to a personal Claude Code configuration. If another setup already links an agent or skill with the same name, this install backs that link up and replaces it, and `--uninstall` puts it back.
 
 ## Install
 
-Requirements: Claude Code, `git`, `bash`, `python3`.
+Requirements: Claude Code or GitHub Copilot, `bash` and `python3`. `git` is optional: you can also download the repo as a ZIP (**Code > Download ZIP**), unzip it somewhere permanent and run `bash install.sh` there.
 
 ```bash
 git clone https://github.com/ZeroTull/claude-qa-automation.git ~/projects/claude-qa-automation
@@ -20,6 +20,22 @@ cd ~/projects/claude-qa-automation
 - **Uninstall:** `./install.sh --uninstall` removes the links and puts back what they replaced.
 
 Restart Claude Code afterwards, then check with `/agents` and by typing `/`.
+
+### Using it with GitHub Copilot (VS Code or IntelliJ)
+
+```bash
+./install.sh --copilot
+```
+
+This installs into `~/.copilot`, the personal folder Copilot reads in VS Code and IntelliJ. It doesn't touch `~/.claude`.
+
+- **Skills** are linked unchanged, because Copilot uses the same `SKILL.md` format. Type `/` in Copilot Chat to run one, such as `/test-developer`.
+- **Agents** are converted into Copilot's `.agent.md` format. Pick one in the Copilot Chat agent picker. Copilot has no `disallowedTools`, so read-only becomes a tools allowlist (`read`, `search`, `execute`, `web`, `todo`; no `edit`). The `model` and `color` fields are dropped (you pick the model in Copilot), and the instructions are unchanged. The agents are generated copies, so after `git pull` (or a fresh ZIP) run `./install.sh --copilot` again.
+- **MCP servers:** if you added MCP servers to Copilot, such as the Atlassian (Jira Cloud) or Azure DevOps server, name them so the agents may use them: `COPILOT_MCP_SERVERS="atlassian azure-devops" ./install.sh --copilot`. The names must match your Copilot MCP configuration. Without MCP servers, the agents use `jira`, `glab`, `gh` and `az` in the terminal.
+- **IntelliJ:** custom agents and skills are in preview in Copilot for JetBrains. Turn them on in **Settings > GitHub Copilot > Chat > Agent**.
+- **Not for Copilot:** `--settings`, because Copilot doesn't use Claude Code's deny rules. The safety rules written into every agent and skill still apply, and Copilot asks before it runs terminal commands unless you allowed them.
+- **Uninstall:** `./install.sh --copilot --uninstall` removes the generated agents and skill links and restores what they replaced.
+- **VS Code with Claude Code installed too:** use the plain `./install.sh`. VS Code Copilot also reads `~/.claude/agents` and `~/.claude/skills`, so installing both would show every agent twice.
 
 ### Install into a team repo
 
