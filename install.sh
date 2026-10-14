@@ -436,8 +436,13 @@ install_copilot() {
   check_dependencies
   echo
   echo "Done. Agents are generated copies: after git pull, run ./install.sh --copilot again to update them."
-  echo "In IntelliJ, turn on Settings > GitHub Copilot > Chat > Agent; on Copilot Business or Enterprise an admin"
-  echo "must also enable the Editor preview features policy."
+  echo
+  echo "VS Code: open Copilot Chat, pick an agent in the Agent dropdown of the chat input (or type /agents), and type /"
+  echo "  for skills (/skills opens the skill list). If something is missing, run Developer: Reload Window; right-click"
+  echo "  in the Chat view > Diagnostics lists every loaded agent and skill with any errors."
+  echo "IntelliJ: turn on Settings > GitHub Copilot > Chat > Agent; on Copilot Business or Enterprise an admin must also"
+  echo "  enable the Editor preview features policy. Then pick an agent in the Copilot Chat agent dropdown, and type /"
+  echo "  for skills."
 }
 
 uninstall_copilot() {

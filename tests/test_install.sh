@@ -270,6 +270,8 @@ assert desc == [l for l in src.splitlines() if l.startswith("description:")][0].
 PY
 assert "does not touch ~/.claude" test ! -e "$TMP/claude-untouched"
 assert "says how to update" grep -q "run ./install.sh --copilot again" <<<"$out"
+assert "gives the VS Code tip" grep -q "^VS Code: open Copilot Chat" <<<"$out"
+assert "gives the IntelliJ tip" grep -q "^IntelliJ: turn on Settings > GitHub Copilot > Chat > Agent" <<<"$out"
 out="$(COPILOT_HOME="$cop" "$REPO/install.sh" --copilot 2>&1)"
 assert "re-run reports ok" grep -q "ok        agents/$(basename "$gen")" <<<"$out"
 echo "edited" >>"$gen"
