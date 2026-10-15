@@ -212,6 +212,12 @@ if project_map and (f"`{MAP_FILE}`" not in project_map or "`Snapshot:`" not in p
     err(f"templates/project-map.md must name `{MAP_FILE}` and its `Snapshot:` line")
 if mapper and (f"write only `{MAP_FILE}`" not in mapper or "Snapshot: <date>, commit <short sha>" not in mapper):
     err(f"skills/framework-map/SKILL.md must write only `{MAP_FILE}` with a `Snapshot: <date>, commit <short sha>` line")
+# The shared blocks mention conventions.md as something to read; only the skill's own text says what it writes.
+own_text = mapper.replace(safety, "").replace(platforms, "") if safety and platforms else mapper
+for other in sorted(set(re.findall(r"`(\.ai/context/[^`]+)`", own_text)) - {MAP_FILE}):
+    err(f"skills/framework-map/SKILL.md names `{other}`; it may only write `{MAP_FILE}`")
+if mapper and "under 250 lines" not in mapper:
+    err("skills/framework-map/SKILL.md must keep the map under 250 lines")
 readme = read(f"{repo}/README.md")
 template = read(f"{repo}/templates/CLAUDE.md")
 

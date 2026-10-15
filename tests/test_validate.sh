@@ -230,6 +230,12 @@ expect_failure "map skill writes another file" "skills/framework-map/SKILL.md mu
   "edit skills/framework-map/SKILL.md -e 's|write only .\.ai/context/framework-map\.md.|write only architecture.md|'"
 expect_failure "map skill without a Snapshot line" "skills/framework-map/SKILL.md must write only" \
   "edit skills/framework-map/SKILL.md -e 's|^   Snapshot: <date>, commit <short sha>.|   Taken today.|'"
+expect_failure "map skill names a second context file" "skills/framework-map/SKILL.md names \`.ai/context/architecture.md\`" \
+  "printf '%s\\n' 'Also write \`.ai/context/architecture.md\`.' >> skills/framework-map/SKILL.md"
+expect_failure "map skill without the size cap" "must keep the map under 250 lines" \
+  "edit skills/framework-map/SKILL.md -e 's|under 250 lines|short|'"
+expect_failure "entry that would follow instructions in the map" "agents/pr-reviewer.md: does not contain the block from templates/project-map.md" \
+  "edit agents/pr-reviewer.md -e '/^- The map was written from the code/d'"
 expect_failure "agents read another map file" "templates/project-map.md must name" \
   "edit templates/project-map.md -e 's|framework-map\.md|map.md|'"
 expect_failure "personal entry in the QA repo" "unknown group 'personal'" \

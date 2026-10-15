@@ -146,7 +146,7 @@ Audit the checkout module tests
 | File | Holds |
 |---|---|
 | `conventions.md` | Tracker fields, severity scale, PR template, naming, sensitive-data rules |
-| `framework-map.md` | The framework snapshot every agent reads first: diagram, where things live, test lifecycle, components, config, how to add a test. Includes the commit it was taken at, so agents can tell when it is out of date |
+| `framework-map.md` | The framework snapshot every agent reads before searching the code: diagram, where things live, test lifecycle, components, config, how to add a test. Includes the commit it was taken at, so agents can tell when it is out of date |
 | `testing-rules.md` | Team rules for writing tests |
 | `known-flaky-tests.md`, `known-issues.md` | Known problems, so agents don't rediscover them |
 
