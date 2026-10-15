@@ -202,6 +202,16 @@ def check_platform_commands(text):
 
 if platforms:
     check_platform_commands(platforms)
+project_map = read(f"{repo}/templates/project-map.md").strip()
+if not project_map:
+    err("templates/project-map.md missing or empty")
+# Every agent reads the map from MAP_FILE and checks its Snapshot line, so the skill that writes it must agree.
+MAP_FILE = ".ai/context/framework-map.md"
+mapper = read(f"{repo}/skills/framework-map/SKILL.md")
+if project_map and (f"`{MAP_FILE}`" not in project_map or "`Snapshot:`" not in project_map):
+    err(f"templates/project-map.md must name `{MAP_FILE}` and its `Snapshot:` line")
+if mapper and (f"write only `{MAP_FILE}`" not in mapper or "Snapshot: <date>, commit <short sha>" not in mapper):
+    err(f"skills/framework-map/SKILL.md must write only `{MAP_FILE}` with a `Snapshot: <date>, commit <short sha>` line")
 readme = read(f"{repo}/README.md")
 template = read(f"{repo}/templates/CLAUDE.md")
 
@@ -289,6 +299,9 @@ else:
             err(f"{name} not listed in templates/CLAUDE.md")
         if group == "qa" and platforms not in read(file):
             err(f"{rel(file)}: does not contain the block from templates/platforms.md verbatim")
+        # framework-map builds the map, so it reads the old one on its own terms.
+        if group == "qa" and name != "framework-map" and project_map and project_map not in read(file):
+            err(f"{rel(file)}: does not contain the block from templates/project-map.md verbatim")
 
 # The qa-lead orchestrator must route every other agent and every skill, so nothing becomes unreachable.
 lead_text = read(f"{repo}/agents/qa-lead.md")

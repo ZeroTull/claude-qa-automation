@@ -86,7 +86,7 @@ Then, in the work repo, start `claude` and run `/qa-conventions`, then `/framewo
 | Skill | Use it for |
 |---|---|
 | `/qa-conventions` | **Run first in each repo.** Builds `.ai/context/conventions.md` (tracker fields for Jira/ADO/GitLab/GitHub, severity scale, PR template, test naming, sensitive-data rules) from what the team already has. |
-| `/framework-map` | **Run second.** Reads the test framework and writes a snapshot of how it works to `.ai/context/`: a one-screen overview with a diagram, layers and modules and how they depend on each other, the path of a test from runner to assertion, config and environments, reusable components and the patterns new tests follow. Re-run after big framework changes. |
+| `/framework-map` | **Run second.** Reads the test framework once and saves a compact snapshot, `.ai/context/framework-map.md`: a diagram, where things live, the path of a test from runner to assertion, components with what they need and who uses them, config, and how to add a test. Every agent and skill reads it first and opens only the files a task needs, instead of re-scanning the framework each time. Agents say when it is out of date. |
 | `/test-developer` | Write missing automated tests from a text file, Excel, Confluence page, Jira issue or ADO/GitLab/GitHub work item. Checks existing coverage, proposes a plan, writes approved tests, and runs them with an approved fix loop (max 5 attempts). |
 | `/test-cases` | Test cases from a Jira issue or ADO work item, with a coverage map. Delivers only approved cases: to ADO Test Plans, to Zephyr Scale through an MCP server, or as a Zephyr Scale CSV file to import. |
 | `/bug-ticket` | Draft a bug in Jira, Azure DevOps, GitLab or GitHub from a failing test or log, with a duplicate check. Files only after approval. |
@@ -141,13 +141,13 @@ Audit the checkout module tests
 
 ### Project knowledge: `.ai/context/`
 
-`/qa-conventions` creates these files in a work repo, and `/framework-map` fills in the framework ones from the code. The agents read them and suggest additions:
+`/qa-conventions` and `/framework-map` create these files in a work repo. The agents read them and suggest additions:
 
 | File | Holds |
 |---|---|
 | `conventions.md` | Tracker fields, severity scale, PR template, naming, sensitive-data rules |
-| `architecture.md` | The framework snapshot: overview diagram, layers, test lifecycle, config, execution |
-| `testing-rules.md`, `framework-patterns.md`, `reusable-components.md` | How tests are written there and what to reuse |
+| `framework-map.md` | The framework snapshot every agent reads first: diagram, where things live, test lifecycle, components, config, how to add a test. Includes the commit it was taken at, so agents can tell when it is out of date |
+| `testing-rules.md` | Team rules for writing tests |
 | `known-flaky-tests.md`, `known-issues.md` | Known problems, so agents don't rediscover them |
 
 Commit `.ai/context/` with the project.
@@ -186,7 +186,7 @@ The agents never handle tokens. Authentication stays in tools that manage it the
 
 ## Customizing
 
-- **Adding an entry:** add an agent (`agents/<name>.md`) or skill (`skills/<name>/SKILL.md`), a row in `catalog.tsv`, a line in this README and in `templates/CLAUDE.md`. Each entry must include the blocks from `templates/safety.md` and `templates/platforms.md` verbatim.
+- **Adding an entry:** add an agent (`agents/<name>.md`) or skill (`skills/<name>/SKILL.md`), a row in `catalog.tsv`, a line in this README and in `templates/CLAUDE.md`. Each entry must include the blocks from `templates/safety.md` and `templates/platforms.md` verbatim, and every entry except `framework-map` the block from `templates/project-map.md`.
 - **Other platforms:** add a column to `templates/platforms.md`, then copy the new block into every entry.
 - **Other languages:** the files assume Java; adjust the build and test commands (for example `pytest` instead of `mvn`).
 

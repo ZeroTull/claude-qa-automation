@@ -1,11 +1,13 @@
 ---
 name: framework-map
-description: Maps an existing test automation framework and writes a snapshot of how it works today to `.ai/context/` - a one-screen overview with a diagram, the layers and modules and how they depend on each other, the path of a test from runner to assertion, configuration and environments, test data, and the reusable components and patterns new tests should follow. Use after /qa-conventions in a new repo, when joining a project, or after big framework changes - "map the framework", "how does this framework work", "snapshot the test framework", "update the framework map".
+description: Builds `.ai/context/framework-map.md`, a compact snapshot of how the test framework works right now - what each part does, what it needs, how the parts relate, where they live and how to add a test. Every QA agent and skill reads it before touching code, so they don't re-scan the whole framework each time. Use after /qa-conventions in a new repo, or when the framework changed - "map the framework", "snapshot the test framework", "update the framework map".
 ---
 
 # Framework Map
 
-Builds a snapshot of the test framework as it is now, so people and the other QA agents and skills can understand it without reading every class: what each part does, what it needs, and how the parts relate. `qa-conventions` collects the team's rules; this skill collects the framework's logic from the code. It describes and does not judge: it lists problems it notices for `test-maintainer` and strategy questions for `senior-automation-qa-engineer`, but does not fix or redesign anything.
+Builds a slice of the test framework as it is right now and saves it as `.ai/context/framework-map.md`. Every QA agent and skill reads that file first (see "Project map" in each of them) and then opens only the files the task needs, instead of scanning the repo again. That saves tokens and time on every task, so the map has to be accurate, short and point to files rather than copy them.
+
+`qa-conventions` collects the team's rules; this skill collects the framework's logic from the code. It describes and does not judge: it lists problems it notices for `test-maintainer` and strategy questions for `senior-automation-qa-engineer`, but does not fix or redesign anything.
 
 ## Safety
 
@@ -39,14 +41,14 @@ Builds a snapshot of the test framework as it is now, so people and the other QA
 
 ## Steps
 
-1. **Check what exists.** Read `.ai/context/` if present (`conventions.md`, `architecture.md`, `framework-patterns.md`, `reusable-components.md`), the README, `CONTRIBUTING.md` and `CLAUDE.md`. If `architecture.md` has a `Snapshot:` line, this is an update: start from `git diff --stat <commit>..HEAD` on the test sources and re-check only what changed, plus anything that file lists under Open questions. If this is not a test project root (no build file, no tests), stop and ask for the correct root.
+1. **Check what exists.** Read `.ai/context/` if present, the README, `CONTRIBUTING.md` and `CLAUDE.md`. If `framework-map.md` exists, this is an update: take the commit from its `Snapshot:` line, run `git diff --stat <commit>..HEAD`, and re-check only what changed plus the Open questions. If that commit is not in the history (after a rebase or in a shallow clone), say so and map from scratch. If older files such as `architecture.md`, `framework-patterns.md` or `reusable-components.md` exist, use them as input and ask before folding their content into the map. If this is not a test project root (no build file, no tests), stop and ask for the correct root.
 
 2. **Inventory.** Record facts with their file paths:
    - Build tool, language version, modules and source sets. From build files use dependency and plugin names only.
    - Runner and libraries: TestNG/JUnit, Cucumber, Rest-Assured, Selenium/Selenide/Playwright, AssertJ/Hamcrest, Allure, WireMock, Testcontainers, DI (Spring, Guice, PicoContainer).
    - How tests are selected: `testng*.xml` suites, `junit-platform.properties`, `@CucumberOptions`, Maven/Gradle profiles, surefire/failsafe includes, groups and tags.
    - CI: which suites run in which stage, by stage and job name. Never read pipeline variables or secret settings.
-   For a large test tree, use the Explore agent (or a subagent) for the scan so the conversation keeps only the summary.
+   For a large test tree, use a subagent for the scan (in Claude Code, the Explore agent) so the conversation keeps only the summary. Put the Safety rules in its prompt and ask it for paths, names and key names, never config values.
 
 3. **Trace the logic.** Follow one representative test of each kind present (UI, API, BDD scenario) from start to finish: runner → base class or hooks → config loading → driver or client creation → page object, step definition or API client → test data → assertion → teardown and reporting. Search for `extends`, `@Before*`/`@After*`, Cucumber hooks, listeners, `ThreadLocal`, factories and DI bindings to find the links. Name the files at each step.
 
@@ -56,11 +58,25 @@ Builds a snapshot of the test framework as it is now, so people and the other QA
    - who uses it, with an approximate usage count;
    - lifecycle and scope (per suite, class, test or thread), and how parallel runs keep state apart.
 
-5. **Configuration and environments.** How an environment is chosen (system property, profile, environment variable name), which config files exist and which wins when they disagree. Record key names, never values. Do not open secret-bearing files; if a config file holds a secret, report its location and type as a finding and continue.
+5. **Configuration and environments.** How an environment is chosen (system property, profile, environment variable name), which config files exist and which wins when they disagree. Record key names, never values: list keys without printing values (for example `grep -oE '^[A-Za-z0-9_.-]+' <file>` for `.properties`, `jq 'keys' <file>` for JSON). If a value is printed anyway, do not repeat it. Do not open secret-bearing files; if a config file holds a secret, report its location and type as a finding and continue.
 
-6. **Separate fact from guess.** Mark every statement as verified (`path:line`) or inferred (say from what). Collect what the code cannot answer, such as which module is legacy or which suite the team trusts, and ask the user in one compact list, not one question at a time.
+6. **Separate fact from guess.** Mark every statement as verified (a path) or inferred (say from what). Collect what the code cannot answer, such as which module is legacy or which suite the team trusts, and ask the user in one compact list, not one question at a time.
 
-7. **Show the slide, then the drafts.** First show a one-screen overview: a Mermaid diagram of at most about 15 nodes (split it per module if there are more) and 5-8 bullets on how a test runs, what it needs and where to add new ones. For example:
+7. **Draft and confirm.** Show the draft of `.ai/context/framework-map.md`. Agents read the whole file before every task, so keep it under about 250 lines: tables and one-line entries, paths instead of code, nothing a reader can get from one file it points to.
+   ```
+   # Framework Map
+   Snapshot: <date>, commit <short sha>. Re-run /framework-map after framework changes.
+   ## Overview          Mermaid diagram (max ~15 nodes, split per module if bigger) + 5-8 bullets
+   ## Where things are  table: I need... | Look in (base classes, page objects, API clients, data, config, hooks, suites)
+   ## Test lifecycle    numbered steps from runner to teardown, with paths
+   ## Components        table: Component | Path | Purpose | Needs | Used by | Scope
+   ## How to add a test per kind: location, base class, naming, data, waits, assertions, example path
+   ## Configuration     how an environment is chosen; config files and precedence; key names only
+   ## Execution         suites, tags, profiles, parallelism, CI stages
+   ## Avoid             habits the existing code avoids (e.g. Thread.sleep where waits exist)
+   ## Open questions    what the code could not answer
+   ```
+   Diagram example:
    ```mermaid
    flowchart LR
      Suite[testng.xml] --> Test[LoginTest]
@@ -71,18 +87,13 @@ Builds a snapshot of the test framework as it is now, so people and the other QA
      Page --> Driver
      Test --> Data[UserBuilder]
    ```
-   Then show the drafts of three files:
-   - `architecture.md`: `Snapshot: <date>, commit <short sha>`, the overview diagram and bullets, a layers and modules table, the test lifecycle as numbered steps, configuration and environments, execution (suites, tags, profiles, parallelism, CI stages), and Open questions.
-   - `framework-patterns.md`: how to add each kind of test (where it goes, which base class, naming, data setup, waits, assertions), each with a path to an existing test that does it well, and the habits the existing code avoids (for example `Thread.sleep` where the framework has waits).
-   - `reusable-components.md`: a table of Component | Path | Purpose | Needs | Used by | Scope.
+   On an update, show only what changes, and keep anything people added by hand unless the user agrees to drop it. Write the file only after the user approves.
 
-   If a file already has content written by people, keep it, show what changes, and ask before replacing any of it. Write the files only after the user approves.
-
-8. **Hand off.** Remind the user to commit `.ai/context/` and to re-run this skill after big framework changes. List any problems noticed in passing (duplication, leaking state, hard-coded waits) in a few lines and offer `test-maintainer` for them.
+8. **Hand off.** Remind the user to commit `.ai/context/framework-map.md` so the whole team and every agent use the same map, and to re-run this skill after framework changes (agents warn when the map is out of date). List any problems noticed in passing (duplication, leaking state, hard-coded waits) in a few lines and offer `test-maintainer` for them.
 
 ## Rules
 
-- Read-only until the user approves the drafts; write only inside `.ai/context/`.
+- Read-only until the user approves the draft; write only `.ai/context/framework-map.md`.
 - Do not run builds or tests, or download dependencies, to learn the framework. Read the code. Ask first if running something is the only way to answer a question.
 - Describe the framework as it is, not as it should be. Every claim points to a file.
 - If the scan only covered a sample of a large repo, say which parts were sampled.

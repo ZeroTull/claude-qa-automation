@@ -222,6 +222,16 @@ expect_failure "skill the lead does not route" "agents/qa-lead.md does not route
   "edit agents/qa-lead.md -e 's/\`test-cases\`/\`x\`/g'"
 expect_failure "framework-map the lead does not route" "agents/qa-lead.md does not route skill \`framework-map\`" \
   "edit agents/qa-lead.md -e 's/\`framework-map\`/\`x\`/g'"
+expect_failure "QA entry without the project map block" "agents/test-maintainer.md: does not contain the block from templates/project-map.md" \
+  "edit agents/test-maintainer.md -e 's|^- If the map and the code disagree, the code wins; say what differs.|- Trust the map.|'"
+expect_failure "project-map.md missing" "templates/project-map.md missing or empty" \
+  "rm templates/project-map.md"
+expect_failure "map skill writes another file" "skills/framework-map/SKILL.md must write only" \
+  "edit skills/framework-map/SKILL.md -e 's|write only .\.ai/context/framework-map\.md.|write only architecture.md|'"
+expect_failure "map skill without a Snapshot line" "skills/framework-map/SKILL.md must write only" \
+  "edit skills/framework-map/SKILL.md -e 's|^   Snapshot: <date>, commit <short sha>.|   Taken today.|'"
+expect_failure "agents read another map file" "templates/project-map.md must name" \
+  "edit templates/project-map.md -e 's|framework-map\.md|map.md|'"
 expect_failure "personal entry in the QA repo" "unknown group 'personal'" \
   "edit catalog.tsv -e 's/^pr-reviewer\tagent\tqa/pr-reviewer\tagent\tpersonal/'"
 expect_failure "machine path in settings.example.json" "settings.example.json contains a machine-specific /Users/ path" \

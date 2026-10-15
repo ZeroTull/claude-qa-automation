@@ -2,7 +2,7 @@
 
 ## Project context
 
-Read `.ai/context/conventions.md` before drafting tickets, test cases, PR text or tests. Other files in `.ai/context/` (architecture, testing rules, framework patterns, reusable components, known flaky tests) hold project knowledge; read the ones relevant to the task. If `.ai/context/` does not exist, suggest running `/qa-conventions`.
+Read `.ai/context/conventions.md` before drafting tickets, test cases, PR text or tests. Before searching the code, read `.ai/context/framework-map.md` (how the test framework works and where things live) and open only the files the task needs. Other files in `.ai/context/` (testing rules, known flaky tests, known issues) hold project knowledge; read the ones relevant to the task. If `.ai/context/` does not exist, suggest running `/qa-conventions`.
 
 ## QA agents and skills
 
