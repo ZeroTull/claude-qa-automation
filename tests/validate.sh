@@ -210,14 +210,22 @@ MAP_FILE = ".ai/context/framework-map.md"
 mapper = read(f"{repo}/skills/framework-map/SKILL.md")
 if project_map and (f"`{MAP_FILE}`" not in project_map or "`Snapshot:`" not in project_map):
     err(f"templates/project-map.md must name `{MAP_FILE}` and its `Snapshot:` line")
-if mapper and (f"write only `{MAP_FILE}`" not in mapper or "Snapshot: <date>, commit <short sha>" not in mapper):
-    err(f"skills/framework-map/SKILL.md must write only `{MAP_FILE}` with a `Snapshot: <date>, commit <short sha>` line")
+# Rules the map's safety and staleness depend on; each phrase pins one rule.
+MAPPER_RULES = {
+    f"write only `{MAP_FILE}`": f"must write only `{MAP_FILE}`",
+    "Snapshot: <date>, commit <short sha>, uncommitted changes:": "must record the snapshot commit and uncommitted changes",
+    "under 250 lines": "must keep the map under 250 lines",
+    "never copy them into the map": "must paraphrase code comments and strings",
+    "`.env*`, `*secret*`, `*credential*` or `*token*`": "must skip secret-bearing config files by name",
+    "Never copy URLs, hosts, IP addresses or account names": "must not copy URLs, hosts or account names",
+}
+for phrase, message in MAPPER_RULES.items():
+    if mapper and phrase not in mapper:
+        err(f"skills/framework-map/SKILL.md {message}")
 # The shared blocks mention conventions.md as something to read; only the skill's own text says what it writes.
 own_text = mapper.replace(safety, "").replace(platforms, "") if safety and platforms else mapper
-for other in sorted(set(re.findall(r"`(\.ai/context/[^`]+)`", own_text)) - {MAP_FILE}):
+for other in sorted(set(re.findall(r"\.ai/context/[A-Za-z0-9_.-]*[A-Za-z0-9_-]", own_text)) - {MAP_FILE}):
     err(f"skills/framework-map/SKILL.md names `{other}`; it may only write `{MAP_FILE}`")
-if mapper and "under 250 lines" not in mapper:
-    err("skills/framework-map/SKILL.md must keep the map under 250 lines")
 readme = read(f"{repo}/README.md")
 template = read(f"{repo}/templates/CLAUDE.md")
 
