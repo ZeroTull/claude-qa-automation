@@ -216,7 +216,8 @@ MAPPER_RULES = {
     "Snapshot: <date>, commit <short sha>, uncommitted changes:": "must record the snapshot commit and uncommitted changes",
     "under 250 lines": "must keep the map under 250 lines",
     "never copy them into the map": "must paraphrase code comments and strings",
-    "`.env*`, `*secret*`, `*credential*` or `*token*`": "must skip secret-bearing config files by name",
+    "files named `.env*`; `*secret*`, `*credential*` or `*token*` files": "must skip secret-bearing config files by name",
+    "[A-Za-z0-9_.-]+:( |$)' <file>` for YAML": "must list YAML keys without host:port values",
     "Never copy URLs, hosts, IP addresses or account names": "must not copy URLs, hosts or account names",
 }
 for phrase, message in MAPPER_RULES.items():

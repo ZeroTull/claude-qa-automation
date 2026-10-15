@@ -244,6 +244,8 @@ expect_failure "map skill without the skip list" "must skip secret-bearing confi
   "edit skills/framework-map/SKILL.md -e 's|\`\*token\*\`|tokens|'"
 expect_failure "map skill copies hosts" "must not copy URLs, hosts or account names" \
   "edit skills/framework-map/SKILL.md -e 's|Never copy URLs, hosts, IP addresses or account names|Keep URLs|'"
+expect_failure "YAML key grep that prints host:port items" "must list YAML keys without host:port values" \
+  "edit skills/framework-map/SKILL.md -e 's|+:( [|][$])|+:|'"
 expect_failure "agents read another map file" "templates/project-map.md must name" \
   "edit templates/project-map.md -e 's|framework-map\.md|map.md|'"
 expect_failure "personal entry in the QA repo" "unknown group 'personal'" \
