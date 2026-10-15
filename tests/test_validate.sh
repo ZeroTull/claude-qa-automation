@@ -254,8 +254,10 @@ expect_failure "YAML key pattern that prints a dotted host key" "the YAML key pa
   "edit skills/framework-map/SKILL.md -e 's|\[A-Za-z0-9_-\]+:( |[A-Za-z0-9_.-]+:( |'"
 expect_failure "host key printed as-is" "must write a host key as <host key>" \
   "edit skills/framework-map/SKILL.md -e 's|If a key is itself a host or URL|If a key is named|'"
-expect_failure "quoted-key note dropped" "must note that quoted YAML keys may be missed" \
-  "edit skills/framework-map/SKILL.md -e 's|Quoted YAML keys may be missed|Keys are listed|'"
+expect_failure "quoted-key note dropped" "must note that quoted or dotted YAML keys may be missed" \
+  "edit skills/framework-map/SKILL.md -e 's|Quoted or dotted YAML keys may be missed|Keys are listed|'"
+expect_failure "host-name key note dropped" "must say not to repeat host-name keys" \
+  "edit skills/framework-map/SKILL.md -e 's|The grep can still show a key that is a host name|Keys are safe|'"
 expect_failure "agents read another map file" "templates/project-map.md must name" \
   "edit templates/project-map.md -e 's|framework-map\.md|map.md|'"
 expect_failure "personal entry in the QA repo" "unknown group 'personal'" \

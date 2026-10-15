@@ -219,7 +219,8 @@ MAPPER_RULES = {
     "files named `.env*`; `*secret*`, `*credential*` or `*token*` files of any type except source code": "must skip secret-bearing config files by name",
     "[A-Za-z0-9_-]+:( |$)' <file>` for YAML": "must list YAML keys without host:port values",
     "If a key is itself a host or URL, write `<host key>`": "must write a host key as <host key>",
-    "Quoted YAML keys may be missed": "must note that quoted YAML keys may be missed",
+    "Quoted or dotted YAML keys may be missed": "must note that quoted or dotted YAML keys may be missed",
+    "The grep can still show a key that is a host name": "must say not to repeat host-name keys",
     "Never copy URLs, hosts, IP addresses or account names": "must not copy URLs, hosts or account names",
 }
 # Run the skill's YAML key pattern on a sample: it must list keys and never a host:port list item.
