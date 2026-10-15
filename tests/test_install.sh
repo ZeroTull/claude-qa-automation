@@ -230,6 +230,8 @@ assert "copies every agent and skill" test "$(find "$proj/.claude/agents" "$proj
 assert "copies, does not link" test ! -L "$proj/.claude/agents/$agent"
 assert "creates settings.json from the example" cmp -s "$proj/.claude/settings.json" "$REPO/settings.example.json"
 assert "keeps existing CLAUDE.md" test "$(cat "$proj/CLAUDE.md")" = "# existing"
+assert "copies the framework-map skill" test -f "$proj/.claude/skills/framework-map/SKILL.md"
+assert "next steps name /framework-map" grep -q "/qa-conventions, then /framework-map" <<<"$out"
 echo "custom" >"$proj/.claude/settings.json"
 run --project "$proj"
 assert "keeps an existing settings.json" test "$(cat "$proj/.claude/settings.json")" = "custom"

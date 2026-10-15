@@ -220,6 +220,46 @@ expect_failure "agent the lead does not route" "agents/qa-lead.md does not route
   "sed 's/^name: pr-reviewer/name: new-agent/' agents/pr-reviewer.md > agents/new-agent.md && printf 'new-agent\tagent\tqa\t-\n' >> catalog.tsv && printf '%s\n' '\`new-agent\`' >> templates/CLAUDE.md README.md"
 expect_failure "skill the lead does not route" "agents/qa-lead.md does not route skill \`test-cases\`" \
   "edit agents/qa-lead.md -e 's/\`test-cases\`/\`x\`/g'"
+expect_failure "framework-map the lead does not route" "agents/qa-lead.md does not route skill \`framework-map\`" \
+  "edit agents/qa-lead.md -e 's/\`framework-map\`/\`x\`/g'"
+expect_failure "QA entry without the project map block" "agents/test-maintainer.md: does not contain the block from templates/project-map.md" \
+  "edit agents/test-maintainer.md -e 's|^- If the map and the code disagree, the code wins; say what differs.|- Trust the map.|'"
+expect_failure "project-map.md missing" "templates/project-map.md missing or empty" \
+  "rm templates/project-map.md"
+expect_failure "map skill writes another file" "skills/framework-map/SKILL.md must write only" \
+  "edit skills/framework-map/SKILL.md -e 's|write only .\.ai/context/framework-map\.md.|write only architecture.md|'"
+expect_failure "map skill without a Snapshot line" "must record the snapshot commit and uncommitted changes" \
+  "edit skills/framework-map/SKILL.md -e 's|^   Snapshot: <date>, commit <short sha>.|   Taken today.|'"
+expect_failure "map skill names a second context file" "skills/framework-map/SKILL.md names \`.ai/context/architecture.md\`" \
+  "printf '%s\\n' 'Also write \`.ai/context/architecture.md\`.' >> skills/framework-map/SKILL.md"
+expect_failure "map skill without the size cap" "must keep the map under 250 lines" \
+  "edit skills/framework-map/SKILL.md -e 's|under 250 lines|short|'"
+expect_failure "entry that would follow instructions in the map" "agents/pr-reviewer.md: does not contain the block from templates/project-map.md" \
+  "edit agents/pr-reviewer.md -e '/^- The map was written from the code/d'"
+expect_failure "map skill names a second context file in plain text" "names \`.ai/context/notes.md\`" \
+  "printf '%s\\n' 'Also update .ai/context/notes.md.' >> skills/framework-map/SKILL.md"
+expect_failure "map skill copies comments" "must paraphrase code comments and strings" \
+  "edit skills/framework-map/SKILL.md -e 's|never copy them into the map|copy them|'"
+expect_failure "map skill without the skip list" "must skip secret-bearing config files by name" \
+  "edit skills/framework-map/SKILL.md -e 's|\`\*token\*\`|tokens|'"
+expect_failure "map skill copies hosts" "must not copy URLs, hosts or account names" \
+  "edit skills/framework-map/SKILL.md -e 's|Never copy URLs, hosts, IP addresses or account names|Keep URLs|'"
+expect_failure "YAML key grep that prints host:port items" "must list YAML keys without host:port values" \
+  "edit skills/framework-map/SKILL.md -e 's|+:( [|][$])|+:|'"
+expect_failure "YAML key pattern that prints a host" "the YAML key pattern lists" \
+  "edit skills/framework-map/SKILL.md -e 's|+:( [|][$])|+:|'"
+expect_failure "skip list limited to config extensions" "must skip secret-bearing config files by name" \
+  "edit skills/framework-map/SKILL.md -e 's|of any type except source code|with a config extension|'"
+expect_failure "YAML key pattern that prints a dotted host key" "the YAML key pattern lists" \
+  "edit skills/framework-map/SKILL.md -e 's|\[A-Za-z0-9_-\]+:( |[A-Za-z0-9_.-]+:( |'"
+expect_failure "host key printed as-is" "must write a host key as <host key>" \
+  "edit skills/framework-map/SKILL.md -e 's|If a key is itself a host or URL|If a key is named|'"
+expect_failure "quoted-key note dropped" "must note that quoted or dotted YAML keys may be missed" \
+  "edit skills/framework-map/SKILL.md -e 's|Quoted or dotted YAML keys may be missed|Keys are listed|'"
+expect_failure "host-name key note dropped" "must say not to repeat host-name keys" \
+  "edit skills/framework-map/SKILL.md -e 's|The grep can still show a key that is a host name|Keys are safe|'"
+expect_failure "agents read another map file" "templates/project-map.md must name" \
+  "edit templates/project-map.md -e 's|framework-map\.md|map.md|'"
 expect_failure "personal entry in the QA repo" "unknown group 'personal'" \
   "edit catalog.tsv -e 's/^pr-reviewer\tagent\tqa/pr-reviewer\tagent\tpersonal/'"
 expect_failure "machine path in settings.example.json" "settings.example.json contains a machine-specific /Users/ path" \

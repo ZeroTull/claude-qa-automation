@@ -563,7 +563,7 @@ case "${1:-}" in
     check_dependencies
     echo
     echo "Note: agents or skills removed from this repo are not deleted from $project/.claude - remove them by hand."
-    echo "Next: open Claude Code in $project and run /qa-conventions."
+    echo "Next: open Claude Code in $project and run /qa-conventions, then /framework-map."
     ;;
   --uninstall)
     [[ $# -eq 1 ]] || die "--uninstall takes no arguments"
