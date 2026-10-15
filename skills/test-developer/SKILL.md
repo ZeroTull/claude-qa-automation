@@ -48,7 +48,7 @@ Turns requirements into automated tests that fit the project's existing framewor
 
 ## Phase 0 - Understand the project
 
-1. Read `.ai/context/*.md` if present (conventions, testing rules, framework patterns, reusable components, known flaky tests).
+1. Read `.ai/context/*.md` if present (conventions, architecture, testing rules, framework patterns, reusable components, known flaky tests). If `architecture.md` has a framework map, use it and read only the files it points to for this task.
 2. Detect the build tool and test dependencies: TestNG/JUnit, Cucumber, Rest-Assured, Selenium/Selenide/Playwright, Allure, Spring, AssertJ/Hamcrest.
 3. Read 2-3 existing tests of the same type to learn package layout, naming, base classes, hooks, injection (PicoContainer/Spring/Guice), assertion library and data setup.
 4. For Cucumber: find `.feature` files, step definition classes and the runner (`@CucumberOptions`, `testng*.xml`). Note tag conventions and Gherkin style.

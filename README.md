@@ -66,7 +66,7 @@ This copies the agents and skills into `<repo>/.claude/`. It also adds `.claude/
 
 To update later, run `git pull` here, then `./install.sh --project <repo> --update`. It replaces the entries whose content changed, including local edits, and never touches the team's settings or `CLAUDE.md`.
 
-Then, in the work repo, start `claude` and run `/qa-conventions`.
+Then, in the work repo, start `claude` and run `/qa-conventions`, then `/framework-map`.
 
 ## Agents and skills
 
@@ -86,6 +86,7 @@ Then, in the work repo, start `claude` and run `/qa-conventions`.
 | Skill | Use it for |
 |---|---|
 | `/qa-conventions` | **Run first in each repo.** Builds `.ai/context/conventions.md` (tracker fields for Jira/ADO/GitLab/GitHub, severity scale, PR template, test naming, sensitive-data rules) from what the team already has. |
+| `/framework-map` | **Run second.** Reads the test framework and writes a snapshot of how it works to `.ai/context/`: a one-screen overview with a diagram, layers and modules and how they depend on each other, the path of a test from runner to assertion, config and environments, reusable components and the patterns new tests follow. Re-run after big framework changes. |
 | `/test-developer` | Write missing automated tests from a text file, Excel, Confluence page, Jira issue or ADO/GitLab/GitHub work item. Checks existing coverage, proposes a plan, writes approved tests, and runs them with an approved fix loop (max 5 attempts). |
 | `/test-cases` | Test cases from a Jira issue or ADO work item, with a coverage map. Delivers only approved cases: to ADO Test Plans, to Zephyr Scale through an MCP server, or as a Zephyr Scale CSV file to import. |
 | `/bug-ticket` | Draft a bug in Jira, Azure DevOps, GitLab or GitHub from a failing test or log, with a duplicate check. Files only after approval. |
@@ -140,11 +141,12 @@ Audit the checkout module tests
 
 ### Project knowledge: `.ai/context/`
 
-`/qa-conventions` creates these files in a work repo. The agents read them and suggest additions:
+`/qa-conventions` creates these files in a work repo, and `/framework-map` fills in the framework ones from the code. The agents read them and suggest additions:
 
 | File | Holds |
 |---|---|
 | `conventions.md` | Tracker fields, severity scale, PR template, naming, sensitive-data rules |
+| `architecture.md` | The framework snapshot: overview diagram, layers, test lifecycle, config, execution |
 | `testing-rules.md`, `framework-patterns.md`, `reusable-components.md` | How tests are written there and what to reuse |
 | `known-flaky-tests.md`, `known-issues.md` | Known problems, so agents don't rediscover them |
 

@@ -59,6 +59,7 @@ Classify the request, then use exactly the owner below. If it fits none, or more
 | Check a ticket is ready for development | `ticket-review` | skill, here |
 | Draft a PR or MR description | `pr-description` | skill, here |
 | Set up or update team conventions | `qa-conventions` | skill, here |
+| Map how the test framework works (snapshot for `.ai/context/`) | `framework-map` | skill, here |
 | Monthly accuracy check of the agents | `agent-calibration` | skill, here |
 
 Skills run in this conversation because they stop for the user's approval at each step; follow the matching skill's instructions exactly. If you can't invoke a skill directly, read its `SKILL.md` with your read tool and follow it: in Claude Code it is at `~/.claude/skills/<name>/SKILL.md`, in GitHub Copilot at `~/.copilot/skills/<name>/SKILL.md`, or in a team repo at `.claude/skills/<name>/SKILL.md`.
@@ -100,6 +101,7 @@ Keep these lines short. They are a trace for the user, not a second report.
 
 Some requests need several owners. Go one step at a time and stop at every approval gate:
 - A red pipeline: `ci-failure-diagnoser`. If it says flaky, offer `flaky-test-triager`. If it is a real product defect, offer `bug-ticket`.
+- A new repo: `qa-conventions`, then offer `framework-map`.
 - A new story: offer `ticket-review` first, then `test-cases` and/or `test-developer`.
 - A PR that adds tests: `pr-reviewer`; for framework-level concerns it raises, offer `test-maintainer`.
 

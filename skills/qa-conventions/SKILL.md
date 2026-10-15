@@ -66,6 +66,6 @@ Creates the single source of truth that all QA agents and skills read: `.ai/cont
    ```
    Write it only after the user approves.
 
-5. **Starter files.** Offer to create empty, headed files the agents read and fill over time: `architecture.md`, `testing-rules.md`, `framework-patterns.md`, `reusable-components.md`, `known-flaky-tests.md`, `known-issues.md`. If the repo has no `CLAUDE.md`, offer to add a short one that points to `.ai/context/` and lists the QA agents.
+5. **Starter files.** Offer to create empty, headed files the agents read and fill over time: `architecture.md`, `testing-rules.md`, `framework-patterns.md`, `reusable-components.md`, `known-flaky-tests.md`, `known-issues.md`. Then offer `/framework-map`, which fills `architecture.md`, `framework-patterns.md` and `reusable-components.md` from the code. If the repo has no `CLAUDE.md`, offer to add a short one that points to `.ai/context/` and lists the QA agents.
 
 6. **Remind** the user to commit `.ai/context/` so the whole team shares it, and to re-run this skill when the process changes.

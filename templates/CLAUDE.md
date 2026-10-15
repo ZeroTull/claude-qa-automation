@@ -2,7 +2,7 @@
 
 ## Project context
 
-Read `.ai/context/conventions.md` before drafting tickets, test cases, PR text or tests. Other files in `.ai/context/` (testing rules, framework patterns, known flaky tests) hold project knowledge; read the ones relevant to the task. If `.ai/context/` does not exist, suggest running `/qa-conventions`.
+Read `.ai/context/conventions.md` before drafting tickets, test cases, PR text or tests. Other files in `.ai/context/` (architecture, testing rules, framework patterns, reusable components, known flaky tests) hold project knowledge; read the ones relevant to the task. If `.ai/context/` does not exist, suggest running `/qa-conventions`.
 
 ## QA agents and skills
 
@@ -20,6 +20,7 @@ Read `.ai/context/conventions.md` before drafting tickets, test cases, PR text o
 | Check a ticket is ready for dev | `/ticket-review` |
 | Draft a PR description | `/pr-description` |
 | Set up or update conventions | `/qa-conventions` |
+| Map how the test framework works | `/framework-map` |
 | Monthly accuracy check of the agents | `/agent-calibration` |
 
 Agents do not change anything; they return a report. The `pr-reviewer` and `test-maintainer` reports end with "Apply Rules". When the user approves items from it, apply only those items here, following those rules.
