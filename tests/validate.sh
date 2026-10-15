@@ -217,15 +217,18 @@ MAPPER_RULES = {
     "under 250 lines": "must keep the map under 250 lines",
     "never copy them into the map": "must paraphrase code comments and strings",
     "files named `.env*`; `*secret*`, `*credential*` or `*token*` files of any type except source code": "must skip secret-bearing config files by name",
-    "[A-Za-z0-9_.-]+:( |$)' <file>` for YAML": "must list YAML keys without host:port values",
+    "[A-Za-z0-9_-]+:( |$)' <file>` for YAML": "must list YAML keys without host:port values",
+    "If a key is itself a host or URL, write `<host key>`": "must write a host key as <host key>",
+    "Quoted YAML keys may be missed": "must note that quoted YAML keys may be missed",
     "Never copy URLs, hosts, IP addresses or account names": "must not copy URLs, hosts or account names",
 }
 # Run the skill's YAML key pattern on a sample: it must list keys and never a host:port list item.
 yaml_grep = re.search(r"`grep -oE '([^']+)' <file>` for YAML", mapper)
 if mapper and yaml_grep:
-    sample = ["grid:", "  hosts:", "    - selenium-hub.corp.example:4444", "    - name: chrome", "  url: http://x"]
+    sample = ["grid:", "  hosts:", "    - selenium-hub.corp.example:4444", "    - name: chrome", "  url: http://x",
+              "  nodes:", "    selenium-node.corp.example: 5555", "  local:", "    - selenium-hub:4444"]
     listed_keys = [m.group(0) for m in (re.match(yaml_grep.group(1), line) for line in sample) if m]
-    if any("corp.example" in k for k in listed_keys) or not any(k.strip() == "hosts:" for k in listed_keys):
+    if any("corp.example" in k or "selenium-hub" in k for k in listed_keys) or not any(k.strip() == "hosts:" for k in listed_keys):
         err(f"skills/framework-map/SKILL.md: the YAML key pattern lists {listed_keys}, expected keys only")
 for phrase, message in MAPPER_RULES.items():
     if mapper and phrase not in mapper:
