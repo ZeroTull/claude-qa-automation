@@ -470,12 +470,16 @@ expect_failure "PR description guessing after a lookup error" "skills/pr-descrip
   "edit skills/pr-description/SKILL.md -e 's|; any other lookup error means the target is unknown, so ask||'"
 expect_failure "symbolic-ref allowed in a writing form" "allows a git symbolic-ref form that can write refs" \
   "edit settings.example.json -e 's|\"Bash(git symbolic-ref --short refs/remotes/origin/HEAD)\"|\"Bash(git symbolic-ref --short refs/remotes/origin/HEAD)\", \"Bash(git symbolic-ref *)\"|'"
-expect_failure "symbolic-ref not allowed" "settings.example.json must allow exactly" \
+expect_failure "symbolic-ref not allowed" "settings.example.json must allow Bash(git symbolic-ref" \
   "edit settings.example.json -e '/git symbolic-ref --short refs.remotes.origin.HEAD/d'"
 expect_failure "fetch options not denied" "settings.example.json misses deny rules: Bash(git fetch *--*)" \
   "edit settings.example.json -e '/git fetch [*]--[*]/d'"
 expect_failure "fetch force refspec not denied" "settings.example.json misses deny rules: Bash(git fetch *+*)" \
   "edit settings.example.json -e '/git fetch [*][+][*]/d'"
+expect_failure "reviewer reading the head owner as the base" "agents/pr-reviewer.md must find a fork's base repository from the PR URL" \
+  "edit agents/pr-reviewer.md -e 's|.gh pr view --json url,isCrossRepository.|gh pr view --json headRepositoryOwner|'"
+expect_failure "reviewer expecting a diff from az repos pr show" "agents/pr-reviewer.md must not expect a diff from az repos pr show" \
+  "edit agents/pr-reviewer.md -e 's|; for Azure DevOps the diff comes from the MCP or the local fetch below||'"
 expect_failure "personal entry in the QA repo" "unknown group 'personal'" \
   "edit catalog.tsv -e 's/^pr-reviewer\tagent\tqa/pr-reviewer\tagent\tpersonal/'"
 expect_failure "machine path in settings.example.json" "settings.example.json contains a machine-specific /Users/ path" \

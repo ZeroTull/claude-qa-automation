@@ -408,6 +408,8 @@ AGENT_RULES = {
         "prints `origin/develop`, so `<base>` is `develop`": "must strip origin/ from the default branch",
         "`targetRefName` without `refs/heads/`": "must name the Azure DevOps target branch command",
         "use that remote instead of `origin` below": "must handle PRs from forks",
+        "`gh pr view --json url,isCrossRepository`": "must find a fork's base repository from the PR URL",
+        "for Azure DevOps the diff comes from the MCP or the local fetch below": "must not expect a diff from az repos pr show",
         "fetch each branch with its own command, in the form the Rules allow": "must fetch PR branches in the allowed form",
         "`gh pr view --json baseRefName -q .baseRefName`": "must name the GitHub target branch command",
         "`glab mr view -F json` (the `target_branch` field)": "must name the GitLab target branch command",
@@ -567,7 +569,7 @@ if example:
         err("settings.example.json contains a machine-specific /Users/ path")
     allow = example[0].get("permissions", {}).get("allow", []) if isinstance(example[0], dict) else []
     if "Bash(git symbolic-ref --short refs/remotes/origin/HEAD)" not in allow:
-        err("settings.example.json must allow exactly `git symbolic-ref --short refs/remotes/origin/HEAD`")
+        err("settings.example.json must allow Bash(git symbolic-ref --short refs/remotes/origin/HEAD)")
     loose = [r for r in allow if r.startswith("Bash(git symbolic-ref") and r != "Bash(git symbolic-ref --short refs/remotes/origin/HEAD)"]
     if loose:
         err(f"settings.example.json allows a git symbolic-ref form that can write refs: {', '.join(loose)}")
