@@ -463,7 +463,8 @@ AGENT_RULES = {
     "agents/test-maintainer.md": {
         "## Scoring": "must define how scores are given",
         "count the items affected by at least one of that category's countable signals": "must score each category from its own signals",
-        "a test that cannot fail (no assertion, an assertion that is always true, or a failure swallowed in a catch)": "must count tests that cannot fail",
+        "a test that cannot fail (no assertion, an assertion that is always true": "must count tests that cannot fail",
+        "or a failure swallowed in a catch)": "must count swallowed failures",
         "and the last row includes 100%": "must give 100% a score",
         "Lower bounds are inclusive and upper bounds exclusive": "must define inclusive and exclusive bounds",
         "with two exceptions: the \"above 0%\" row excludes exactly 0%": "must name the 0% exception",
@@ -485,7 +486,9 @@ AGENT_RULES = {
         "A gate counts only if it runs in CI on the default branch and fails the pipeline when violated": "must define when a gate counts",
         "A missing or empty CI configuration counts as 0 gates": "must score a missing CI configuration",
         "Every score cites its evidence": "must cite evidence for every score",
-        "take the first N items of each kind in sorted path order (N at least 50)": "must sample deterministically",
+        "Count every item in the scope; do not sample": "must count every item",
+        "Stability is the lower of its counted score and 4": "must define the override as a minimum",
+        "The override never raises a score": "must not raise a score through the override",
         "if fewer than 3 categories have a score, write \"overall n/a (categories with a score: N)\"": "must handle too few scored categories",
         "round it down, and cap it at the lowest scored category (CI gates included) plus 3": "must define rounding and the cap",
         "apply the Stability override first": "must apply the override before the overall score",
@@ -656,7 +659,7 @@ TM_ROWS = [
 # second mapping can be added in prose or any other format.
 TM_RANGE_LINES = [
     "Compare the exact fraction (affected / total) with the bounds below. Show the share with two decimals next to the counts (for example 10/503 = 1.99%, which scores 8); the exact value decides, never the rounded one. Lower bounds are inclusive and upper bounds exclusive, with two exceptions: the \"above 0%\" row excludes exactly 0% (which has its own rows), and the last row includes 100%. If the total is zero, the category is `n/a` with the reason (for example \"no API tests\").",
-    "Stability override: the flaky rate is the share of test executions on the default branch in the last 30 days that failed and then passed on a retry. Compare its exact fraction: from 5% to 10% inclusive, Stability is at most 4; above 10%, at most 2. Without a run history, or with no executions in the last 30 days, there is no override, and the report says so. The override only caps a Stability score that the counts produced: without Stability counts, Stability stays `n/a` and the report gives the flaky rate as evidence."
+    "Stability override: the flaky rate is the share of test executions on the default branch in the last 30 days that failed and then passed on a retry. Compare its exact fraction: from 5% to 10% inclusive, Stability is the lower of its counted score and 4; above 10%, the lower of its counted score and 2. The override never raises a score. Without a run history, or with no executions in the last 30 days, there is no override, and the report says so. The override only caps a Stability score that the counts produced: without Stability counts, Stability stays `n/a` and the report gives the flaky rate as evidence."
 ]
 # The test-maintainer score table must map every share to exactly one score: scores 10 down to 0, and share ranges
 # that start at 0%, touch without overlapping, and end at 100%. A row deleted from both the agent and its snapshot
