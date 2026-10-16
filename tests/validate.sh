@@ -414,6 +414,7 @@ AGENT_RULES = {
         "`gh pr view --json baseRefName -q .baseRefName`": "must name the GitHub target branch command",
         "`glab mr view -F json` (the `target_branch` field)": "must name the GitLab target branch command",
         "On a detached HEAD there is no branch to look up, so go to step 2": "must handle a detached HEAD",
+        "`git remote set-head origin -a`": "must say how to set a missing origin/HEAD",
         "reports that no pull request or merge request exists for the branch": "must fall through when no PR/MR exists",
         "means the PR target is unknown, so do not fall back to the default branch: go to step 3": "must not guess the base after a lookup error",
         "For a PR from a fork, use \"Read a PR/MR\" instead": "must use the platform diff for fork PRs",
@@ -428,6 +429,9 @@ AGENT_RULES = {
         "Run `git fetch <remote> <target>:refs/remotes/<remote>/<target>` first; if that fails, say the base may be out of date": "must refresh the base before diffing",
         "unless the PR comes from a fork whose base repository is another remote": "must handle PRs from forks",
         "`glab mr view -F json` (`target_branch`)": "must name the per-platform target lookups",
+        "GitHub `gh pr view --json baseRefName -q .baseRefName`": "must name the GitHub target lookup",
+        "`az repos pr list --source-branch <branch> --status active --query \"[0].targetRefName\" -o tsv`": "must name the Azure DevOps target lookup",
+        "GitHub `gh pr view --json url,isCrossRepository`": "must say how to find a fork's base repository",
     },
     "skills/bug-ticket/SKILL.md": {
         "An intermittent failure can still be a product defect": "must not dismiss intermittent failures as non-bugs",

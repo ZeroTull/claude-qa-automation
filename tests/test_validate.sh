@@ -488,6 +488,14 @@ expect_failure "PR description fetching a fork base from origin" "skills/pr-desc
   "edit skills/pr-description/SKILL.md -e 's|unless the PR comes from a fork whose base repository is another remote|always|'"
 expect_failure "PR description without lookup commands" "skills/pr-description/SKILL.md must name the per-platform target lookups" \
   "edit skills/pr-description/SKILL.md -e 's|.glab mr view -F json. (.target_branch.)|glab|'"
+expect_failure "PR description without a GitHub lookup" "skills/pr-description/SKILL.md must name the GitHub target lookup" \
+  "edit skills/pr-description/SKILL.md -e 's|GitHub .gh pr view --json baseRefName -q .baseRefName.|GitHub gh|'"
+expect_failure "PR description without an ADO lookup" "skills/pr-description/SKILL.md must name the Azure DevOps target lookup" \
+  "edit skills/pr-description/SKILL.md -e 's|.az repos pr list --source-branch <branch> --status active --query \"\[0\][.]targetRefName\" -o tsv.|az|'"
+expect_failure "PR description without a fork base lookup" "skills/pr-description/SKILL.md must say how to find a fork's base repository" \
+  "edit skills/pr-description/SKILL.md -e 's|GitHub .gh pr view --json url,isCrossRepository.|GitHub|'"
+expect_failure "reviewer without the set-head hint" "agents/pr-reviewer.md must say how to set a missing origin/HEAD" \
+  "edit agents/pr-reviewer.md -e 's| If .origin/HEAD. is just not set, say that .git remote set-head origin -a. sets it[.]||'"
 expect_failure "personal entry in the QA repo" "unknown group 'personal'" \
   "edit catalog.tsv -e 's/^pr-reviewer\tagent\tqa/pr-reviewer\tagent\tpersonal/'"
 expect_failure "machine path in settings.example.json" "settings.example.json contains a machine-specific /Users/ path" \
