@@ -332,6 +332,11 @@ else:
 
 # Behaviour rules that agents depend on: each phrase pins one rule, so an edit cannot drop it silently.
 AGENT_RULES = {
+    "templates/safety.md": {
+        "you may use dependency coordinates and versions, plugin configuration, profiles and test filters": "must allow the build-file details diagnosis needs",
+        "never quote server, repository, distribution or credential blocks": "must forbid quoting credential blocks from build files",
+        "Maven `settings.xml`, `gradle.properties`": "must forbid reading Maven settings.xml and gradle.properties",
+    },
     "agents/ci-failure-diagnoser.md": {
         "Until the evidence rules the product out": "must not rule out a product defect for timeouts or reruns without evidence",
         "list every plausible one, ranked": "must list every plausible cause when the evidence is inconclusive",
@@ -503,6 +508,7 @@ if example:
                 "Read(**/secrets/**/*.properties)", "Read(**/secrets/**/*.env)", "Read(**/secrets/**/*.conf)",
                 "Read(**/secrets/**/*.txt)",
                 "Read(~/.ssh/**)", "Read(~/.azure/**)", "Read(~/.config/gh/**)", "Read(**/*.pem)",
+                "Read(**/settings.xml)", "Read(**/gradle.properties)",
                 "Bash(glab ci get *--with-variables*)"]
     if "/Users/" in json.dumps(example[0]):
         err("settings.example.json contains a machine-specific /Users/ path")

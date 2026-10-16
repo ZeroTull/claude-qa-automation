@@ -70,6 +70,8 @@
       "Read(~/.azure/**)",
       "Read(~/.m2/settings.xml)",
       "Read(~/.gradle/gradle.properties)",
+      "Read(**/settings.xml)",
+      "Read(**/gradle.properties)",
       "Bash(rm -rf *)",
       "Bash(glab ci get *--with-variables*)",
       "Bash(git diff *--output*)"

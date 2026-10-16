@@ -360,6 +360,14 @@ expect_failure "verdicts without routing cases" "must map every verdict to a rou
   "edit agents/flaky-test-triager.md -e 's|/ inconclusive \\[case 5\\]|/ inconclusive|'"
 expect_failure "flaky verdict without ruling out the product" "must rule out the product before calling a test genuinely flaky" \
   "edit agents/flaky-test-triager.md -e 's|cause identified in the test and product ruled out (case 2)|cause identified (case 2)|'"
+expect_failure "safety rule that hides versions again" "templates/safety.md must allow the build-file details diagnosis needs" \
+  "edit templates/safety.md -e 's|you may use dependency coordinates and versions, plugin configuration, profiles and test filters|use only dependency and plugin names|'"
+expect_failure "safety rule that allows credential blocks" "templates/safety.md must forbid quoting credential blocks from build files" \
+  "edit templates/safety.md -e 's|never quote server, repository, distribution or credential blocks|quote what you need|'"
+expect_failure "safety rule that reads settings.xml" "templates/safety.md must forbid reading Maven settings.xml and gradle.properties" \
+  "edit templates/safety.md -e 's|Maven .settings.xml., .gradle.properties. or other|or other|'"
+expect_failure "project settings.xml readable" "settings.example.json misses deny rules: Read(**/settings.xml)" \
+  "edit settings.example.json -e '/\"Read(\\*\\*\\/settings.xml)\",/d'"
 expect_failure "personal entry in the QA repo" "unknown group 'personal'" \
   "edit catalog.tsv -e 's/^pr-reviewer\tagent\tqa/pr-reviewer\tagent\tpersonal/'"
 expect_failure "machine path in settings.example.json" "settings.example.json contains a machine-specific /Users/ path" \
