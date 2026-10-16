@@ -5,9 +5,9 @@
 #   ./install.sh --settings                  add this repo's secret deny rules to ~/.claude/settings.json (Claude Code)
 #   ./install.sh --project <path> [--update] copy the agents and skills into <path>/.claude for a team
 #   ./install.sh [--copilot] --uninstall     remove what the install added and restore what it replaced
-# It never touches ~/.claude/CLAUDE.md. It changes ~/.claude/settings.json only with --settings, and a team repo's
-# .claude/settings.json only with --project --update, both after a backup (if the file exists) and only to add deny rules. The file is
-# rewritten as JSON, so values stay the same but number spelling, escapes and line endings can change.
+# It never touches ~/.claude/CLAUDE.md. ~/.claude/settings.json changes only with --settings. --project creates a
+# team repo's .claude/settings.json from settings.example.json when it is absent, and adds deny rules to an existing
+# one only with --update. Both add deny rules only, after a backup of an existing file; see the README for details.
 # Anything a link install replaces is moved to <target>/backups/qa-<timestamp>-NNN/ first. --project --update
 # overwrites the copied agents and skills in place (the team repo's git history is their backup).
 set -euo pipefail
@@ -213,6 +213,16 @@ settings_tool() {
 import json, os, re, stat, sys, tempfile
 mode, example, target = sys.argv[1:4]
 
+class DuplicateKey(ValueError):
+    pass
+
+def no_duplicate_keys(pairs):
+    # json.loads keeps only the last of two equal keys; a merge would then silently drop the first one.
+    keys = [k for k, _ in pairs]
+    if len(keys) != len(set(keys)):
+        raise DuplicateKey(next(k for k in keys if keys.count(k) > 1))
+    return dict(pairs)
+
 def fail(msg):
     print(msg, file=sys.stderr)
     sys.exit(2)
@@ -224,9 +234,11 @@ if os.path.exists(target):
     try:
         with open(target, encoding="utf-8") as f:
             raw = f.read()
-        data = json.loads(raw)
+        data = json.loads(raw, object_pairs_hook=no_duplicate_keys)
     except OSError as e:
         fail(f"could not read {target}: {e.strerror}")
+    except DuplicateKey as e:
+        fail(f"{target} has the key {json.dumps(str(e))} twice in one object; merge it by hand")
     except UnicodeDecodeError as e:
         # Never echo the bytes: name only where the bad byte is.
         fail(f"settings.json is not UTF-8 (byte offset {e.start})")

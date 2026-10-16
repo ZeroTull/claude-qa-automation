@@ -361,6 +361,13 @@ assert "a number JSON cannot write back is reported" grep -q "could not write .*
 assert "it is not turned into Infinity" cmp -s "$big/.claude/settings.json" "$TMP/big-copy.json"
 assert "it prints no traceback" out_lacks "Traceback"
 assert "it leaves no temp file" test -z "$(find "$big/.claude" -name '.settings.*')"
+dup="$TMP/proj-dup"
+mkdir -p "$dup/.claude"
+printf '{"permissions": {"deny": ["Read(**/.env)"]}, "permissions": {"deny": []}}\n' >"$dup/.claude/settings.json"
+cp "$dup/.claude/settings.json" "$TMP/dup-copy.json"
+run --project "$dup" --update
+assert "duplicate keys are reported" grep -q 'has the key "permissions" twice in one object' <<<"$out"
+assert "duplicate keys leave the file unchanged" cmp -s "$dup/.claude/settings.json" "$TMP/dup-copy.json"
 mkdir -p "$TMP/no-mktemp"
 printf '#!/bin/sh\nexit 1\n' >"$TMP/no-mktemp/mktemp"
 chmod +x "$TMP/no-mktemp/mktemp"

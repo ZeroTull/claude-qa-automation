@@ -360,8 +360,6 @@ expect_failure "verdicts without routing cases" "must map every verdict to a rou
   "edit agents/flaky-test-triager.md -e 's|/ inconclusive \\[case 5\\]|/ inconclusive|'"
 expect_failure "flaky verdict without ruling out the product" "must rule out the product before calling a test genuinely flaky" \
   "edit agents/flaky-test-triager.md -e 's|cause identified in the test and product ruled out (case 2)|cause identified (case 2)|'"
-expect_failure "safety rule that hides versions again" "templates/safety.md must allow the build-file details diagnosis needs" \
-  "edit templates/safety.md -e 's|dependency, plugin and parent coordinates and versions, and the Java release|dependency names|'"
 expect_failure "safety rule that allows credential blocks" "templates/safety.md must forbid quoting credential blocks from build files" \
   "edit templates/safety.md -e 's|Never quote server, repository, distribution or credential blocks|Quote what you need|'"
 expect_failure "safety rule that reads settings.xml" "templates/safety.md must forbid reading Maven settings and gradle.properties" \
@@ -390,14 +388,10 @@ expect_failure "JVM flags quoted wholesale" "templates/safety.md must quote only
   "edit templates/safety.md -e 's|.-XX. flags that only switch something on or off or set a number|any flag|'"
 expect_failure "profile activation values quoted" "templates/safety.md must redact profile activation values" \
   "edit templates/safety.md -e 's|; for a .<property>. activation keep its .<name>. and write its .<value>. as .<redacted>.||'"
-expect_failure "any value under a version name" "templates/safety.md must allow sensitive-named versions only for version-shaped values" \
-  "edit templates/safety.md -e 's| and the value looks like a version (digits with at least one dot, a range, or a .[$]{...}. reference with nothing else in the value)||'"
 expect_failure "suite files outside the rule" "templates/safety.md must cover test suite files" \
   "edit templates/safety.md -e 's| and TestNG suite files (.testng[*].xml. or any XML with a .<suite>. root)||'"
 expect_failure "JVM list only inside argLine" "templates/safety.md must apply the JVM list wherever the key appears" \
   "edit templates/safety.md -e 's|, wherever they appear (.argLine., .jvmArgs., .systemPropertyVariables., .jvm.config., .maven.config.)||'"
-expect_failure "version shape widened" "templates/safety.md must allow sensitive-named versions only for version-shaped values" \
-  "edit templates/safety.md -e 's|(digits with at least one dot, a range, or a .[$]{...}. reference with nothing else in the value)|(any value)|'"
 expect_failure "README calls the JVM list open" "README.md must describe the closed JVM list" \
   "edit README.md -e 's|the five JVM settings the rule names|standard JVM settings|'"
 expect_failure "suite file parameters quoted" "templates/safety.md must redact suite file parameter values" \
@@ -416,8 +410,14 @@ expect_failure "README with a partial allow-list" "README.md must point to the f
   "edit README.md -e 's|quotes only what the allow-list in .templates/safety.md. permits|quotes only|'"
 expect_failure "README promising a byte-identical merge" "README.md must say the settings merge rewrites the file" \
   "edit README.md -e 's| The file is rewritten as JSON, so its values stay the same but number spelling, escapes and line endings can change[.]||'"
-expect_failure "versions under any property name" "templates/safety.md must allow sensitive-named versions only for version properties" \
-  "edit templates/safety.md -e 's|but only if the property name ends in .version. (such as .auth-lib.version.) and|but only if|'"
+expect_failure "safety rule that hides versions again" "templates/safety.md must allow the build-file details diagnosis needs" \
+  "edit templates/safety.md -e 's|dependency, plugin and parent coordinates, and the Java release|dependency names|'"
+expect_failure "version element quoted without a shape check" "templates/safety.md must shape-check every version value" \
+  "edit templates/safety.md -e 's|version values (a .<version>. element, a .version =. setting, or a property whose name ends in .version.|version properties (|'"
+expect_failure "undefined version range" "templates/safety.md must define a version range" \
+  "edit templates/safety.md -e 's|a range made only of digits, dots, commas, spaces, .[*]., .\\[., .\\]., .(. and .).|a range|'"
+expect_failure "odd version values quoted" "templates/safety.md must redact version values that do not look like versions" \
+  "edit templates/safety.md -e 's| Write any other version value as .<redacted>.[.]||'"
 expect_failure "personal entry in the QA repo" "unknown group 'personal'" \
   "edit catalog.tsv -e 's/^pr-reviewer\tagent\tqa/pr-reviewer\tagent\tpersonal/'"
 expect_failure "machine path in settings.example.json" "settings.example.json contains a machine-specific /Users/ path" \

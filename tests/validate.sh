@@ -336,9 +336,6 @@ else:
 AGENT_RULES = {
     "templates/safety.md": {
         "quote only what this list allows. For anything else, name the element, property or key and write `<redacted>`": "must quote only allow-listed build-file values",
-        "dependency, plugin and parent coordinates and versions, and the Java release": "must allow the build-file details diagnosis needs",
-        "the value looks like a version (digits with at least one dot, a range, or a `${...}` reference with nothing else in the value)": "must allow sensitive-named versions only for version-shaped values",
-        "but only if the property name ends in `version`": "must allow sensitive-named versions only for version properties",
         "wherever they appear (`argLine`, `jvmArgs`, `systemPropertyVariables`, `jvm.config`, `maven.config`)": "must apply the JVM list wherever the key appears",
         "JVM and Maven command options (`argLine`, `jvmArgs`, `.mvn/jvm.config`, `.mvn/maven.config`)": "must redact -D pairs in Maven config files",
         "This includes string literals and variable assignments in build scripts": "must redact string literals in build scripts",
@@ -347,6 +344,10 @@ AGENT_RULES = {
         "`<parameter>` values in suite files are redacted like any other value": "must redact suite file parameter values",
         "`settings.gradle`, `settings.gradle.kts`, `gradle/libs.versions.toml`": "must cover Gradle settings and version catalogs",
         "Never quote server, repository, distribution or credential blocks": "must forbid quoting credential blocks from build files",
+        "dependency, plugin and parent coordinates, and the Java release": "must allow the build-file details diagnosis needs",
+        "version values (a `<version>` element, a `version =` setting, or a property whose name ends in `version`": "must shape-check every version value",
+        "a range made only of digits, dots, commas, spaces, `*`, `[`, `]`, `(` and `)`": "must define a version range",
+        "Write any other version value as `<redacted>`": "must redact version values that do not look like versions",
         "a URL, connection string or command-line argument that contains a credential": "must forbid quoting credentials inside URLs and arguments",
         "write every other `-D` pair as `-Dname=<redacted>`": "must redact JVM -D pairs by default",
         "`user.timezone`, `user.language`, `user.country`, `file.encoding` and `java.awt.headless`. Other standard JDK settings": "must allow only a closed list of JVM settings",
