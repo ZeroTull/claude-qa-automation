@@ -129,7 +129,7 @@ obak="$(find "$open_home/backups" -name settings.json | head -n 1)"
 assert "the backup of a 666 settings.json is not writable by others" test "$(file_mode "$obak")" = 644
 out="$(CLAUDE_HOME="$open_home" "$REPO/install.sh" --settings 2>&1)"
 assert "warns even when every deny rule is present" grep -q "already has every deny rule" <<<"$out"
-assert "the warning comes with the ok line" grep -q "WARNING   settings.json is writable by other users or your group" <<<"$out"
+assert "the warning is printed on the already-complete run" grep -q "WARNING   settings.json is writable by other users or your group" <<<"$out"
 chmod 664 "$open_home/settings.json"
 out="$(CLAUDE_HOME="$open_home" "$REPO/install.sh" --settings 2>&1)"
 assert "warns when settings.json is writable by the group" grep -q "WARNING   settings.json is writable" <<<"$out"
@@ -146,6 +146,7 @@ assert "shows the reason" grep -q "Could not check .*: .*settings.json is not va
 echo "--settings on a fresh machine"
 out="$(CLAUDE_HOME="$TMP/fresh" "$REPO/install.sh" --settings 2>&1)"; rc=$?
 assert "exits 0" test "$rc" = 0
+assert "--settings on a fresh machine prints no traceback" out_lacks "Traceback"
 assert "creates settings.json with the deny rules" test "$(deny_count "$TMP/fresh/settings.json")" = "$n_deny"
 assert "--settings adds no allow rules" python3 -c 'import json,sys; sys.exit(1 if json.load(open(sys.argv[1])).get("permissions",{}).get("allow") else 0)' "$TMP/fresh/settings.json"
 assert "creates it readable (0644)" test "$(python3 -c 'import os,stat,sys; print(oct(stat.S_IMODE(os.stat(sys.argv[1]).st_mode)))' "$TMP/fresh/settings.json")" = 0o644
@@ -297,6 +298,13 @@ chmod 644 "$proj6/.claude/settings.json"
 out="$(umask 077; CLAUDE_HOME="$TMP/modes-home" COPILOT_HOME="$TMP/modes-copilot" "$REPO/install.sh" --project "$proj6" --update 2>&1)"
 bak6="$(sed -n 's|.*backup: \(.*project-settings.json\)).*|\1|p' <<<"$out")"
 assert "the project settings backup keeps 644 under umask 077" test "$(file_mode "$bak6")" = 644
+proj_open="$TMP/proj-open"
+mkdir -p "$proj_open/.claude"
+echo '{"permissions": {"deny": []}}' >"$proj_open/.claude/settings.json"
+chmod 666 "$proj_open/.claude/settings.json"
+out="$(CLAUDE_HOME="$TMP/modes-home" COPILOT_HOME="$TMP/modes-copilot" "$REPO/install.sh" --project "$proj_open" --update 2>&1)"
+bak_open="$(sed -n 's|.*backup: \(.*project-settings.json\)).*|\1|p' <<<"$out")"
+assert "the project settings backup of a 666 file is not writable by others" test "$(file_mode "$bak_open")" = 644
 proj3="$TMP/proj3"
 mkdir -p "$proj3/.claude"
 printf '{"model": "x", "permissions": {"allow": ["Bash(ls)"], "deny": ["Read(**/.env)"]}}\n' >"$proj3/.claude/settings.json"

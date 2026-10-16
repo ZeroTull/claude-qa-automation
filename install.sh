@@ -306,6 +306,16 @@ except BaseException as e:
 PY
 }
 
+# Warns when a file that controls the deny rules can be edited by the group or other users.
+# Skips missing files and links (a link's target belongs to another repo, which gets the SKIP below).
+warn_if_writable_by_others() {
+  local f="$1"
+  [[ -e "$f" && ! -L "$f" ]] || return 0
+  if python3 -c 'import os,sys; sys.exit(0 if os.stat(sys.argv[1]).st_mode & 0o022 else 1)' "$f"; then
+    echo "  WARNING   settings.json is writable by other users or your group; consider: chmod go-w \"$f\""
+  fi
+}
+
 # Adds the missing deny rules to ~/.claude/settings.json (backed up first). Refuses to write through a link,
 # because then the file belongs to another repo and the rules belong there.
 merge_settings() {
@@ -314,9 +324,7 @@ merge_settings() {
     echo "error: --settings needs a working python3" >&2
     return 1
   fi
-  if [[ -e "$target" ]] && python3 -c 'import os,stat,sys; sys.exit(0 if os.stat(sys.argv[1]).st_mode & 0o022 else 1)' "$target"; then
-    echo "  WARNING   settings.json is writable by other users or your group; consider: chmod go-w $target"
-  fi
+  warn_if_writable_by_others "$target"
   if ! missing="$(settings_tool check)"; then
     echo "error: settings.json was left unchanged" >&2
     return 1
