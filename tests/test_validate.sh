@@ -384,6 +384,10 @@ expect_failure "Maven master password readable" "settings.example.json misses de
   "edit settings.example.json -e '/settings-security[.]xml/d'"
 expect_failure "safety rule that quotes argLine freely" "templates/safety.md must redact JVM -D pairs by default" \
   "edit templates/safety.md -e 's|; write every other .-D. pair as .-Dname=<redacted>.||'"
+expect_failure "open-ended JVM settings list" "templates/safety.md must allow only a closed list of JVM settings" \
+  "edit templates/safety.md -e 's|these JVM settings and no others:|standard JVM settings such as|'"
+expect_failure "JVM flags quoted wholesale" "templates/safety.md must redact JVM flags that carry credentials" \
+  "edit templates/safety.md -e 's|flags that contain no credential, URL or user info|flags|'"
 expect_failure "personal entry in the QA repo" "unknown group 'personal'" \
   "edit catalog.tsv -e 's/^pr-reviewer\tagent\tqa/pr-reviewer\tagent\tpersonal/'"
 expect_failure "machine path in settings.example.json" "settings.example.json contains a machine-specific /Users/ path" \

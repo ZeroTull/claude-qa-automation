@@ -281,6 +281,8 @@ if [[ "$(id -u)" != 0 ]]; then
   assert "a failed write gives a one-line reason, not a traceback" out_lacks "Traceback"
   assert "a failed write leaves the file unchanged" test "$(deny_count "$proj6/.claude/settings.json")" = 0
   assert "a failed write still finishes the install" grep -q "Next: open Claude Code" <<<"$out"
+else
+  echo "  skip  a failed write (needs a non-root user)"
 fi
 out="$(QA_FAIL_SETTINGS_WRITE=1 "$REPO/install.sh" --project "$proj6" --update 2>&1)"
 assert "a failure after the temp file exists is reported" grep -q "could not write .*simulated write failure" <<<"$out"
@@ -307,7 +309,29 @@ if [[ "$(id -u)" != 0 ]]; then
   assert "a failed backup is reported" grep -q "FAILED .*settings.json (could not back it up" <<<"$out"
   assert "a failed backup leaves the file unchanged" test "$(deny_count "$proj10/.claude/settings.json")" = 0
   assert "a failed backup still finishes the install" grep -q "Next: open Claude Code" <<<"$out"
+else
+  echo "  skip  a failed backup (needs a non-root user)"
 fi
+if [[ "$(id -u)" != 0 ]]; then
+  unread="$TMP/unread-home"
+  mkdir -p "$unread"
+  echo '{"permissions": {"deny": []}}' >"$unread/settings.json"
+  chmod 000 "$unread/settings.json"
+  out="$(CLAUDE_HOME="$unread" "$REPO/install.sh" --settings 2>&1)"
+  chmod 600 "$unread/settings.json"
+  assert "an unreadable settings.json gives a one-line reason" grep -q "could not read .*settings.json" <<<"$out"
+  assert "an unreadable settings.json prints no traceback" out_lacks "Traceback"
+  assert "an unreadable settings.json is left unchanged" test "$(deny_count "$unread/settings.json")" = 0
+else
+  echo "  skip  an unreadable settings.json (needs a non-root user)"
+fi
+enc="$TMP/proj-enc"
+mkdir -p "$enc/.claude"
+printf '{"permissions": {"deny": ["\\ud800"]}}\n' >"$enc/.claude/settings.json"
+run --project "$enc" --update
+assert "an unwritable value gives a one-line reason" grep -q "could not write .*settings.json" <<<"$out"
+assert "an unwritable value prints no traceback" out_lacks "Traceback"
+assert "an unwritable value leaves no temp file" test -z "$(find "$enc/.claude" -name '.settings.*')"
 proj7="$TMP/proj7"
 mkdir -p "$proj7/.claude"
 echo '{"permissions": {"deny": []}}' >"$proj7/.claude/settings.json"

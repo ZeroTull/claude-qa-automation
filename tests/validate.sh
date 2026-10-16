@@ -340,6 +340,8 @@ AGENT_RULES = {
         "Never quote server, repository, distribution or credential blocks": "must forbid quoting credential blocks from build files",
         "a URL, connection string or command-line argument that contains a credential": "must forbid quoting credentials inside URLs and arguments",
         "write every other `-D` pair as `-Dname=<redacted>`": "must redact JVM -D pairs by default",
+        "these JVM settings and no others: `user.timezone`, `user.language`, `user.country`, `file.encoding` and `java.awt.headless`": "must allow only a closed list of JVM settings",
+        "flags that contain no credential, URL or user info": "must redact JVM flags that carry credentials",
         "names, not values, of environment variables and properties": "must allow variable names but not their values",
         "Maven `settings.xml` or `settings-security.xml`, `gradle.properties`": "must forbid reading Maven settings and gradle.properties",
     },

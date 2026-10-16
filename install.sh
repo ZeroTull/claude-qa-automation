@@ -150,7 +150,10 @@ project_settings() {
     echo "  SKIP      $target (exists; checking its deny rules needs python3 - compare with settings.example.json by hand)"
     return
   fi
-  errfile="$(mktemp)"
+  if ! errfile="$(mktemp)"; then
+    echo "  SKIP      $target (exists; could not create a temp file to check its deny rules)"
+    return
+  fi
   if ! missing="$(settings_tool check "$target" 2>"$errfile")"; then
     echo "  SKIP      $target (exists; could not check its deny rules: $(tail -n 1 "$errfile"))"
     rm -f "$errfile"
@@ -162,7 +165,7 @@ project_settings() {
   elif [[ "$update" == yes ]]; then
     init_backup_dir
     if ! { mkdir -p "$BACKUP_DIR" && cp -p "$target" "$BACKUP_DIR/project-settings.json"; }; then
-      echo "  FAILED    $target (could not back it up to $BACKUP_DIR; the file is unchanged)"
+      echo "  FAILED    $target (could not back it up to $BACKUP_DIR, see the error above; the file is unchanged)"
       return
     fi
     if ! settings_tool merge "$target"; then
@@ -218,15 +221,17 @@ data = {}
 if os.path.exists(target):
     try:
         with open(target, encoding="utf-8") as f:
-            data = json.load(f)
+            raw = f.read()
+        data = json.loads(raw)
+    except OSError as e:
+        fail(f"could not read {target}: {e.strerror}")
     except ValueError as e:
         fail(f"settings.json is not valid JSON ({e})")
 # Keep the file's own indentation (spaces or a tab), so a merge does not reformat a team's file. A file with no
 # indented line (such as a one-line file) is written with 2 spaces.
 indent = 2
 if os.path.exists(target):
-    with open(target, encoding="utf-8") as f:
-        m = re.search(r"\n([ \t]+)\S", f.read())
+    m = re.search(r"\n([ \t]+)\S", raw)
     if m:
         indent = m.group(1)
 if not isinstance(data, dict):
@@ -258,7 +263,8 @@ try:
         os.chmod(tmp, stat.S_IMODE(os.stat(target).st_mode) if os.path.exists(target) else 0o644)
         json.dump(data, f, indent=indent, ensure_ascii=False)
         f.write("\n")
-    if os.environ.get("QA_FAIL_SETTINGS_WRITE"):  # lets the tests simulate a failure after the temp file exists
+    # Test-only fault injection (like the QA_* hooks above): simulates a failure after the temp file exists.
+    if os.environ.get("QA_FAIL_SETTINGS_WRITE"):
         raise OSError(5, "simulated write failure")
     os.replace(tmp, target)
 except BaseException as e:
@@ -267,6 +273,8 @@ except BaseException as e:
         os.unlink(tmp)
     if isinstance(e, OSError):
         fail(f"could not write {target}: {e.strerror}")
+    if isinstance(e, ValueError):
+        fail(f"could not write {target}: {e}")
     raise
 PY
 }
