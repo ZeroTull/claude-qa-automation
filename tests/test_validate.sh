@@ -429,13 +429,27 @@ expect_failure "reviewer that assumes main" "agents/pr-reviewer.md must take the
 expect_failure "reviewer without a default-branch fallback" "agents/pr-reviewer.md must fall back to the repo's default branch" \
   "edit agents/pr-reviewer.md -e 's|git symbolic-ref --short refs/remotes/origin/HEAD|origin/main|'"
 expect_failure "reviewer that guesses the base" "agents/pr-reviewer.md must ask when the base branch is unknown" \
-  "edit agents/pr-reviewer.md -e 's|ask the user which branch to compare against|use main|'"
+  "edit agents/pr-reviewer.md -e 's|stop and return a one-line request for the base branch|use main|'"
 expect_failure "reviewer that may change git state silently" "agents/pr-reviewer.md must state that git fetch is the only allowed git write" \
-  "edit agents/pr-reviewer.md -e 's|The one allowed exception is .git fetch origin <branch>[.][.][.].|Fetching is fine|'"
+  "edit agents/pr-reviewer.md -e 's|The one allowed exception is the .git fetch. in Phase 1, in exactly the form|Fetching is fine, for example|'"
 expect_failure "reviewer that hides its base" "agents/pr-reviewer.md must report the base branch" \
-  "edit agents/pr-reviewer.md -e 's|Name the base branch you compared against in the PR Overview|Review the diff|'"
+  "edit agents/pr-reviewer.md -e 's|name the base branch and how you found it|review the diff|'"
 expect_failure "PR description that assumes main" "skills/pr-description/SKILL.md must take the target branch from the PR, not assume main" \
   "edit skills/pr-description/SKILL.md -e 's|never assume .main.|use main|'"
+expect_failure "reviewer with a double origin prefix" "agents/pr-reviewer.md must strip origin/ from the default branch" \
+  "edit agents/pr-reviewer.md -e 's|prints .origin/develop., so .<base>. is .develop.|gives the base|'"
+expect_failure "reviewer with any fetch form" "agents/pr-reviewer.md must restrict the fetch form" \
+  "edit agents/pr-reviewer.md -e 's|Never add .--all., .--prune., .--force. or a .+. refspec, and never|Never|'"
+expect_failure "reviewer without an ADO base lookup" "agents/pr-reviewer.md must name the Azure DevOps target branch command" \
+  "edit agents/pr-reviewer.md -e 's|.targetRefName. without .refs/heads/.|the target|'"
+expect_failure "reviewer ignoring forks" "agents/pr-reviewer.md must handle PRs from forks" \
+  "edit agents/pr-reviewer.md -e 's|use that remote instead of .origin. below|use origin|'"
+expect_failure "PR description with a double origin prefix" "skills/pr-description/SKILL.md must strip origin/ from the default branch" \
+  "edit skills/pr-description/SKILL.md -e 's|prints .origin/develop., so .<target>. is .develop.|gives the target|'"
+expect_failure "PR description without the default-branch fallback" "skills/pr-description/SKILL.md must fall back to the repo's default branch" \
+  "edit skills/pr-description/SKILL.md -e 's|git symbolic-ref --short refs/remotes/origin/HEAD|origin/main|'"
+expect_failure "PR description on a stale base" "skills/pr-description/SKILL.md must refresh the base before diffing" \
+  "edit skills/pr-description/SKILL.md -e 's|Run .git fetch origin <target>:refs/remotes/origin/<target>. first; if that fails, say the base may be out of date[.] ||'"
 expect_failure "personal entry in the QA repo" "unknown group 'personal'" \
   "edit catalog.tsv -e 's/^pr-reviewer\tagent\tqa/pr-reviewer\tagent\tpersonal/'"
 expect_failure "machine path in settings.example.json" "settings.example.json contains a machine-specific /Users/ path" \

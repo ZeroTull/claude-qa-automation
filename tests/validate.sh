@@ -402,13 +402,19 @@ AGENT_RULES = {
     "agents/pr-reviewer.md": {
         "never assume `main`": "must take the base branch from the PR, not assume main",
         "git symbolic-ref --short refs/remotes/origin/HEAD": "must fall back to the repo's default branch",
-        "ask the user which branch to compare against": "must ask when the base branch is unknown",
-        "The one allowed exception is `git fetch origin <branch>...`": "must state that git fetch is the only allowed git write",
-        "Name the base branch you compared against in the PR Overview": "must report the base branch",
+        "stop and return a one-line request for the base branch": "must ask when the base branch is unknown",
+        "The one allowed exception is the `git fetch` in Phase 1, in exactly the form": "must state that git fetch is the only allowed git write",
+        "Never add `--all`, `--prune`, `--force` or a `+` refspec": "must restrict the fetch form",
+        "prints `origin/develop`, so `<base>` is `develop`": "must strip origin/ from the default branch",
+        "`targetRefName` without `refs/heads/`": "must name the Azure DevOps target branch command",
+        "use that remote instead of `origin` below": "must handle PRs from forks",
+        "name the base branch and how you found it": "must report the base branch",
     },
     "skills/pr-description/SKILL.md": {
         "never assume `main`": "must take the target branch from the PR, not assume main",
         "git symbolic-ref --short refs/remotes/origin/HEAD": "must fall back to the repo's default branch",
+        "prints `origin/develop`, so `<target>` is `develop`": "must strip origin/ from the default branch",
+        "Run `git fetch origin <target>:refs/remotes/origin/<target>` first; if that fails, say the base may be out of date": "must refresh the base before diffing",
     },
     "skills/bug-ticket/SKILL.md": {
         "An intermittent failure can still be a product defect": "must not dismiss intermittent failures as non-bugs",

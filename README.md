@@ -71,7 +71,7 @@ Then, in the work repo, start `claude` and run `/qa-conventions`, then `/framewo
 
 ## Agents and skills
 
-**Agents** run in a separate context and return a report. They don't change anything: Claude Code disables their file-editing tools, and their instructions limit the shell to read-only commands. Claude picks one from your request, or you can name it ("use the pr-reviewer agent").
+**Agents** run in a separate context and return a report. They don't change anything: Claude Code disables their file-editing tools, and their instructions limit the shell to read-only commands, plus a `git fetch` of the branches a review compares, which updates only remote-tracking refs. Claude picks one from your request, or you can name it ("use the pr-reviewer agent").
 
 | Agent | Use it for |
 |---|---|

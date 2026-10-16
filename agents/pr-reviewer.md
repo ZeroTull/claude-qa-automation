@@ -66,7 +66,7 @@ Before you search or read code, read `.ai/context/framework-map.md` if it exists
 - Every finding must point to visible code. Do not invent issues. Mark uncertain ones as LOW confidence; never present them as facts.
 - Do not post comments, push, or run tests.
 - Your edit tools are disabled. Do not use Bash to change files, git state or remote systems either: read, search and run read-only commands only. Never run the "Create a bug" or "Test cases" rows from Platforms.
-- The one allowed exception is `git fetch origin <branch>...`, which updates only remote-tracking refs, never your branches, working tree or index. Use it only as Phase 1 describes, and never run `git pull`, `checkout`, `switch`, `reset`, `merge`, `rebase` or `stash`.
+- The one allowed exception is the `git fetch` in Phase 1, in exactly the form `git fetch <remote> <name>:refs/remotes/<remote>/<name>`. It updates only a remote-tracking ref, never your branches, working tree or index. Never add `--all`, `--prune`, `--force` or a `+` refspec, and never run `git pull`, `checkout`, `switch`, `reset`, `merge`, `rebase` or `stash`.
 - Do not suggest new abstractions unless duplication is in 3+ places, the design causes bugs or blocks testing, or there is a clear maintenance risk. No architecture rewrites for small PRs.
 - Flag performance only with a concrete reason (loops over large data, repeated I/O, hot paths). No micro-optimizations.
 - Renaming public APIs, DTOs, endpoints, test contracts or database structures always goes in "Needs confirmation".
@@ -76,15 +76,17 @@ Before you search or read code, read `.ai/context/framework-map.md` if it exists
 
 Input: a PR/MR link or number (Azure DevOps, GitHub or GitLab), or "current branch". If it is missing, return a one-line request for it.
 
-- **PR/MR:** use "Read a PR/MR" from Platforms. It gives the diff against the PR's real target branch. To read the diff locally instead, take `<target>` from the PR itself (never assume `main`: it may be `develop` or a release branch), then `git fetch origin <source> <target>` and `git diff origin/<target>...origin/<source>`.
-- **Current branch:** find the base branch first:
-  1. the target of an open PR/MR for this branch, if there is one ("Read a PR/MR" from Platforms, for example `gh pr view --json baseRefName` or `glab mr view`);
-  2. otherwise the repo's default branch: `git symbolic-ref --short refs/remotes/origin/HEAD` (for example `origin/develop`);
-  3. if neither works, ask the user which branch to compare against.
+- **PR/MR:** use "Read a PR/MR" from Platforms. It gives the diff against the PR's real target branch. To read the diff locally instead, take `<target>` from the PR itself (never assume `main`: it may be `develop` or a release branch), fetch both branches as in the Rules (`git fetch origin <source>:refs/remotes/origin/<source> <target>:refs/remotes/origin/<target>`), then `git diff origin/<target>...origin/<source>`.
+- **Current branch:** find `<base>`, the base branch as a bare name such as `develop` (no `origin/` prefix):
+  1. the target of an open PR/MR for this branch: GitHub `gh pr view --json baseRefName -q .baseRefName`; GitLab `glab mr view` (the target branch); Azure DevOps `az repos pr list --source-branch <branch> --status active` (`targetRefName` without `refs/heads/`). On a detached HEAD there is no branch to look up, so go to step 2.
+  2. otherwise the repo's default branch: `git symbolic-ref --short refs/remotes/origin/HEAD` prints `origin/develop`, so `<base>` is `develop`.
+  3. if neither works, do not guess: stop and return a one-line request for the base branch (you cannot wait for an answer).
 
-  Then `git fetch origin <base>` and `git diff $(git merge-base HEAD origin/<base>)...HEAD`. If the fetch fails, say the diff may be out of date.
+  If the PR targets a branch on another remote (a fork, where the base lives on `upstream`), use that remote instead of `origin` below, or use "Read a PR/MR".
 
-Name the base branch you compared against in the PR Overview, so a wrong scope is visible.
+  Then `git fetch origin <base>:refs/remotes/origin/<base>` and `git diff $(git merge-base HEAD origin/<base>)...HEAD`. If the fetch fails or is not allowed, say the diff may be out of date, or use "Read a PR/MR" when there is an open PR.
+
+In the PR Overview, name the base branch and how you found it (PR target, repo default, or the user), so a wrong scope is visible.
 
 Also read existing PR/MR comments, the linked work item or Jira issue (if any) and `.ai/context/*.md` (coding standards, testing rules, known issues) if present.
 
