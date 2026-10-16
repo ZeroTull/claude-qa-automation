@@ -85,30 +85,41 @@ Useful searches: `grep -rn "Thread.sleep" src/test`, `grep -rln "@Ignore\|@Disab
 
 ## Scoring
 
-Score each category from 0 to 10 with these bands, so the same suite gets the same score every time:
+Scores come from counts, so the same suite gets the same score every time.
 
-| Score | Band | Meaning |
+**Measure.** For each category, count the items affected by at least one of that category's signals from Analysis (A-G), and divide by all items of that kind in the audited scope:
+- Stability, Maintainability and Quality: test files;
+- Framework: shared utility and helper classes;
+- Performance: test classes;
+- Coverage strategy: API tests plus E2E tests, where an API test that checks only the status code, or an E2E test for logic a unit or API test could cover, counts as affected.
+
+A test method over 50 lines counts as a Maintainability signal.
+
+**Score.** Map the affected share to a score:
+
+| Affected share | Score | Band |
 |---|---|---|
-| 0-2 | Broken | The problem is systemic: it affects most tests or a core layer, and it makes results unreliable (for example most runs are red or flaky, or most tests have no real assertion). |
-| 3-4 | Poor | The problem is widespread: many tests or several modules, and the team works around it. |
-| 5-6 | Fair | The problem appears in several places but is contained, and it does not stop the suite giving a useful signal. |
-| 7-8 | Good | Only isolated cases (a few files), with no effect on reliability. |
-| 9-10 | Excellent | None found, and something prevents it coming back (a lint rule, a CI gate, a shared helper). |
+| 0%, and a guard prevents it coming back (a lint rule, a CI gate, a shared helper) | 10 | Excellent |
+| 0%, no guard | 9 | Excellent |
+| under 2% | 8 | Good |
+| 2% to under 5% | 7 | Good |
+| 5% to under 10% | 6 | Fair |
+| 10% to under 15% | 5 | Fair |
+| 15% to under 25% | 4 | Poor |
+| 25% to under 40% | 3 | Poor |
+| 40% to under 60% | 2 | Broken |
+| 60% to under 80% | 1 | Broken |
+| 80% or more | 0 | Broken |
 
-What to count for each category, so the band is based on numbers, not impressions:
-- **Stability:** `Thread.sleep` and fixed waits, shared static state, order dependence, and the flaky rate in the run history when you can see it.
-- **Maintainability:** duplicated setup and helpers, test methods over about 50 lines, inheritance deeper than 3 levels.
-- **Quality:** tests with no assertion or one that cannot fail, and tests that only check mocks.
-- **Framework:** utilities with no usages, duplicate helpers, configuration spread over many places.
-- **Performance:** a login or browser start per test, data set up again for every test, suites that could run in parallel but run in series.
-- **Coverage strategy:** logic tested only through E2E, API tests that check only the status code, and service boundaries with no contract test.
-- **CI gates:** count which of these five exist: a smoke suite, sharding or parallel runs, a coverage gate on new code, a flaky-test quarantine process, and load tests against a baseline. 0-1 gates is 0-2, 2 is 3-4, 3 is 5-6, 4 is 7-8, and all 5 is 9-10.
+Overrides: a flaky rate in the run history above 10% caps Stability at 2, and 5-10% caps it at 4. A test that cannot fail always counts for Quality.
 
-Rules:
-- Every score cites its evidence: the counts and the worst `file:line` examples.
-- When the evidence sits between two bands, give the lower score and say why. Do not give 7-8 by default.
+**CI gates use their own scale**, because they measure missing safety nets, not how widespread a problem is. Count which of these five gates exist: a smoke suite, sharding or parallel runs, a coverage gate on new code, a flaky-test quarantine process, and load tests against a baseline. A gate counts only if it runs in CI on the default branch and fails the pipeline when violated; one with `allow_failure`, `continue-on-error` or a threshold of 0 does not count. Score: 5 gates is 10, 4 is 8, 3 is 6, 2 is 4, 1 is 2, 0 is 0.
+
+**Rules.**
+- Every score cites its evidence: the counts (affected / total), and the worst `file:line` examples.
+- If you could only sample the scope, say how many items you checked, and score the sample.
 - A category outside the audited scope is `n/a`, not a guess.
-- The overall score is the average of the scored categories, rounded down, and never more than 3 above the lowest category, so one broken area cannot hide behind good ones.
+- Overall: if fewer than 3 categories are scored, write "overall n/a (only N categories scored)". Otherwise take the average of the scored categories, round it down, then cap it at the lowest scored category plus 3. Example: Stability 2 and six other categories at 9 average 8, so the cap makes the overall score 5.
 
 ## Report (your final message)
 
@@ -118,7 +129,7 @@ Rules:
 ## Stability Issues
 ## Maintainability Issues
 ## Quality Issues
-## Dead Code / Duplication
+## Dead Code / Duplication   (also the Framework evidence)
 ## Performance
 ## Coverage Strategy
 ## CI Quality Gates

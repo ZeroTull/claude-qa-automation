@@ -462,11 +462,14 @@ AGENT_RULES = {
     },
     "agents/test-maintainer.md": {
         "## Scoring": "must define how scores are given",
-        "| 0-2 | Broken |": "must define the score bands",
+        "count the items affected by at least one of that category's signals": "must score from counts",
+        "| 0%, no guard | 9 | Excellent |": "must score a clean category without a guard",
+        "| 80% or more | 0 | Broken |": "must map every share to a score",
+        "**CI gates use their own scale**": "must say CI gates use their own scale",
+        "A gate counts only if it runs in CI on the default branch and fails the pipeline when violated": "must define when a gate counts",
         "Every score cites its evidence": "must cite evidence for every score",
-        "give the lower score and say why. Do not give 7-8 by default": "must not inflate scores",
-        "never more than 3 above the lowest category": "must not let one broken area hide",
-        "0-1 gates is 0-2, 2 is 3-4, 3 is 5-6, 4 is 7-8, and all 5 is 9-10": "must score CI gates by count",
+        "if fewer than 3 categories are scored, write \"overall n/a": "must handle too few scored categories",
+        "round it down, then cap it at the lowest scored category plus 3": "must define rounding and the cap",
         "overall X/10 (see Scoring)": "must report the overall score by the Scoring rules",
     },
     "agents/pr-reviewer.md": {
@@ -531,7 +534,7 @@ AGENT_RULES = {
     },
     "README.md": {
         "the five JVM settings the rule names": "must describe the closed JVM list",
-        "scored against fixed bands (0-2 broken to 9-10 excellent, with the evidence)": "must describe the health score bands",
+        "scored from counts against fixed bands (0-2 broken to 9-10 excellent, with the evidence)": "must describe the health score bands",
         "which agent, skill or the main session takes the first phase (its Phased Plan says who takes each phase)": "must describe the strategy Next Step",
         "a phased plan and measurable success criteria": "must describe the strategy report",
         "we don't recommend a wildcard allow rule for it": "must not recommend a git fetch allow rule",
