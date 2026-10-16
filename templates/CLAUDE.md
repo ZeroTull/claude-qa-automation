@@ -16,7 +16,7 @@ Read `.ai/context/conventions.md` before drafting tickets, test cases, PR text o
 | Test fails intermittently | `flaky-test-triager` agent |
 | Plan a test strategy or design a framework | `senior-automation-qa-engineer` agent |
 | Test cases for ADO Test Plans | `/test-cases` |
-| File a bug for a pre-existing product defect | `/bug-ticket` |
+| File a bug for a confirmed pre-existing product defect with no identifiable commit (see Defect routing) | `/bug-ticket` |
 | Check a ticket is ready for dev | `/ticket-review` |
 | Draft a PR description | `/pr-description` |
 | Set up or update conventions | `/qa-conventions` |

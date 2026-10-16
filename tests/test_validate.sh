@@ -305,7 +305,7 @@ expect_failure "triager description without product defects" "description must n
 expect_failure "diagnoser listing the product cause last" "must list the product cause first" \
   "edit agents/ci-failure-diagnoser.md -e 's|list the candidates, product first|list the candidates|'"
 expect_failure "defect routing missing from an agent" "agents/qa-lead.md: does not contain the block from templates/defect-routing.md" \
-  "edit agents/qa-lead.md -e 's|^- [*][*]Pre-existing confirmed product defect[*][*]|- Other|'"
+  "edit agents/qa-lead.md -e 's|^5[.] [*][*]Inconclusive:[*][*]|5. Other:|'"
 expect_failure "defect routing changed in one file only" "skills/bug-ticket/SKILL.md: does not contain the block from templates/defect-routing.md" \
   "edit skills/bug-ticket/SKILL.md -e 's|or the .bug-ticket. skill, and let the user choose|or file it|'"
 expect_failure "defect-routing.md missing" "templates/defect-routing.md missing or empty" \
@@ -330,6 +330,12 @@ expect_failure "quarantine rule dropped everywhere" "templates/defect-routing.md
   "for f in templates/defect-routing.md agents/ci-failure-diagnoser.md agents/flaky-test-triager.md agents/qa-lead.md skills/bug-ticket/SKILL.md skills/test-developer/SKILL.md; do edit \"\$f\" -e '/^Never quarantine a test that catches a real bug[.]\$/d'; done"
 expect_failure "another entry with a stale routing section" "skills/pr-description/SKILL.md: does not contain the block from templates/defect-routing.md" \
   "printf '\\n## Defect routing\\n\\nFile everything.\\n' >> skills/pr-description/SKILL.md"
+expect_failure "routes without an order" "templates/defect-routing.md must say which route wins when several fit" \
+  "for f in templates/defect-routing.md agents/ci-failure-diagnoser.md agents/flaky-test-triager.md agents/qa-lead.md skills/bug-ticket/SKILL.md skills/test-developer/SKILL.md; do edit \"\$f\" -e 's|take the first case that fits|pick a case|'; done"
+expect_failure "no route for a stale test" "templates/defect-routing.md must route test defects where the product is correct" \
+  "for f in templates/defect-routing.md agents/ci-failure-diagnoser.md agents/flaky-test-triager.md agents/qa-lead.md skills/bug-ticket/SKILL.md skills/test-developer/SKILL.md; do edit \"\$f\" -e 's|[*][*]Test defect, product correct[*][*]|Other|'; done"
+expect_failure "CLAUDE template bug row too broad" "templates/CLAUDE.md bug-ticket row must match Defect routing" \
+  "edit templates/CLAUDE.md -e 's|File a bug for a confirmed pre-existing product defect with no identifiable commit|File a bug from a failure|'"
 expect_failure "personal entry in the QA repo" "unknown group 'personal'" \
   "edit catalog.tsv -e 's/^pr-reviewer\tagent\tqa/pr-reviewer\tagent\tpersonal/'"
 expect_failure "machine path in settings.example.json" "settings.example.json contains a machine-specific /Users/ path" \
