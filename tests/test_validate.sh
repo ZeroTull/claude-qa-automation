@@ -34,6 +34,27 @@ expect_failure() {
 
 echo "baseline"
 if "$REPO/tests/validate.sh" "$REPO" >/dev/null; then echo "  pass  repo is valid"; else echo "  FAIL  repo is invalid"; fail=1; fi
+# No environment variable may turn a check run into a dump: with the old variable set, the run still checks.
+if out="$(QA_DUMP_PINS=1 "$REPO/tests/validate.sh" "$REPO")" && grep -q "all checks passed" <<<"$out"; then
+  echo "  pass  an environment variable does not skip the checks"
+else
+  echo "  FAIL  an environment variable changed the check run"; fail=1
+fi
+envcopy="$TMP/env-var-copy"
+copy_repo "$envcopy"
+python3 - "$envcopy/settings.example.json" <<'ENVCOPY'
+import json, sys
+d = json.load(open(sys.argv[1]))
+d["permissions"]["allow"].remove("Bash(git remote -v)")
+open(sys.argv[1], "w").write(json.dumps(d, indent=2) + "\n")
+ENVCOPY
+if out="$(QA_DUMP_PINS=1 "$REPO/tests/validate.sh" "$envcopy")"; then
+  echo "  FAIL  a broken repo passes when an environment variable is set"; fail=1
+elif grep -qF "settings.example.json must allow Bash(git remote -v)" <<<"$out"; then
+  echo "  pass  a broken repo still fails with an environment variable set"
+else
+  echo "  FAIL  unexpected output with an environment variable set: $out"; fail=1
+fi
 
 # Portable in-place edit (BSD and GNU sed differ on -i). Subshells in expect_failure inherit it.
 edit() { local f="$1"; shift; sed "$@" "$f" >"$f.tmp" && mv "$f.tmp" "$f"; }
@@ -424,6 +445,100 @@ expect_failure "digits-only versions quoted" "templates/safety.md must redact di
   "edit templates/safety.md -e 's| a value of digits only is not a version and is .<redacted>.[;]||'"
 expect_failure "credential-looking names undefined" "templates/safety.md must say what a credential-looking name is" \
   "edit templates/safety.md -e 's| (a known token prefix such as .ghp_., .github_pat_., .glpat-., .AKIA. or .xox., or a long run of mixed letters and digits)||'"
+expect_failure "reviewer that assumes main" "agents/pr-reviewer.md must take the base branch from the PR, not assume main" \
+  "edit agents/pr-reviewer.md -e 's|never assume .main.|use main|'"
+expect_failure "reviewer without a default-branch fallback" "agents/pr-reviewer.md must fall back to the repo's default branch" \
+  "edit agents/pr-reviewer.md -e 's|git symbolic-ref --short refs/remotes/origin/HEAD|origin/main|'"
+expect_failure "reviewer that guesses the base" "agents/pr-reviewer.md must ask when the base branch is unknown" \
+  "edit agents/pr-reviewer.md -e 's|stop and return a one-line request for the base branch|use main|'"
+expect_failure "reviewer that may change git state silently" "agents/pr-reviewer.md must state that git fetch is the only allowed git write" \
+  "edit agents/pr-reviewer.md -e 's|The one allowed exception is the .git fetch. in Phase 1, in exactly the form|Fetching is fine, for example|'"
+expect_failure "reviewer that hides its base" "agents/pr-reviewer.md must report the base branch" \
+  "edit agents/pr-reviewer.md -e 's|name the base branch and how you found it|review the diff|'"
+expect_failure "PR description that assumes main" "skills/pr-description/SKILL.md must take the target branch from the PR, not assume main" \
+  "edit skills/pr-description/SKILL.md -e 's|never assume .main.|use main|'"
+expect_failure "reviewer with a double origin prefix" "agents/pr-reviewer.md must strip origin/ from the default branch" \
+  "edit agents/pr-reviewer.md -e 's|prints .origin/develop., so .<base>. is .develop.|gives the base|'"
+expect_failure "reviewer with any fetch form" "agents/pr-reviewer.md must restrict the fetch form" \
+  "edit agents/pr-reviewer.md -e 's|Never add .--all., .--prune., .--force. or a .+. refspec, and never|Never|'"
+expect_failure "reviewer without an ADO base lookup" "agents/pr-reviewer.md must name the Azure DevOps target branch command" \
+  "edit agents/pr-reviewer.md -e 's|.targetRefName. without .refs/heads/.|the target|'"
+expect_failure "reviewer ignoring forks" "agents/pr-reviewer.md must handle PRs from forks" \
+  "edit agents/pr-reviewer.md -e 's|use that remote instead of .origin. below|use origin|'"
+expect_failure "PR description with a double origin prefix" "skills/pr-description/SKILL.md must strip origin/ from the default branch" \
+  "edit skills/pr-description/SKILL.md -e 's|prints .origin/develop., so .<target>. is .develop.|gives the target|'"
+expect_failure "PR description without the default-branch fallback" "skills/pr-description/SKILL.md must fall back to the repo's default branch" \
+  "edit skills/pr-description/SKILL.md -e 's|git symbolic-ref --short refs/remotes/origin/HEAD|origin/main|'"
+expect_failure "PR description on a stale base" "skills/pr-description/SKILL.md must refresh the base before diffing" \
+  "edit skills/pr-description/SKILL.md -e 's|Run .git fetch <remote> <target>:refs/remotes/<remote>/<target>. first; if that fails, say the base may be out of date[.] ||'"
+expect_failure "reviewer fetching two refspecs at once" "agents/pr-reviewer.md must fetch PR branches in the allowed form" \
+  "edit agents/pr-reviewer.md -e 's|fetch each branch with its own command, in the form the Rules allow|fetch both branches|'"
+expect_failure "reviewer without a GitHub base lookup" "agents/pr-reviewer.md must name the GitHub target branch command" \
+  "edit agents/pr-reviewer.md -e 's|.gh pr view --json baseRefName -q .baseRefName.|gh|'"
+expect_failure "reviewer reading glab text output" "agents/pr-reviewer.md must name the GitLab target branch command" \
+  "edit agents/pr-reviewer.md -e 's|.glab mr view -F json. (the .target_branch. field)|glab mr view|'"
+expect_failure "reviewer stuck on a detached HEAD" "agents/pr-reviewer.md must handle a detached HEAD" \
+  "edit agents/pr-reviewer.md -e 's| On a detached HEAD there is no branch to look up, so go to step 2[.]||'"
+expect_failure "reviewer stuck when a branch has no PR" "agents/pr-reviewer.md must fall through when no PR/MR exists" \
+  "edit agents/pr-reviewer.md -e 's|reports that no pull request or merge request exists for the branch|fails|'"
+expect_failure "PR description stuck when a branch has no PR" "skills/pr-description/SKILL.md must fall through when no PR/MR exists" \
+  "edit skills/pr-description/SKILL.md -e 's|reports that no PR/MR exists for the branch means there is none|fails means stop|'"
+expect_failure "reviewer guessing after a lookup error" "agents/pr-reviewer.md must not guess the base after a lookup error" \
+  "edit agents/pr-reviewer.md -e 's|means the PR target is unknown, so do not fall back to the default branch: go to step 3|is fine: say so and go to step 2|'"
+expect_failure "reviewer fetching a fork PR from origin" "agents/pr-reviewer.md must use the platform diff for fork PRs" \
+  "edit agents/pr-reviewer.md -e 's|For a PR from a fork, use \"Read a PR/MR\" instead|For a fork PR, fetch from origin|'"
+expect_failure "PR description guessing after a lookup error" "skills/pr-description/SKILL.md must not guess the target after a lookup error" \
+  "edit skills/pr-description/SKILL.md -e 's|; any other lookup error means the target is unknown, so ask||'"
+expect_failure "symbolic-ref allowed in a writing form" "allows a git symbolic-ref form that can write refs" \
+  "edit settings.example.json -e 's|\"Bash(git symbolic-ref --short refs/remotes/origin/HEAD)\"|\"Bash(git symbolic-ref --short refs/remotes/origin/HEAD)\", \"Bash(git symbolic-ref *)\"|'"
+expect_failure "symbolic-ref not allowed" "settings.example.json must allow Bash(git symbolic-ref" \
+  "edit settings.example.json -e '/git symbolic-ref --short refs.remotes.origin.HEAD/d'"
+expect_failure "fetch options not denied" "settings.example.json misses deny rules: Bash(git fetch *--*)" \
+  "edit settings.example.json -e '/git fetch [*]--[*]/d'"
+expect_failure "fetch force refspec not denied" "settings.example.json misses deny rules: Bash(git fetch *+*)" \
+  "edit settings.example.json -e '/git fetch [*][+][*]/d'"
+expect_failure "reviewer reading the head owner as the base" "agents/pr-reviewer.md must find a fork's base repository from the PR URL" \
+  "edit agents/pr-reviewer.md -e 's|.gh pr view --json url,isCrossRepository.|gh pr view --json headRepositoryOwner|'"
+expect_failure "reviewer expecting a diff from az repos pr show" "agents/pr-reviewer.md must not expect a diff from az repos pr show" \
+  "edit agents/pr-reviewer.md -e 's|; for Azure DevOps the diff comes from the MCP or the local fetch below||'"
+expect_failure "short fetch options not denied" "settings.example.json misses deny rules: Bash(git fetch * -*)" \
+  "edit settings.example.json -e '/git fetch [*] -[*]/d'"
+expect_failure "leading fetch options not denied" "settings.example.json misses deny rules: Bash(git fetch -*)" \
+  "edit settings.example.json -e '/\"Bash(git fetch -[*])\"/d'"
+expect_failure "PR description fetching a fork base from origin" "skills/pr-description/SKILL.md must handle PRs from forks" \
+  "edit skills/pr-description/SKILL.md -e 's|unless the PR comes from a fork whose base repository is another remote|always|'"
+expect_failure "PR description without lookup commands" "skills/pr-description/SKILL.md must name the per-platform target lookups" \
+  "edit skills/pr-description/SKILL.md -e 's|.glab mr view -F json. (.target_branch.)|glab|'"
+expect_failure "PR description without a GitHub lookup" "skills/pr-description/SKILL.md must name the GitHub target lookup" \
+  "edit skills/pr-description/SKILL.md -e 's|GitHub .gh pr view --json baseRefName -q .baseRefName.|GitHub gh|'"
+expect_failure "PR description without an ADO lookup" "skills/pr-description/SKILL.md must name the Azure DevOps target lookup" \
+  "edit skills/pr-description/SKILL.md -e 's|.az repos pr list --source-branch <branch> --status active --query \"\[0\][.]targetRefName\" -o tsv.|az|'"
+expect_failure "PR description without a fork base lookup" "skills/pr-description/SKILL.md must say how to find a fork's base repository" \
+  "edit skills/pr-description/SKILL.md -e 's|GitHub .gh pr view --json url,isCrossRepository.|GitHub|'"
+expect_failure "reviewer without the set-head hint" "agents/pr-reviewer.md must say how to set a missing origin/HEAD" \
+  "edit agents/pr-reviewer.md -e 's| If .origin/HEAD. is just not set, say that .git remote set-head origin -a. sets it[.]||'"
+expect_failure "git remote -v not allowed" "settings.example.json must allow Bash(git remote -v)" \
+  "edit settings.example.json -e '/\"Bash(git remote -v)\"/d'"
+expect_failure "git remote allowed in a changing form" "allows a git remote form that can change remotes" \
+  "edit settings.example.json -e 's|\"Bash(git remote -v)\"|\"Bash(git remote -v)\", \"Bash(git remote *)\"|'"
+expect_failure "a pin count that does not match the pins" "tests/pin-count says 999, but this script defines" \
+  "echo 999 > tests/pin-count"
+expect_failure "pin count file missing" "tests/pin-count says nothing" \
+  "rm tests/pin-count"
+expect_failure "second refspec not denied" "settings.example.json misses deny rules: Bash(git fetch * * *)" \
+  "edit settings.example.json -e '/\"Bash(git fetch [*] [*] [*])\"/d'"
+expect_failure "git fetch pre-approved through Bash(git *)" "settings.example.json must not pre-approve git fetch" \
+  "edit settings.example.json -e 's|\"Bash(git remote -v)\"|\"Bash(git remote -v)\", \"Bash(git *)\"|'"
+expect_failure "git fetch pre-approved through git -C" "settings.example.json must not pre-approve git fetch" \
+  "edit settings.example.json -e 's|\"Bash(git remote -v)\"|\"Bash(git remote -v)\", \"Bash(git -C . fetch origin *)\"|'"
+expect_failure "git fetch pre-approved" "settings.example.json must not pre-approve git fetch" \
+  "edit settings.example.json -e 's|\"Bash(git remote -v)\"|\"Bash(git remote -v)\", \"Bash(git fetch origin *:refs/remotes/origin/*)\"|'"
+expect_failure "local branch fetch not denied" "misses deny rules: Bash(git fetch *:refs/heads/*)" \
+  "edit settings.example.json -e '/refs.heads/d'"
+expect_failure "tag fetch not denied" "misses deny rules: Bash(git fetch *:refs/tags/*)" \
+  "edit settings.example.json -e '/refs.tags/d'"
+expect_failure "agent fetch form denied" "denies the one git fetch form the agents use" \
+  "edit settings.example.json -e 's|\"Bash(git diff [*]--output[*])\"|\"Bash(git diff *--output*)\", \"Bash(git fetch origin *)\"|'"
 expect_failure "personal entry in the QA repo" "unknown group 'personal'" \
   "edit catalog.tsv -e 's/^pr-reviewer\tagent\tqa/pr-reviewer\tagent\tpersonal/'"
 expect_failure "machine path in settings.example.json" "settings.example.json contains a machine-specific /Users/ path" \
@@ -432,6 +547,36 @@ expect_failure "third-party skill that differs from the lock" "skills/vendored d
   "cp -R skills/bug-ticket skills/vendored && edit skills/vendored/SKILL.md -e 's/^name: bug-ticket/name: vendored/' && printf 'vendored\tskill\tthird-party\thttps://example.com\n' >> catalog.tsv && printf '%s\n' '\`vendored\`' >> README.md && printf 'vendored\t0000\n' > third-party.lock"
 expect_failure "third-party entry without a lock file" "third-party.lock missing" \
   "cp -R skills/bug-ticket skills/vendored && edit skills/vendored/SKILL.md -e 's/^name: bug-ticket/name: vendored/' && printf 'vendored\tskill\tthird-party\thttps://example.com\n' >> catalog.tsv && printf '%s\n' '\`vendored\`' >> README.md"
+
+echo "every pinned phrase"
+# Each phrase pinned in validate.sh is deleted, one at a time, in a copy of the repo; validate.sh must then fail with
+# that pin's message. New pins are covered automatically.
+dump_rc=0
+"$REPO/tests/validate.sh" --dump-pins "$REPO" >"$TMP/pins.json" || dump_rc=$?
+# Deletes pin number $1 (from $TMP/pins.json) from its file in the current directory. Called from eval'd mutations.
+# shellcheck disable=SC2317,SC2329
+drop_pin() {
+  python3 - "$TMP/pins.json" "$1" <<'DROP'
+import json, sys
+path, phrase, _ = json.load(open(sys.argv[1]))[int(sys.argv[2])]
+text = open(path, encoding="utf-8").read()
+open(path, "w", encoding="utf-8").write(text.replace(phrase, ""))
+DROP
+}
+n_pins=$(python3 -c 'import json,sys; print(len(json.load(open(sys.argv[1]))))' "$TMP/pins.json" 2>/dev/null || echo 0)
+# A failed or changed dump must fail here, not pass by checking fewer pins. tests/pin-count is the exact count.
+expected_pins="$(tr -d '[:space:]' <"$REPO/tests/pin-count" 2>/dev/null)"
+if [[ $dump_rc -ne 0 || "$n_pins" != "$expected_pins" ]]; then
+  echo "  FAIL  pin dump failed or lists $n_pins pins (tests/pin-count says $expected_pins)"
+  fail=1
+fi
+assert_pins=0
+for ((i = 0; i < n_pins; i++)); do
+  expected=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))[int(sys.argv[2])][2])' "$TMP/pins.json" "$i")
+  expect_failure "pin $i: $expected" "$expected" "drop_pin $i"
+  assert_pins=$((assert_pins + 1))
+done
+echo "  checked $assert_pins pinned phrases"
 
 echo "accepts"
 for indicator in ">" ">-" ">+" "|" "|-" "|+" "> # folded"; do

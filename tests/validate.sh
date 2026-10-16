@@ -2,14 +2,21 @@
 # Checks that every agent, skill and command is cataloged, loadable by Claude Code, documented,
 # and that our own entries carry the safety rules. Also checks both settings files.
 # Usage: tests/validate.sh [repo-dir]   (defaults to this repo)
+#        tests/validate.sh --dump-pins [repo-dir]   print every pinned phrase as JSON (used by tests/test_validate.sh)
 # Needs only python3 (standard library). Runs as one process so the whole check stays fast.
 set -uo pipefail
 
+MODE=check
+if [[ "${1:-}" == --dump-pins ]]; then
+  MODE=dump-pins
+  shift
+fi
 REPO="$(cd "${1:-$(dirname "${BASH_SOURCE[0]}")/..}" && pwd)"
 
 # -X utf8: read files as UTF-8 even under LANG=C (the entries contain non-ASCII characters).
-exec python3 -X utf8 - "$REPO" <<'PYTHON'
+exec python3 -X utf8 - "$REPO" "$MODE" <<'PYTHON'
 import glob
+from fnmatch import fnmatchcase
 import hashlib
 import json
 import os
@@ -17,6 +24,7 @@ import re
 import sys
 
 repo = sys.argv[1]
+mode = sys.argv[2]
 # Catalog groups this repo may contain. claude-dev allows personal and third-party instead.
 ALLOWED_GROUPS = ("qa", "third-party")
 errors = []
@@ -399,6 +407,59 @@ AGENT_RULES = {
         "For a defect, offer the step from Defect routing": "must route defects with Defect routing",
         "for a pre-existing confirmed product defect, or a regression from a merged change if the user chooses it": "plan example must file bugs only for confirmed product defects or shared-branch regressions",
     },
+    "agents/pr-reviewer.md": {
+        "never assume `main`": "must take the base branch from the PR, not assume main",
+        "git symbolic-ref --short refs/remotes/origin/HEAD": "must fall back to the repo's default branch",
+        "stop and return a one-line request for the base branch": "must ask when the base branch is unknown",
+        "The one allowed exception is the `git fetch` in Phase 1, in exactly the form": "must state that git fetch is the only allowed git write",
+        "Never add `--all`, `--prune`, `--force` or a `+` refspec": "must restrict the fetch form",
+        "The fetch is not pre-approved, so Claude may ask the user first": "must say the fetch is not pre-approved",
+        "prints `origin/develop`, so `<base>` is `develop`": "must strip origin/ from the default branch",
+        "`targetRefName` without `refs/heads/`": "must name the Azure DevOps target branch command",
+        "use that remote instead of `origin` below": "must handle PRs from forks",
+        "`gh pr view --json url,isCrossRepository`": "must find a fork's base repository from the PR URL",
+        "To tell, compare the PR's base repository with the URLs in `git remote -v`": "must compare the base repository with git remote -v",
+        "and `isCrossRepository` is true for a fork": "must name the fork flag",
+        "`git fetch <remote> <base>:refs/remotes/<remote>/<base>`": "must fetch the base with an explicit refspec",
+        "`git diff $(git merge-base HEAD <remote>/<base>)...HEAD`": "must diff against <remote>/<base>",
+        "`git diff origin/<target>...origin/<source>`": "must diff a PR's target and source",
+        "`az repos pr list --source-branch <branch> --status active --query \"[0].targetRefName\" -o tsv`": "must name the Azure DevOps target lookup",
+        "(`gh pr diff N`, `glab mr diff N --raw`; for Azure DevOps": "must name the platform diff commands",
+        "say the diff may be out of date, or use": "must say when the diff may be stale",
+        "If the lookup prints nothing, or reports": "must treat empty lookup output as no PR",
+        "and never run `git pull`, `checkout`, `switch`, `reset`, `merge`, `rebase` or `stash`": "must forbid git commands that change state",
+        "title, source and base branch": "must show source and base branch in the overview",
+        "for Azure DevOps the diff comes from the MCP or the local fetch below": "must not expect a diff from az repos pr show",
+        "fetch each branch with its own command, in the form the Rules allow": "must fetch PR branches in the allowed form",
+        "`gh pr view --json baseRefName -q .baseRefName`": "must name the GitHub target branch command",
+        "`glab mr view -F json` (the `target_branch` field)": "must name the GitLab target branch command",
+        "On a detached HEAD there is no branch to look up, so go to step 2": "must handle a detached HEAD",
+        "`git remote set-head origin -a`": "must say how to set a missing origin/HEAD",
+        "reports that no pull request or merge request exists for the branch": "must fall through when no PR/MR exists",
+        "means the PR target is unknown, so do not fall back to the default branch: go to step 3": "must not guess the base after a lookup error",
+        "For a PR from a fork, use \"Read a PR/MR\" instead": "must use the platform diff for fork PRs",
+        "name the base branch and how you found it": "must report the base branch",
+    },
+    "skills/pr-description/SKILL.md": {
+        "never assume `main`": "must take the target branch from the PR, not assume main",
+        "git symbolic-ref --short refs/remotes/origin/HEAD": "must fall back to the repo's default branch",
+        "prints `origin/develop`, so `<target>` is `develop`": "must strip origin/ from the default branch",
+        "reports that no PR/MR exists for the branch means there is none": "must fall through when no PR/MR exists",
+        "any other lookup error means the target is unknown, so ask": "must not guess the target after a lookup error",
+        "Run `git fetch <remote> <target>:refs/remotes/<remote>/<target>` first; if that fails, say the base may be out of date": "must refresh the base before diffing",
+        "unless the PR comes from a fork whose base repository is another remote": "must handle PRs from forks",
+        "`glab mr view -F json` (`target_branch`)": "must name the per-platform target lookups",
+        "GitHub `gh pr view --json baseRefName -q .baseRefName`": "must name the GitHub target lookup",
+        "`az repos pr list --source-branch <branch> --status active --query \"[0].targetRefName\" -o tsv`": "must name the Azure DevOps target lookup",
+        "GitHub `gh pr view --json url,isCrossRepository`": "must say how to find a fork's base repository",
+        "GitLab the `web_url` from `glab mr view -F json`": "must say how GitLab finds a fork's base repository",
+        "Azure DevOps the repository in the PR's details": "must say how Azure DevOps finds a fork's base repository",
+        "then use that remote.": "must use the fork's base remote",
+        "(compare the PR's base repository with `git remote -v`": "must compare the base repository with git remote -v",
+        "`git diff $(git merge-base HEAD <remote>/<target>)...HEAD`": "must diff against <remote>/<target>",
+        "`git log --oneline <remote>/<target>..HEAD`": "must list commits against <remote>/<target>",
+        "a lookup that prints nothing or reports": "must treat empty lookup output as no PR",
+    },
     "skills/bug-ticket/SKILL.md": {
         "An intermittent failure can still be a product defect": "must not dismiss intermittent failures as non-bugs",
         "File only what Defect routing sends here": "must file only what Defect routing sends to it",
@@ -408,6 +469,7 @@ AGENT_RULES = {
     },
     "README.md": {
         "the five JVM settings the rule names": "must describe the closed JVM list",
+        "we don't recommend a wildcard allow rule for it": "must not recommend a git fetch allow rule",
         "quotes only what the allow-list in `templates/safety.md` permits": "must point to the full build-file allow-list",
         "The file is rewritten as JSON, so its values stay the same": "must say the settings merge rewrites the file",
         "suspected flaky/environment (product not ruled out)": "trace example must use the diagnoser's suspected-flaky label",
@@ -451,6 +513,19 @@ else:
     for path in sorted(DEFECT_ROUTING_FILES):
         if defect_routing not in read(f"{repo}/{path}"):
             err(f"{path}: does not contain the block from templates/defect-routing.md verbatim")
+# --dump-pins prints every pinned phrase as JSON and exits, so tests/test_validate.sh can delete each one in a copy of
+# the repo and check that this script then fails with the pin's message. It is an argument, not an environment
+# variable, so nothing in the environment can turn a normal run into one that checks nothing.
+pins = [[p, ph, f"{p} {m}"] for p, rules in AGENT_RULES.items() for ph, m in rules.items()]
+pins += [["skills/framework-map/SKILL.md", ph, f"skills/framework-map/SKILL.md {m}"] for ph, m in MAPPER_RULES.items()]
+pins += [["templates/defect-routing.md", ph, f"templates/defect-routing.md {m}"] for ph, m in DEFECT_ROUTES.items()]
+if mode == "dump-pins":
+    print(json.dumps(pins))
+    sys.exit(0)
+# tests/pin-count holds the exact number of pins, so a pin removed from this script fails instead of going untested.
+pin_count = read(f"{repo}/tests/pin-count").strip()
+if pin_count != str(len(pins)):
+    err(f"tests/pin-count says {pin_count or 'nothing'}, but this script defines {len(pins)} pins; update both together")
 for path, rules in AGENT_RULES.items():
     text = read(f"{repo}/{path}")
     for phrase, message in rules.items():
@@ -535,10 +610,32 @@ if example:
                 "Read(**/secrets/**/*.txt)",
                 "Read(~/.ssh/**)", "Read(~/.azure/**)", "Read(~/.config/gh/**)", "Read(**/*.pem)",
                 "Read(**/settings.xml)", "Read(**/gradle.properties)", "Read(~/.m2/settings-security.xml)",
-                "Read(**/settings-security.xml)",
+                "Read(**/settings-security.xml)", "Bash(git fetch *--*)", "Bash(git fetch *+*)",
+                "Bash(git fetch * -*)", "Bash(git fetch -*)", "Bash(git fetch * * *)",
+                "Bash(git fetch *:refs/heads/*)", "Bash(git fetch *:refs/tags/*)",
                 "Bash(glab ci get *--with-variables*)"]
     if "/Users/" in json.dumps(example[0]):
         err("settings.example.json contains a machine-specific /Users/ path")
+    allow = example[0].get("permissions", {}).get("allow", []) if isinstance(example[0], dict) else []
+    if "Bash(git symbolic-ref --short refs/remotes/origin/HEAD)" not in allow:
+        err("settings.example.json must allow Bash(git symbolic-ref --short refs/remotes/origin/HEAD)")
+    loose = [r for r in allow if r.startswith("Bash(git symbolic-ref") and r != "Bash(git symbolic-ref --short refs/remotes/origin/HEAD)"]
+    if loose:
+        err(f"settings.example.json allows a git symbolic-ref form that can write refs: {', '.join(loose)}")
+    if "Bash(git remote -v)" not in allow:
+        err("settings.example.json must allow Bash(git remote -v)")
+    wide_remote = [r for r in allow if r.startswith("Bash(git remote") and r != "Bash(git remote -v)"]
+    if wide_remote:
+        err(f"settings.example.json allows a git remote form that can change remotes: {', '.join(wide_remote)}")
+    # The agents' one fetch form must not be denied (glob matching, an approximation of Claude Code's matcher). No
+    # allow rule is recommended for it, because globs cannot model shell syntax; the deny rules are only a backstop.
+    bash_deny = [r[5:-1] for r in deny if r.startswith("Bash(") and r.endswith(")")]
+    if any(fnmatchcase("git fetch origin develop:refs/remotes/origin/develop", d) for d in bash_deny):
+        err("settings.example.json denies the one git fetch form the agents use")
+    # No allow rule may match the agents' fetch, directly or through a wider pattern such as Bash(git *).
+    fetch_form = "git fetch origin develop:refs/remotes/origin/develop"
+    if any(r.startswith("Bash(") and r.endswith(")") and (fnmatchcase(fetch_form, r[5:-1]) or "fetch" in r) for r in allow):
+        err("settings.example.json must not pre-approve git fetch")
     missing = [r for r in required if r not in deny]
     if missing:
         err(f"settings.example.json misses deny rules: {', '.join(missing)}")

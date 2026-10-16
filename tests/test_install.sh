@@ -55,7 +55,7 @@ assert "agent link resolves to the repo" test "$(readlink "$CLAUDE_HOME/agents/$
 assert "skill is readable through its link" test -f "$CLAUDE_HOME/skills/$skill/SKILL.md"
 assert "does not touch CLAUDE.md" test ! -e "$CLAUDE_HOME/CLAUDE.md"
 assert "does not create settings.json" test ! -e "$CLAUDE_HOME/settings.json"
-assert "reports missing deny rules" grep -q "lacks $n_deny secret deny rule(s). Run ./install.sh --settings" <<<"$out"
+assert "reports missing deny rules" grep -q "lacks $n_deny deny rule(s). Run ./install.sh --settings" <<<"$out"
 assert "no backup on a clean install" test ! -d "$CLAUDE_HOME/backups"
 
 echo "dependency check"
@@ -74,7 +74,7 @@ assert "reports missing azure-devops extension" grep -q "missing .*az azure-devo
 assert "does not run az" test ! -e "$TMP/az-called"
 assert "reports missing openpyxl" grep -q "missing .*openpyxl" <<<"$out"
 assert "still links when python3 cannot run" test "$(count_links "$TMP/deps/agents")" = "$n_agents"
-assert "says the settings check failed" grep -q "Could not check .*settings.json for the secret deny rules" <<<"$out"
+assert "says the settings check failed" grep -q "Could not check .*settings.json for the deny rules" <<<"$out"
 printf '#!/bin/sh\ntouch "%s/stub-called"\nexit 1\n' "$TMP" >"$stubs/py-stub"
 chmod +x "$stubs/py-stub"
 mkdir -p "$TMP/stubpath"
@@ -116,6 +116,7 @@ echo "--settings on a fresh machine"
 out="$(CLAUDE_HOME="$TMP/fresh" "$REPO/install.sh" --settings 2>&1)"; rc=$?
 assert "exits 0" test "$rc" = 0
 assert "creates settings.json with the deny rules" test "$(deny_count "$TMP/fresh/settings.json")" = "$n_deny"
+assert "--settings adds no allow rules" python3 -c 'import json,sys; sys.exit(1 if json.load(open(sys.argv[1])).get("permissions",{}).get("allow") else 0)' "$TMP/fresh/settings.json"
 assert "creates it readable (0644)" test "$(python3 -c 'import os,stat,sys; print(oct(stat.S_IMODE(os.stat(sys.argv[1]).st_mode)))' "$TMP/fresh/settings.json")" = 0o644
 
 echo "--settings with broken input changes nothing"
