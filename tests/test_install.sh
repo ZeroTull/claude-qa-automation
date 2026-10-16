@@ -332,6 +332,20 @@ run --project "$enc" --update
 assert "an unwritable value gives a one-line reason" grep -q "could not write .*settings.json" <<<"$out"
 assert "an unwritable value prints no traceback" out_lacks "Traceback"
 assert "an unwritable value leaves no temp file" test -z "$(find "$enc/.claude" -name '.settings.*')"
+assert "an unwritable value does not echo it" out_lacks "ud800"
+mkdir -p "$TMP/no-mktemp"
+printf '#!/bin/sh\nexit 1\n' >"$TMP/no-mktemp/mktemp"
+chmod +x "$TMP/no-mktemp/mktemp"
+mk="$TMP/proj-mk"
+mkdir -p "$mk/.claude"
+echo '{"permissions": {"deny": []}}' >"$mk/.claude/settings.json"
+out="$(PATH="$TMP/no-mktemp:$PATH" "$REPO/install.sh" --project "$mk" --update 2>&1)"; rc=$?
+assert "without mktemp the project install still finishes" test "$rc" = 0
+assert "without mktemp the project settings are skipped with a reason" grep -q "could not create a temp file to check its deny rules" <<<"$out"
+assert "without mktemp the file is unchanged" test "$(deny_count "$mk/.claude/settings.json")" = 0
+out="$(CLAUDE_HOME="$TMP/mk-home" PATH="$TMP/no-mktemp:$PATH" "$REPO/install.sh" 2>&1)"; rc=$?
+assert "without mktemp the default install still finishes" test "$rc" = 0
+assert "without mktemp the settings check is skipped with a reason" grep -q "Skipped the settings check: could not create a temp file" <<<"$out"
 proj7="$TMP/proj7"
 mkdir -p "$proj7/.claude"
 echo '{"permissions": {"deny": []}}' >"$proj7/.claude/settings.json"

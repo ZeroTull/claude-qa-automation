@@ -386,8 +386,10 @@ expect_failure "safety rule that quotes argLine freely" "templates/safety.md mus
   "edit templates/safety.md -e 's|; write every other .-D. pair as .-Dname=<redacted>.||'"
 expect_failure "open-ended JVM settings list" "templates/safety.md must allow only a closed list of JVM settings" \
   "edit templates/safety.md -e 's|these JVM settings and no others:|standard JVM settings such as|'"
-expect_failure "JVM flags quoted wholesale" "templates/safety.md must redact JVM flags that carry credentials" \
-  "edit templates/safety.md -e 's|flags that contain no credential, URL or user info|flags|'"
+expect_failure "JVM flags quoted wholesale" "templates/safety.md must quote only on/off and numeric JVM flags" \
+  "edit templates/safety.md -e 's|.-XX. flags that only switch something on or off or set a number|any flag|'"
+expect_failure "profile activation values quoted" "templates/safety.md must redact profile activation values" \
+  "edit templates/safety.md -e 's|; for a .<property>. activation keep its .<name>. and write its .<value>. as .<redacted>.||'"
 expect_failure "personal entry in the QA repo" "unknown group 'personal'" \
   "edit catalog.tsv -e 's/^pr-reviewer\tagent\tqa/pr-reviewer\tagent\tpersonal/'"
 expect_failure "machine path in settings.example.json" "settings.example.json contains a machine-specific /Users/ path" \

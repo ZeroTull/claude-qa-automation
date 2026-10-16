@@ -274,7 +274,8 @@ except BaseException as e:
     if isinstance(e, OSError):
         fail(f"could not write {target}: {e.strerror}")
     if isinstance(e, ValueError):
-        fail(f"could not write {target}: {e}")
+        # Name the error type only: the message of an encoding error quotes the offending text.
+        fail(f"could not write {target}: {type(e).__name__}")
     raise
 PY
 }
@@ -304,8 +305,10 @@ merge_settings() {
   mkdir -p "$CLAUDE_HOME"
   if [[ -e "$target" ]]; then
     init_backup_dir
-    mkdir -p "$BACKUP_DIR"
-    cp "$target" "$BACKUP_DIR/settings.json"
+    if ! { mkdir -p "$BACKUP_DIR" && cp "$target" "$BACKUP_DIR/settings.json"; }; then
+      echo "error: could not back up settings.json to $BACKUP_DIR, see the error above; the file is unchanged" >&2
+      return 1
+    fi
     echo "  backed up settings.json"
   fi
   settings_tool merge
@@ -585,8 +588,10 @@ case "${1:-}" in
     if ! have_python3; then
       echo
       echo "Skipped the settings check: no working python3."
+    elif ! errfile="$(mktemp)"; then
+      echo
+      echo "Skipped the settings check: could not create a temp file."
     else
-      errfile="$(mktemp)"
       trap 'rm -f "$errfile"' EXIT
       if ! missing="$(settings_tool check 2>"$errfile")"; then
         echo
