@@ -161,10 +161,24 @@ extra_files() {
   done < <(cd "$dest" && find . ! -type d)
 }
 
+# True when find can list every folder under $1 (a file counts as listable).
+listable() { [[ ! -d "$1" ]] || find "$1" >/dev/null 2>&1; }
+
+# Reports the files and links the team has inside $dest that this repo's $src lacks (Finder's .DS_Store aside).
+note_kept() {
+  local src="$1" dest="$2" name="$3" extra
+  while IFS= read -r extra; do
+    [[ -n "$extra" && "$(basename "$extra")" != .DS_Store ]] || continue
+    echo "  kept      $dest/$extra (not in this repo)"
+    note sum_kept "$name/$extra"
+  done < <(extra_files "$src" "$dest")
+}
+
 # Copies one agent or skill into a team repo. --update copies this repo's files over the existing ones (local edits
 # to them are overwritten; the team repo's git history is their backup) and never deletes a file this repo lacks.
+# One link or file/folder mismatch anywhere in an entry skips the whole entry, so nothing is written through a link.
 copy_one() {
-  local src="$1" dest="$2" update="$3" name conflict extra
+  local src="$1" dest="$2" update="$3" name conflict
   name="${dest#"$project/.claude/"}"
   if [[ -L "$dest" ]]; then
     echo "  SKIP      $dest (is a symlink - remove it to install a copy)"
@@ -179,10 +193,14 @@ copy_one() {
     echo "  copied    $dest"
     note sum_added "$name"
     return
+  elif ! listable "$dest"; then
+    echo "  SKIP      $dest (could not read all of it - fix its permissions)"
+    note sum_skipped "$name (could not read all of it)"
+    return
   fi
   conflict="$(conflict_in "$src" "$dest")"
   if [[ -n "$conflict" ]]; then
-    echo "  SKIP      $dest ($conflict is a symlink or a different type - remove it to install)"
+    echo "  SKIP      $dest ($conflict is a symlink or a different type - remove that path to install)"
     note sum_skipped "$name ($conflict is a symlink or a different type)"
     return
   fi
@@ -190,29 +208,27 @@ copy_one() {
     echo "  ok        $dest"
     note sum_unchanged "$name"
   elif [[ "$update" == yes ]]; then
-    if [[ -d "$src" ]]; then cp -Rp "$src/." "$dest/"; else cp -p "$src" "$dest"; fi
+    # -f replaces a read-only file instead of failing on it.
+    if [[ -d "$src" ]]; then cp -Rpf "$src/." "$dest/"; else cp -pf "$src" "$dest"; fi
     echo "  updated   $dest"
     note sum_updated "$name"
   else
     echo "  DIFFERS   $dest (--update copies this repo's version over it, including local edits)"
     note sum_differs "$name"
   fi
-  while IFS= read -r extra; do
-    [[ -n "$extra" ]] || continue
-    echo "  kept      $dest/$extra (not in this repo)"
-    note sum_kept "$name/$extra"
-  done < <(extra_files "$src" "$dest")
+  note_kept "$src" "$dest" "$name"
 }
 
 # Notes the agents and skills in the team repo that this repo doesn't have; they are left as they are.
+# Hidden names (such as .DS_Store) are not agents or skills and are not listed.
 note_left() {
   local entry base
-  for entry in "$project/.claude/agents"/* "$project/.claude/agents"/.[!.]*; do
+  for entry in "$project/.claude/agents"/*; do
     [[ -e "$entry" || -L "$entry" ]] || continue
     base="$(basename "$entry")"
     [[ "$base" == *.md && -f "$REPO/agents/$base" ]] || note sum_left "agents/$base"
   done
-  for entry in "$project/.claude/skills"/* "$project/.claude/skills"/.[!.]*; do
+  for entry in "$project/.claude/skills"/*; do
     [[ -e "$entry" || -L "$entry" ]] || continue
     base="$(basename "$entry")"
     [[ -d "$REPO/skills/$base" && ! -L "$REPO/skills/$base" ]] || note sum_left "skills/$base"
@@ -236,7 +252,7 @@ project_summary() {
   summary_line updated "$sum_updated"
   summary_line unchanged "$sum_unchanged"
   [[ -z "$sum_differs" ]] || summary_line differs "$sum_differs" "run again with --update to copy this repo's version"
-  [[ -z "$sum_skipped" ]] || summary_line skipped "$sum_skipped" "remove them, then run again"
+  [[ -z "$sum_skipped" ]] || summary_line skipped "$sum_skipped" "remove the path named in each, then run again"
   summary_line left "$sum_left" "not in this repo, kept as they are"
   [[ -z "$sum_kept" ]] || summary_line kept "$sum_kept" "files inside an agent or skill that this repo lacks, kept"
 }
