@@ -222,7 +222,7 @@ copy_one() {
       echo "  copied    $dest"
       note sum_added "$name"
     else
-      echo "  FAILED    $dest (could not copy, see the error above; files copied before it stay - remove them, then run again)"
+      echo "  FAILED    $dest (could not copy, see the error above; files copied before it stay - delete that folder, then run again)"
       note sum_failed "$name"
     fi
     return

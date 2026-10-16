@@ -555,7 +555,7 @@ class InstallTest(unittest.TestCase):
                     self.check(f"{sub} {args}: copies nothing", not any((proj / ".claude" / "agents").iterdir()))
         complete = self.tmp / "proj-locked-complete"
         complete.mkdir()
-        self.run_install("--project", complete)
+        self.check("a complete install: the setup run succeeds", self.run_install("--project", complete).rc == 0)
         agents = complete / ".claude" / "agents"
         agents.chmod(0o555)
         self.addCleanup(agents.chmod, 0o755)
