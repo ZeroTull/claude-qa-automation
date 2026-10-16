@@ -23,13 +23,14 @@ run() {
 
 # True if the last install output does not contain $1. Called through assert.
 # shellcheck disable=SC2317,SC2329
-# Fixed-string and byte-wise (LC_ALL=C), so a pattern such as '\377' or a raw byte is matched literally and a
-# grep error can never pass as "not found".
-out_lacks() { ! LC_ALL=C grep -qF -- "$1" <<<"$out"; }
+# Fixed-string and byte-wise (LC_ALL=C), so a pattern such as '\377' or a raw byte is matched literally. Only grep's
+# "no match" (exit 1) counts as lacking; a grep error (exit 2) fails the assertion.
+out_lacks() { local rc=0; LC_ALL=C grep -qF -- "$1" <<<"$out" || rc=$?; [[ $rc -eq 1 ]]; }
 
 # True if file $2 does not contain $1. Called through assert.
 # shellcheck disable=SC2317,SC2329
-out_lacks_file() { ! grep -qF -- "$1" "$2"; }
+# Like out_lacks: a missing or unreadable file fails the assertion instead of passing it.
+out_lacks_file() { local rc=0; LC_ALL=C grep -qF -- "$1" "$2" || rc=$?; [[ $rc -eq 1 ]]; }
 
 # Octal permission bits of a file. GNU stat first: on Linux, "stat -f" is filesystem status and succeeds.
 file_mode() { stat -c %a "$1" 2>/dev/null || stat -f %Lp "$1"; }
@@ -109,7 +110,7 @@ mkdir -p "$TMP/badjson"
 printf '{not json' >"$TMP/badjson/settings.json"
 out="$(CLAUDE_HOME="$TMP/badjson" "$REPO/install.sh" 2>&1)"; rc=$?
 assert "exits 0" test "$rc" = 0
-assert "shows the reason" grep -q "Could not check .*: settings.json is not valid JSON" <<<"$out"
+assert "shows the reason" grep -q "Could not check .*: .*settings.json is not valid JSON" <<<"$out"
 
 echo "--settings on a fresh machine"
 out="$(CLAUDE_HOME="$TMP/fresh" "$REPO/install.sh" --settings 2>&1)"; rc=$?
@@ -316,6 +317,23 @@ assert "--settings reports a failed backup" grep -q "could not back up settings.
 assert "--settings fails when the backup fails" test "$rc" != 0
 assert "--settings leaves the file unchanged when the backup fails" test "$(deny_count "$TMP/blocked-home/settings.json")" = 0
 assert "--settings leaves no temp file when the backup fails" test -z "$(find "$TMP/blocked-home" -name '.settings.*')"
+mf="$TMP/merge-fail-home"
+mkdir -p "$mf"
+echo '{"permissions": {"deny": []}}' >"$mf/settings.json"
+out="$(CLAUDE_HOME="$mf" QA_FAIL_SETTINGS_WRITE=1 "$REPO/install.sh" --settings 2>&1)"; rc=$?
+assert "--settings fails when the merge fails" test "$rc" = 1
+assert "--settings says the file was left unchanged" grep -q "could not add the deny rules; settings.json was left unchanged" <<<"$out"
+assert "--settings leaves the file unchanged when the merge fails" test "$(deny_count "$mf/settings.json")" = 0
+assert "--settings leaves no temp file when the merge fails" test -z "$(find "$mf" -name '.settings.*')"
+full="$TMP/full-backups-home"
+fullp="$TMP/proj-full-backups"
+mkdir -p "$fullp/.claude"
+echo '{"permissions": {"deny": []}}' >"$fullp/.claude/settings.json"
+for i in $(seq 0 999); do mkdir -p "$full/backups/qa-20990101-000000-$(printf '%03d' "$i")"; done
+out="$(CLAUDE_HOME="$full" BACKUP_STAMP=20990101-000000 "$REPO/install.sh" --project "$fullp" --update 2>&1)"; rc=$?
+assert "1000 backups in one second fails only the settings step" grep -q "FAILED .*settings.json (could not back it up" <<<"$out"
+assert "it still finishes the install" grep -q "Next: open Claude Code" <<<"$out"
+assert "it leaves the file unchanged" test "$(deny_count "$fullp/.claude/settings.json")" = 0
 bad="$TMP/bad-utf8-home"
 mkdir -p "$bad"
 printf '{"a": "\377"}\n' >"$bad/settings.json"
@@ -329,13 +347,14 @@ out="leaked \\377 here"
 assert "out_lacks detects a leaked escape" test "$(out_lacks '\377' && echo missed || echo found)" = found
 out="leaked $(printf '\377') here"
 assert "out_lacks detects a leaked raw byte" test "$(out_lacks "$(printf '\377')" && echo missed || echo found)" = found
+assert "out_lacks_file fails on a missing file" test "$(out_lacks_file x "$TMP/no-such-file" 2>/dev/null && echo passed || echo failed)" = failed
 out="$saved_out"
 badp="$TMP/proj-bad-utf8"
 mkdir -p "$badp/.claude"
 printf '{"a": "\377"}\n' >"$badp/.claude/settings.json"
 cp "$badp/.claude/settings.json" "$TMP/bad-utf8-copy.json"
 run --project "$badp" --update
-assert "--project skips a non-UTF-8 settings.json with a reason" grep -q "could not check its deny rules: settings.json is not UTF-8 (byte offset" <<<"$out"
+assert "--project skips a non-UTF-8 settings.json with a reason" grep -q "could not check its deny rules: .*settings.json is not UTF-8 (byte offset" <<<"$out"
 assert "--project does not echo the bytes" out_lacks "0xff"
 assert "--project leaves the non-UTF-8 file unchanged" cmp -s "$badp/.claude/settings.json" "$TMP/bad-utf8-copy.json"
 assert "a non-UTF-8 settings.json prints no traceback" out_lacks "Traceback"
@@ -379,7 +398,8 @@ mkdir -p "$dup/.claude"
 printf '{"permissions": {"deny": ["Read(**/.env)"]}, "permissions": {"deny": []}}\n' >"$dup/.claude/settings.json"
 cp "$dup/.claude/settings.json" "$TMP/dup-copy.json"
 run --project "$dup" --update
-assert "duplicate keys are reported" grep -q 'has the key "permissions" twice in one object' <<<"$out"
+assert "duplicate keys are reported" grep -q 'has the same key twice in one object' <<<"$out"
+assert "duplicate keys are not named" out_lacks '"permissions" twice'
 assert "duplicate keys leave the file unchanged" cmp -s "$dup/.claude/settings.json" "$TMP/dup-copy.json"
 mkdir -p "$TMP/no-mktemp"
 printf '#!/bin/sh\nexit 1\n' >"$TMP/no-mktemp/mktemp"

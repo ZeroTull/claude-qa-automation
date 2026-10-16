@@ -5,9 +5,9 @@
 #   ./install.sh --settings                  add this repo's secret deny rules to ~/.claude/settings.json (Claude Code)
 #   ./install.sh --project <path> [--update] copy the agents and skills into <path>/.claude for a team
 #   ./install.sh [--copilot] --uninstall     remove what the install added and restore what it replaced
-# It never touches ~/.claude/CLAUDE.md. ~/.claude/settings.json changes only with --settings. --project creates a
-# team repo's .claude/settings.json from settings.example.json when it is absent, and adds deny rules to an existing
-# one only with --update. Both add deny rules only, after a backup of an existing file; see the README for details.
+# It never touches ~/.claude/CLAUDE.md. ~/.claude/settings.json changes only with --settings, which adds missing deny
+# rules after a backup. --project copies settings.example.json (allow and deny lists) into a team repo that has no
+# .claude/settings.json; for an existing one it adds only the missing deny rules, with --update and after a backup.
 # Anything a link install replaces is moved to <target>/backups/qa-<timestamp>-NNN/ first. --project --update
 # overwrites the copied agents and skills in place (the team repo's git history is their backup).
 set -euo pipefail
@@ -58,7 +58,8 @@ init_backup_dir() {
     i=$((i + 1))
     if [[ $i -gt 999 ]]; then
       echo "error: more than 1000 backups for one second in $TARGET_HOME/backups" >&2
-      exit 1
+      BACKUP_DIR=""
+      return 1
     fi
   done
 }
@@ -168,8 +169,7 @@ project_settings() {
   if [[ -z "$missing" ]]; then
     echo "  ok        $target has every deny rule from settings.example.json"
   elif [[ "$update" == yes ]]; then
-    init_backup_dir
-    if ! { mkdir -p "$BACKUP_DIR" && cp -p "$target" "$BACKUP_DIR/project-settings.json"; }; then
+    if ! { init_backup_dir && mkdir -p "$BACKUP_DIR" && cp -p "$target" "$BACKUP_DIR/project-settings.json"; }; then
       echo "  FAILED    $target (could not back it up to $BACKUP_DIR, see the error above; the file is unchanged)"
       return
     fi
@@ -242,12 +242,12 @@ if os.path.exists(target):
     except OSError as e:
         fail(f"could not read {target}: {e.strerror}")
     except DuplicateKey as e:
-        fail(f"{target} has the key {json.dumps(str(e))} twice in one object; merge it by hand")
+        fail(f"{target} has the same key twice in one object; merge it by hand")
     except UnicodeDecodeError as e:
         # Never echo the bytes: name only where the bad byte is.
-        fail(f"settings.json is not UTF-8 (byte offset {e.start})")
+        fail(f"{target} is not UTF-8 (byte offset {e.start})")
     except ValueError as e:
-        fail(f"settings.json is not valid JSON ({e})")
+        fail(f"{target} is not valid JSON ({e})")
 # Keep the file's own indentation (spaces or a tab), so a merge does not reformat a team's file. A file with no
 # indented line (such as a one-line file) is written with 2 spaces.
 indent = 2
