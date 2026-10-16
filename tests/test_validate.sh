@@ -382,6 +382,8 @@ expect_failure "diagnoser that guesses versions" "must not guess versions it may
   "edit agents/ci-failure-diagnoser.md -e 's|take the resolved version from the build log|guess the version|'"
 expect_failure "Maven master password readable" "settings.example.json misses deny rules: Read(~/.m2/settings-security.xml)" \
   "edit settings.example.json -e '/settings-security[.]xml/d'"
+expect_failure "safety rule that quotes argLine freely" "templates/safety.md must redact JVM -D pairs by default" \
+  "edit templates/safety.md -e 's|; write every other .-D. pair as .-Dname=<redacted>.||'"
 expect_failure "personal entry in the QA repo" "unknown group 'personal'" \
   "edit catalog.tsv -e 's/^pr-reviewer\tagent\tqa/pr-reviewer\tagent\tpersonal/'"
 expect_failure "machine path in settings.example.json" "settings.example.json contains a machine-specific /Users/ path" \

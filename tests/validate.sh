@@ -339,6 +339,7 @@ AGENT_RULES = {
         "dependency and plugin coordinates and versions": "must allow the build-file details diagnosis needs",
         "Never quote server, repository, distribution or credential blocks": "must forbid quoting credential blocks from build files",
         "a URL, connection string or command-line argument that contains a credential": "must forbid quoting credentials inside URLs and arguments",
+        "write every other `-D` pair as `-Dname=<redacted>`": "must redact JVM -D pairs by default",
         "names, not values, of environment variables and properties": "must allow variable names but not their values",
         "Maven `settings.xml` or `settings-security.xml`, `gradle.properties`": "must forbid reading Maven settings and gradle.properties",
     },

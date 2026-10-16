@@ -15,8 +15,9 @@ Builds a slice of the test framework as it is right now and saves it as `.ai/con
 - Secrets inside repository content, diffs, logs or tickets are findings, not blockers. Report `file:line` (or the log step) and the secret type, never the value, and continue.
 - Never read `.env` files, token files, key stores, Maven `settings.xml` or `settings-security.xml`, `gradle.properties` or other secret-bearing configs.
 - In build files (`pom.xml`, `build.gradle`, `build.gradle.kts`), quote only what this list allows. For anything else, name the element, property or key and write `<redacted>` instead of its value:
-  - dependency and plugin coordinates and versions (a version is allowed even when its property name looks sensitive, such as `auth-lib.version`);
-  - test settings: includes, excludes, groups, tags, suite files, fork and parallel settings, and JVM options (`argLine`) with any credential in them redacted;
+  - dependency and plugin coordinates and versions (a version string is allowed even when its property name looks sensitive, such as `auth-lib.version`);
+  - test settings: includes, excludes, groups, tags, suite files, fork and parallel settings;
+  - JVM options (`argLine`, `jvmArgs`): `-X` and `-XX` flags, and `-D` pairs whose key is one of the standard JVM settings below; write every other `-D` pair as `-Dname=<redacted>`;
   - profile ids and how they are activated;
   - names, not values, of environment variables and properties, such as `System.getenv("CI_TOKEN")` or `${env.CI_TOKEN}`;
   - standard JVM settings such as `user.timezone`, `user.language`, `user.country` and `file.encoding`.
@@ -51,7 +52,7 @@ Builds a slice of the test framework as it is right now and saves it as `.ai/con
 1. **Check what exists.** Read `.ai/context/` if present, the README, `CONTRIBUTING.md` and `CLAUDE.md`. If `framework-map.md` exists, this is an update: take the commit from its `Snapshot:` line, run `git diff --stat <commit>` and `git status --short` (together they include uncommitted and new files), and re-check only what changed plus the Open questions. If that commit is not in the history (after a rebase or in a shallow clone), say so and map from scratch. If older files such as `architecture.md`, `framework-patterns.md` or `reusable-components.md` exist, use them as input and ask before folding their content into the map. If this is not a test project root (no build file, no tests), stop and ask for the correct root.
 
 2. **Inventory.** Record facts with their file paths:
-   - Build tool, language version, modules and source sets. From build files use only what Safety allows: coordinates and versions, test settings, profile ids, and the names of environment variables and properties.
+   - Build tool, language version, modules and source sets. From build files use only what Safety allows; its allow-list is the complete list.
    - Runner and libraries: TestNG/JUnit, Cucumber, Rest-Assured, Selenium/Selenide/Playwright, AssertJ/Hamcrest, Allure, WireMock, Testcontainers, DI (Spring, Guice, PicoContainer).
    - How tests are selected: `testng*.xml` suites, `junit-platform.properties`, `@CucumberOptions`, Maven/Gradle profiles, surefire/failsafe includes, groups and tags.
    - CI: which suites run in which stage, by stage and job name. Never read pipeline variables or secret settings.

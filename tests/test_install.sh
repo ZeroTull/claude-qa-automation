@@ -272,12 +272,42 @@ proj6="$TMP/proj6"
 mkdir -p "$proj6/.claude/agents" "$proj6/.claude/skills"
 echo '{"permissions": {"deny": []}}' >"$proj6/.claude/settings.json"
 # The agents and skills folders stay writable; only .claude itself refuses the temp file the merge needs.
-chmod 500 "$proj6/.claude"
-run --project "$proj6" --update
-chmod 700 "$proj6/.claude"
-assert "a failed write is reported" grep -q "FAILED .*settings.json (could not add the deny rules; the file is unchanged)" <<<"$out"
-assert "a failed write leaves the file unchanged" test "$(deny_count "$proj6/.claude/settings.json")" = 0
-assert "a failed write still finishes the install" grep -q "Next: open Claude Code" <<<"$out"
+# Root ignores mode bits, so this case only runs as a normal user.
+if [[ "$(id -u)" != 0 ]]; then
+  chmod 500 "$proj6/.claude"
+  run --project "$proj6" --update
+  chmod 700 "$proj6/.claude"
+  assert "a failed write is reported" grep -q "FAILED .*settings.json (could not add the deny rules; the file is unchanged)" <<<"$out"
+  assert "a failed write gives a one-line reason, not a traceback" out_lacks "Traceback"
+  assert "a failed write leaves the file unchanged" test "$(deny_count "$proj6/.claude/settings.json")" = 0
+  assert "a failed write still finishes the install" grep -q "Next: open Claude Code" <<<"$out"
+fi
+out="$(QA_FAIL_SETTINGS_WRITE=1 "$REPO/install.sh" --project "$proj6" --update 2>&1)"
+assert "a failure after the temp file exists is reported" grep -q "could not write .*simulated write failure" <<<"$out"
+assert "it removes the temp file" test -z "$(find "$proj6/.claude" -name '.settings.*')"
+assert "it leaves the file unchanged" test "$(deny_count "$proj6/.claude/settings.json")" = 0
+proj8="$TMP/proj8"
+mkdir -p "$proj8/.claude"
+printf '{\n\t"permissions": {\n\t\t"deny": []\n\t}\n}\n' >"$proj8/.claude/settings.json"
+run --project "$proj8" --update
+assert "--update keeps a tab indent" grep -q "$(printf '^\t\t"deny": \\[')" "$proj8/.claude/settings.json"
+proj9="$TMP/proj9"
+mkdir -p "$proj9/.claude"
+echo '{"permissions": {"deny": []}}' >"$proj9/.claude/settings.json"
+run --project "$proj9" --update
+assert "a one-line file is written with 2 spaces" grep -q '^    "deny": \[' "$proj9/.claude/settings.json"
+if [[ "$(id -u)" != 0 ]]; then
+  proj10="$TMP/proj10"
+  mkdir -p "$proj10/.claude"
+  echo '{"permissions": {"deny": []}}' >"$proj10/.claude/settings.json"
+  mkdir -p "$TMP/ro-home"
+  chmod 500 "$TMP/ro-home"
+  out="$(CLAUDE_HOME="$TMP/ro-home" "$REPO/install.sh" --project "$proj10" --update 2>&1)"
+  chmod 700 "$TMP/ro-home"
+  assert "a failed backup is reported" grep -q "FAILED .*settings.json (could not back it up" <<<"$out"
+  assert "a failed backup leaves the file unchanged" test "$(deny_count "$proj10/.claude/settings.json")" = 0
+  assert "a failed backup still finishes the install" grep -q "Next: open Claude Code" <<<"$out"
+fi
 proj7="$TMP/proj7"
 mkdir -p "$proj7/.claude"
 echo '{"permissions": {"deny": []}}' >"$proj7/.claude/settings.json"

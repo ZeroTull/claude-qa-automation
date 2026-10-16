@@ -161,8 +161,10 @@ project_settings() {
     echo "  ok        $target has every deny rule from settings.example.json"
   elif [[ "$update" == yes ]]; then
     init_backup_dir
-    mkdir -p "$BACKUP_DIR"
-    cp -p "$target" "$BACKUP_DIR/project-settings.json"
+    if ! { mkdir -p "$BACKUP_DIR" && cp -p "$target" "$BACKUP_DIR/project-settings.json"; }; then
+      echo "  FAILED    $target (could not back it up to $BACKUP_DIR; the file is unchanged)"
+      return
+    fi
     if ! settings_tool merge "$target"; then
       echo "  FAILED    $target (could not add the deny rules; the file is unchanged)"
       return
@@ -219,7 +221,8 @@ if os.path.exists(target):
             data = json.load(f)
     except ValueError as e:
         fail(f"settings.json is not valid JSON ({e})")
-# Keep the file's own indentation (spaces or a tab), so a merge does not reformat a team's file.
+# Keep the file's own indentation (spaces or a tab), so a merge does not reformat a team's file. A file with no
+# indented line (such as a one-line file) is written with 2 spaces.
 indent = 2
 if os.path.exists(target):
     with open(target, encoding="utf-8") as f:
@@ -245,18 +248,25 @@ if mode == "check":
 data["permissions"] = perms
 perms["deny"] = deny + missing
 folder = os.path.dirname(target) or "."
-fd, tmp = tempfile.mkstemp(dir=folder, prefix=".settings.", suffix=".json")
 try:
-    # mkstemp creates the file as 0600; keep the existing file's permissions (or the usual 0644 for a new one).
-    os.chmod(tmp, stat.S_IMODE(os.stat(target).st_mode) if os.path.exists(target) else 0o644)
+    fd, tmp = tempfile.mkstemp(dir=folder, prefix=".settings.", suffix=".json")
+except OSError as e:
+    fail(f"could not write next to {target}: {e.strerror}")
+try:
     with os.fdopen(fd, "w", encoding="utf-8") as f:
+        # mkstemp creates the file as 0600; keep the existing file's permissions (or the usual 0644 for a new one).
+        os.chmod(tmp, stat.S_IMODE(os.stat(target).st_mode) if os.path.exists(target) else 0o644)
         json.dump(data, f, indent=indent, ensure_ascii=False)
         f.write("\n")
+    if os.environ.get("QA_FAIL_SETTINGS_WRITE"):  # lets the tests simulate a failure after the temp file exists
+        raise OSError(5, "simulated write failure")
     os.replace(tmp, target)
-except BaseException:
+except BaseException as e:
     # Never leave a half-written temp file behind, where it could end up committed in a team repo.
     if os.path.exists(tmp):
         os.unlink(tmp)
+    if isinstance(e, OSError):
+        fail(f"could not write {target}: {e.strerror}")
     raise
 PY
 }
