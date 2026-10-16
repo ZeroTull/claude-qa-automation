@@ -391,9 +391,15 @@ expect_failure "JVM flags quoted wholesale" "templates/safety.md must quote only
 expect_failure "profile activation values quoted" "templates/safety.md must redact profile activation values" \
   "edit templates/safety.md -e 's|; for a .<property>. activation keep its .<name>. and write its .<value>. as .<redacted>.||'"
 expect_failure "any value under a version name" "templates/safety.md must allow sensitive-named versions only for version-shaped values" \
-  "edit templates/safety.md -e 's|, but only if the value looks like a version (digits, dots, a range or a .[$]{...}. reference)||'"
+  "edit templates/safety.md -e 's|, but only if the value looks like a version (digits, dots, a range or a .[$]{...}. reference)[;] a secret with that shape would still pass, so check that the key really names a version||'"
 expect_failure "suite files outside the rule" "templates/safety.md must cover test suite files" \
-  "edit templates/safety.md -e 's| and test suite files (.testng[*].xml.)||'"
+  "edit templates/safety.md -e 's| and TestNG suite files (.testng[*].xml. or any XML with a .<suite>. root)||'"
+expect_failure "JVM list only inside argLine" "templates/safety.md must apply the JVM list wherever the key appears" \
+  "edit templates/safety.md -e 's|, wherever they appear (.argLine., .jvmArgs., .systemPropertyVariables., .jvm.config.)||'"
+expect_failure "version shape widened" "templates/safety.md must allow sensitive-named versions only for version-shaped values" \
+  "edit templates/safety.md -e 's|(digits, dots, a range or a .[$]{...}. reference)|(any value)|'"
+expect_failure "README calls the JVM list open" "README.md must describe the closed JVM list" \
+  "edit README.md -e 's|the five JVM settings the rule names|standard JVM settings|'"
 expect_failure "personal entry in the QA repo" "unknown group 'personal'" \
   "edit catalog.tsv -e 's/^pr-reviewer\tagent\tqa/pr-reviewer\tagent\tpersonal/'"
 expect_failure "machine path in settings.example.json" "settings.example.json contains a machine-specific /Users/ path" \

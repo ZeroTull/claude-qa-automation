@@ -337,8 +337,9 @@ AGENT_RULES = {
     "templates/safety.md": {
         "quote only what this list allows. For anything else, name the element, property or key and write `<redacted>`": "must quote only allow-listed build-file values",
         "dependency, plugin and parent coordinates and versions, and the Java release": "must allow the build-file details diagnosis needs",
-        "but only if the value looks like a version": "must allow sensitive-named versions only for version-shaped values",
-        "and test suite files (`testng*.xml`)": "must cover test suite files",
+        "but only if the value looks like a version (digits, dots, a range or a `${...}` reference)": "must allow sensitive-named versions only for version-shaped values",
+        "wherever they appear (`argLine`, `jvmArgs`, `systemPropertyVariables`, `jvm.config`)": "must apply the JVM list wherever the key appears",
+        "and TestNG suite files (`testng*.xml` or any XML with a `<suite>` root)": "must cover test suite files",
         "Never quote server, repository, distribution or credential blocks": "must forbid quoting credential blocks from build files",
         "a URL, connection string or command-line argument that contains a credential": "must forbid quoting credentials inside URLs and arguments",
         "write every other `-D` pair as `-Dname=<redacted>`": "must redact JVM -D pairs by default",
@@ -396,6 +397,7 @@ AGENT_RULES = {
         "report it as a possible defect and route it with Defect routing": "must route a failing requirement with Defect routing",
     },
     "README.md": {
+        "the five JVM settings the rule names": "must describe the closed JVM list",
         "suspected flaky/environment (product not ruled out)": "trace example must use the diagnoser's suspected-flaky label",
         "for a pre-existing confirmed product defect, or a regression from a merged change if the user chooses it": "plan example must file bugs only for confirmed product defects or shared-branch regressions",
         "an intermittent product defect (such as a race condition)": "must describe the triager's product-defect verdict",

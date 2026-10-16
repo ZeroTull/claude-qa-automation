@@ -286,6 +286,7 @@ else
 fi
 out="$(QA_FAIL_SETTINGS_WRITE=1 "$REPO/install.sh" --project "$proj6" --update 2>&1)"
 assert "a failure after the temp file exists is reported" grep -q "could not write .*simulated write failure" <<<"$out"
+assert "it says the deny rules were not added" grep -q "FAILED .*settings.json (could not add the deny rules; the file is unchanged)" <<<"$out"
 assert "it removes the temp file" test -z "$(find "$proj6/.claude" -name '.settings.*')"
 assert "it leaves the file unchanged" test "$(deny_count "$proj6/.claude/settings.json")" = 0
 proj8="$TMP/proj8"
@@ -319,6 +320,16 @@ printf '{"a": "\377"}\n' >"$bad/settings.json"
 out="$(CLAUDE_HOME="$bad" "$REPO/install.sh" --settings 2>&1)"
 assert "a non-UTF-8 settings.json gives a one-line reason" grep -q "settings.json is not UTF-8 (byte offset" <<<"$out"
 assert "a non-UTF-8 settings.json is not echoed" out_lacks "0xff"
+assert "a non-UTF-8 settings.json is not echoed as an escape" out_lacks '\377'
+assert "a non-UTF-8 settings.json is not echoed raw" out_lacks "$(printf '\377')"
+badp="$TMP/proj-bad-utf8"
+mkdir -p "$badp/.claude"
+printf '{"a": "\377"}\n' >"$badp/.claude/settings.json"
+cp "$badp/.claude/settings.json" "$TMP/bad-utf8-copy.json"
+run --project "$badp" --update
+assert "--project skips a non-UTF-8 settings.json with a reason" grep -q "could not check its deny rules: settings.json is not UTF-8 (byte offset" <<<"$out"
+assert "--project does not echo the bytes" out_lacks "0xff"
+assert "--project leaves the non-UTF-8 file unchanged" cmp -s "$badp/.claude/settings.json" "$TMP/bad-utf8-copy.json"
 assert "a non-UTF-8 settings.json prints no traceback" out_lacks "Traceback"
 if [[ "$(id -u)" != 0 ]]; then
   unread="$TMP/unread-home"
