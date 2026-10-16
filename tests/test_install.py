@@ -13,12 +13,17 @@ import subprocess
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 REPO = Path(__file__).resolve().parent.parent
 INSTALL = REPO / "install.sh"
 IGNORE = shutil.ignore_patterns(".git", ".idea", "__pycache__")
 EMPTY_DENY = '{"permissions": {"deny": []}}\n'
 NON_ROOT = hasattr(os, "geteuid") and os.geteuid() != 0
+# Environment variables install.sh reads (test_install_knobs_are_all_listed keeps this complete). A value left in a
+# developer's shell must not leak into a test, so setUp drops them; tests that need one set it explicitly.
+INSTALL_KNOBS = ("CLAUDE_HOME", "COPILOT_HOME", "HOME", "BACKUP_STAMP", "AZURE_EXTENSION_DIR", "COPILOT_MCP_SERVERS",
+                 "QA_OS", "QA_PY_STUB", "QA_XCODE_SELECT", "QA_FAIL_SETTINGS_WRITE")
 
 AGENTS = sorted(p.name for p in (REPO / "agents").glob("*.md"))
 SKILLS = sorted(p.name for p in (REPO / "skills").iterdir() if p.is_dir())
@@ -78,8 +83,7 @@ class InstallTest(unittest.TestCase):
         self.tmp = Path(tmp.name)
         self.home = self.tmp / "home"
         # Never let a test fall back to the real ~/.claude or ~/.copilot, or read anything else under the real HOME.
-        # QA_* and BACKUP_STAMP are test hooks of install.sh; one left in a developer's shell must not leak in.
-        inherited = {k: v for k, v in os.environ.items() if not k.startswith("QA_") and k != "BACKUP_STAMP"}
+        inherited = {k: v for k, v in os.environ.items() if k not in INSTALL_KNOBS and not k.startswith("QA_")}
         self.env = {**inherited, "HOME": str(self.tmp / "home-root"), "CLAUDE_HOME": str(self.home),
                     "COPILOT_HOME": str(self.tmp / "copilot-default")}
         # Per-test stubs, so the "never runs" markers start empty in every test.
@@ -810,6 +814,20 @@ class InstallTest(unittest.TestCase):
         self.check_lacks("uninstall does not mention settings.json", out, "settings.json")
         out = self.run_install("--copilot", "--settings")
         self.check("--copilot rejects other options", out.rc == 1)
+
+    def test_install_knobs_are_all_listed(self):
+        script = INSTALL.read_text(encoding="utf-8")
+        read = set(re.findall(r"\$\{([A-Z][A-Z0-9_]*):-", script)) | set(re.findall(r'os\.environ\.get\("([A-Z0-9_]+)"', script))
+        self.assertEqual(read - set(INSTALL_KNOBS), set(), "add these to INSTALL_KNOBS")
+
+    def test_a_knob_in_the_developer_shell_does_not_leak_in(self):
+        with mock.patch.dict(os.environ, {"COPILOT_MCP_SERVERS": "github"}):
+            self.setUp()  # again, so self.env is built from the patched environment
+            cop = self.tmp / "copilot"
+            self.copilot_install(cop)
+        gen = (cop / "agents" / f"{AGENT_STEM}.agent.md").read_text()
+        self.check("a shell COPILOT_MCP_SERVERS is ignored",
+                   "tools: ['read', 'search', 'execute', 'web', 'todo']" in gen.split("\n"))
 
     def test_check_file_lacks_fails_on_a_missing_file(self):
         with self.assertRaises(FileNotFoundError):
