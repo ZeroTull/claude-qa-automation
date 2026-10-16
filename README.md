@@ -80,7 +80,7 @@ Then, in the work repo, start `claude` and run `/qa-conventions`, then `/framewo
 | `test-maintainer` | Audit a test framework for flakiness, duplication, weak assertions, dead code, slow setup, test-layer balance, contract/performance testing and CI quality gates. Gives a health report and an improvement plan. |
 | `ci-failure-diagnoser` | Find the root cause of a failed pipeline run (Azure Pipelines, GitHub Actions or GitLab CI), with log evidence. |
 | `flaky-test-triager` | Decide whether an intermittent failure is flaky, an intermittent product defect (such as a race condition), or a real regression, based on run history. |
-| `senior-automation-qa-engineer` | Test strategy and framework design: which test layers to invest in, a new automation framework, contract, performance and E2E strategy. |
+| `senior-automation-qa-engineer` | Test strategy and framework design: which test layers to invest in, a new automation framework, contract, performance and E2E strategy. Answers with context, ranked risks, 2-3 options with trade-offs, a recommendation, a phased plan and measurable success criteria. |
 
 **Skills** run in your conversation, so they can ask questions and wait for approval at each step. Start one with a slash command, or describe the task.
 

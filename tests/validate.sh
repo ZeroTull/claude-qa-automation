@@ -407,6 +407,18 @@ AGENT_RULES = {
         "For a defect, offer the step from Defect routing": "must route defects with Defect routing",
         "for a pre-existing confirmed product defect, or a regression from a merged change if the user chooses it": "plan example must file bugs only for confirmed product defects or shared-branch regressions",
     },
+    "agents/senior-automation-qa-engineer.md": {
+        "## Method": "must follow a method",
+        "state the assumption you make and how the answer would change without it": "must mark assumptions",
+        "ranked by likelihood and impact, each with its evidence": "must rank risks with evidence",
+        "Give 2-3 realistic options, one of which keeps the current approach": "must compare options",
+        "Choose one option, say why it beats the others": "must recommend one option",
+        "For each phase: goal, concrete work, who does it": "must give a phased plan",
+        "Measurable targets with a baseline and a way to measure them": "must define measurable success criteria",
+        "## Success Criteria  metric | baseline (or how to get it) | target | how measured": "must report success criteria",
+        "## Phased Plan       numbered phases": "must report a phased plan",
+        "## Options           2-3": "must report options",
+    },
     "agents/pr-reviewer.md": {
         "never assume `main`": "must take the base branch from the PR, not assume main",
         "git symbolic-ref --short refs/remotes/origin/HEAD": "must fall back to the repo's default branch",
@@ -469,6 +481,7 @@ AGENT_RULES = {
     },
     "README.md": {
         "the five JVM settings the rule names": "must describe the closed JVM list",
+        "a phased plan and measurable success criteria": "must describe the strategy report",
         "we don't recommend a wildcard allow rule for it": "must not recommend a git fetch allow rule",
         "quotes only what the allow-list in `templates/safety.md` permits": "must point to the full build-file allow-list",
         "The file is rewritten as JSON, so its values stay the same": "must say the settings merge rewrites the file",
