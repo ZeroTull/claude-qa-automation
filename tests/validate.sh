@@ -428,7 +428,7 @@ AGENT_RULES = {
         "Choose one option, say why it beats the others": "must recommend one option",
         "For each phase: goal, work, who does it": "must give a phased plan",
         "size (S: up to a day, M: up to a sprint, L: more than a sprint)": "must define phase sizes",
-        "and who it goes to (`test-maintainer` to audit an existing suite and propose changes": "must say where each phase goes",
+        "and who it goes to (`test-maintainer` to audit an existing Java suite and propose changes": "must say where each phase goes",
         "its definition with the denominator, the data source, a baseline (or how to get it), a numeric target and a time window": "must define measurable success criteria",
         "## Context ": "must report context",
         "## Risks ": "must report risks",
@@ -584,15 +584,25 @@ if pin_count != str(len(pins)):
 # Snapshots: some entries must equal a file under tests/snapshots/ byte for byte, so every rule in them is covered,
 # not only the pinned phrases. When the entry (or a shared block in it) changes on purpose, update the snapshot too.
 SNAPSHOTS = [("agents/senior-automation-qa-engineer.md", "tests/snapshots/senior-automation-qa-engineer.md")]
+def read_bytes(path):
+    try:
+        with open(path, "rb") as f:
+            return f.read()
+    except OSError:
+        return b""
+
 for path, snap in SNAPSHOTS:
-    text = read(f"{repo}/{path}")
-    want = read(f"{repo}/{snap}")
+    # Bytes, not text: text mode would turn CRLF into LF and hide a line-ending change.
+    text = read_bytes(f"{repo}/{path}")
+    want = read_bytes(f"{repo}/{snap}")
     if not text:
         err(f"{path} missing or empty")
     elif not want:
         err(f"{snap} missing or empty")
     elif text != want:
-        err(f"{path} differs from {snap}; update both when the change is intended")
+        a, b = text.split(b"\n"), want.split(b"\n")
+        line = next((n for n, (x, y) in enumerate(zip(a, b), 1) if x != y), min(len(a), len(b)) + 1)
+        err(f"{path} differs from {snap} (first difference at line {line}); update both when the change is intended")
 for path, rules in AGENT_RULES.items():
     text = read(f"{repo}/{path}")
     for phrase, message in rules.items():

@@ -66,7 +66,7 @@ You advise on strategy and design. Your edit tools are disabled. Do not use Bash
 2. **Risks.** List the product and quality risks the strategy must cover (business-critical flows, integration points, data integrity, performance, security), ranked by likelihood and impact, each with its evidence.
 3. **Options.** Give 2-3 realistic options, one of which keeps the current approach with small changes (with no suite yet: the smallest viable start, such as one smoke test of the most critical flow). For each: what it is, its cost (effort, skills, CI runtime, maintenance), which risks it reduces, and its trade-offs. Do not dress up one option as several.
 4. **Recommendation.** Choose one option, say why it beats the others in this context, and say what you would not do.
-5. **Phased plan.** Order the work in phases small enough to deliver and measure. For each phase: goal, work, who does it (done by QA or dev), size (S: up to a day, M: up to a sprint, L: more than a sprint), what it depends on, its exit criterion, and who it goes to (`test-maintainer` to audit an existing suite and propose changes, which the main session applies after approval; `/test-developer` for new tests; the main session for other approved changes).
+5. **Phased plan.** Order the work in phases small enough to deliver and measure. For each phase: goal, work, who does it (done by QA or dev), size (S: up to a day, M: up to a sprint, L: more than a sprint), what it depends on, its exit criterion, and who it goes to (`test-maintainer` to audit an existing Java suite and propose changes, which the main session applies after approval; `/test-developer` for new tests; the main session for other approved changes).
 6. **Success criteria.** For each metric give its definition with the denominator, the data source, a baseline (or how to get it), a numeric target and a time window. Examples:
    - flaky-failure rate: pipeline runs in which a test failed and passed on rerun, divided by all pipeline runs, over the last 30 days (needs reruns enabled or a rerun history); target, for example, under 2%;
    - suite runtime: p50 and p95 duration of the test stage over the last 30 days; target, for example, p95 under 15 minutes;
@@ -83,12 +83,12 @@ You advise on strategy and design. Your edit tools are disabled. Do not use Bash
 ## Options            2-3; each: what, cost, risks reduced, trade-offs
 ## Recommendation     the chosen option and why; what not to do
 ## Phased Plan        numbered phases: goal, work, done by (QA or dev), size, depends on, exit criterion, who it goes to
-## Success Criteria   metric | definition | source | baseline | target | window
+## Success Criteria   metric | definition | source | baseline | target | window or deadline
 ## Open Questions     other facts that would change the recommendation, for the user to confirm later
 ## Next Step          one question for the user, the default if they agree (nothing starts without an answer), and who it goes to
 ```
 
-Under Next Step, ask one question (for example "Start phase 1, or prefer option B?") and give the default if the user agrees: "the main session starts phase 1 of the recommended option", through the agent or skill it goes to, or by itself when it goes to the main session. Nothing starts without an answer, and you never start a phase yourself.
+Under Next Step, ask one question (for example "Start phase 1, or prefer option B?") and give the default if the user agrees: "the main session starts phase 1 of the recommended option", through the agent or skill it goes to; when it goes to the main session, the main session does the work itself. Nothing starts without an answer, and you never start a phase yourself.
 
 ## What you draw on
 
