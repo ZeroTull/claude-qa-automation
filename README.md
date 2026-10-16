@@ -65,7 +65,7 @@ This installs into `~/.copilot` and doesn't touch `~/.claude`.
 
 This copies the agents and skills into `<repo>/.claude/`, keeping their file permissions. It also adds `.claude/settings.json` (the allow and deny lists from `settings.example.json`) and a `CLAUDE.md` (from `templates/CLAUDE.md`) if they don't exist yet. Commit the result and the whole team gets the same agents.
 
-To update later, run `git pull` here, then `./install.sh --project <repo> --update`. It replaces the entries whose content changed: local edits are overwritten, and files you added inside a replaced agent or skill are deleted without a backup, so move anything you want to keep first. It adds missing deny rules to the team's `.claude/settings.json` (after a backup), and never changes the rest of its settings or `CLAUDE.md`.
+To update later, run `git pull` here, then `./install.sh --project <repo> --update`. It replaces the entries whose content changed: local edits are overwritten, and files you added inside a replaced agent or skill are deleted without a backup, so move anything you want to keep first. An entry that is a link, or a file where the repo has a folder (or the reverse), is skipped with a message: remove it, then run again. Agents or skills removed from this repo are not deleted from the work repo; remove them by hand. It adds missing deny rules to the team's `.claude/settings.json` (after a backup), and never changes the rest of its settings or `CLAUDE.md`.
 
 Then, in the work repo, start `claude` and run `/qa-conventions`, then `/framework-map`.
 
@@ -118,18 +118,19 @@ A printed plan is not approval: it still stops at every gate. It ends a request 
 
 ### What happens to a failure: defect routing
 
-The agents and skills that handle failures (`qa-lead`, `ci-failure-diagnoser`, `flaky-test-triager`, `/bug-ticket`, `/test-developer`) carry the same routing text (`templates/defect-routing.md`), which CI keeps identical. "The change under test" is the branch or PR being checked, until it is merged. They take the first case that fits:
+The agents and skills that handle failures (`qa-lead`, `ci-failure-diagnoser`, `flaky-test-triager`, `/bug-ticket`, `/test-developer`) carry the same routing text, `templates/defect-routing.md`, and CI checks that each copy matches it. Here it is, copied from the template; if the two ever differ, the template is what the agents follow:
 
-1. **Dependency or pipeline config:** name the file, version, variable or permission to change. If an intended dependency change only breaks a test's old assertion, it is case 2; if it breaks product code, case 3.
-2. **Test defect, product correct** (the test asserts behavior an intended change replaced, or fails consistently because of its own code): fix the test on a branch, naming the commit that made it stale. No bug. If the change was not intended, it is case 3 once the product defect is confirmed, and case 5 until then.
-3. **Confirmed product defect:**
-   - from the change under test: fix it on that branch, naming the file and commit;
-   - from a change already merged into a shared branch: name the commit, then offer a fix-forward change or a bug (`/bug-ticket`), and let you choose;
-   - pre-existing, with no identifiable commit: a bug (`/bug-ticket`).
-4. **Intermittent, no product cause confirmed:** flaky triage with `flaky-test-triager`; its verdict picks case 1, 2, 3 or 5. A consistent failure skips triage.
-5. **Inconclusive:** list the candidate causes, product first, with what would confirm or rule out each. No bug and no "known flaky" entry until one is confirmed.
-
-A test that catches a real bug is never quarantined.
+> The change under test is the branch or PR whose pipeline or tests you are looking at, until it is merged. Before recommending what to do with a failure, take the first case that fits:
+> 1. **Dependency or pipeline config:** name the file, version, variable or permission to change. If an intended dependency change only breaks a test's old assertion, it is case 2; if it breaks product code, it is case 3.
+> 2. **Test defect, product correct** (the test asserts behaviour that an intended change replaced, or fails consistently because of its own code; an intermittent failure reaches this case only through case 4): fix the test on a branch, naming the commit that made it stale if there is one. Do not file a bug. If the change was not intended, it is case 3 once the product defect is confirmed, and case 5 until then.
+> 3. **Confirmed product defect**, routed by where it came from:
+>    - **from the change under test:** fix it on that branch, naming the file and the commit;
+>    - **from a change already merged into a shared branch** (a regression with a known commit): name the commit, then offer a fix-forward change (a new commit on the shared branch that corrects it) or the `bug-ticket` skill, and let the user choose;
+>    - **pre-existing, with no identifiable commit:** the `bug-ticket` skill.
+> 4. **Intermittent, with no product cause confirmed:** flaky triage with the `flaky-test-triager` agent; its verdict then picks case 1, 2, 3 or 5. A consistent failure skips triage: take case 1, 2 or 5, or case 3 once the product defect is confirmed.
+> 5. **Inconclusive:** list the candidate causes, product first, each with what would confirm or rule it out. Do not file a bug and do not record the test as known flaky until one is confirmed.
+>
+> Never quarantine a test that catches a real bug.
 
 ### How approvals work
 
