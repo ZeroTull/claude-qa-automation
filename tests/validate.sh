@@ -412,12 +412,14 @@ AGENT_RULES = {
         "`gh pr view --json baseRefName -q .baseRefName`": "must name the GitHub target branch command",
         "`glab mr view -F json` (the `target_branch` field)": "must name the GitLab target branch command",
         "On a detached HEAD there is no branch to look up, so go to step 2": "must handle a detached HEAD",
+        "exits non-zero with a \"no pull request / merge request found\" message, there is no open PR/MR: go to step 2": "must fall through when no PR/MR exists",
         "name the base branch and how you found it": "must report the base branch",
     },
     "skills/pr-description/SKILL.md": {
         "never assume `main`": "must take the target branch from the PR, not assume main",
         "git symbolic-ref --short refs/remotes/origin/HEAD": "must fall back to the repo's default branch",
         "prints `origin/develop`, so `<target>` is `develop`": "must strip origin/ from the default branch",
+        "a lookup that prints nothing or reports \"no pull request / merge request found\" means there is none": "must fall through when no PR/MR exists",
         "Run `git fetch origin <target>:refs/remotes/origin/<target>` first; if that fails, say the base may be out of date": "must refresh the base before diffing",
     },
     "skills/bug-ticket/SKILL.md": {

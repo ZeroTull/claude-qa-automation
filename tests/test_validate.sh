@@ -458,6 +458,10 @@ expect_failure "reviewer reading glab text output" "agents/pr-reviewer.md must n
   "edit agents/pr-reviewer.md -e 's|.glab mr view -F json. (the .target_branch. field)|glab mr view|'"
 expect_failure "reviewer stuck on a detached HEAD" "agents/pr-reviewer.md must handle a detached HEAD" \
   "edit agents/pr-reviewer.md -e 's| On a detached HEAD there is no branch to look up, so go to step 2[.]||'"
+expect_failure "reviewer stuck when a branch has no PR" "agents/pr-reviewer.md must fall through when no PR/MR exists" \
+  "edit agents/pr-reviewer.md -e 's|exits non-zero with a \"no pull request / merge request found\" message, there is no open PR/MR: go to step 2|fails, stop|'"
+expect_failure "PR description stuck when a branch has no PR" "skills/pr-description/SKILL.md must fall through when no PR/MR exists" \
+  "edit skills/pr-description/SKILL.md -e 's| (a lookup that prints nothing or reports \"no pull request / merge request found\" means there is none)||'"
 expect_failure "personal entry in the QA repo" "unknown group 'personal'" \
   "edit catalog.tsv -e 's/^pr-reviewer\tagent\tqa/pr-reviewer\tagent\tpersonal/'"
 expect_failure "machine path in settings.example.json" "settings.example.json contains a machine-specific /Users/ path" \
