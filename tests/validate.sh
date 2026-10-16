@@ -2,7 +2,7 @@
 # Checks that every agent, skill and command is cataloged, loadable by Claude Code, documented,
 # and that our own entries carry the safety rules. Also checks both settings files.
 # Usage: tests/validate.sh [repo-dir]   (defaults to this repo)
-#        tests/validate.sh --dump-pins [repo-dir]   print every pinned phrase as JSON (used by tests/test_validate.sh)
+#        tests/validate.sh --dump-pins [repo-dir]   print every pinned phrase as JSON (used by tests/test_validate.py)
 # Needs only python3 (standard library). Runs as one process so the whole check stays fast.
 set -uo pipefail
 
@@ -613,7 +613,7 @@ else:
     for path in sorted(DEFECT_ROUTING_FILES):
         if defect_routing not in read(f"{repo}/{path}"):
             err(f"{path}: does not contain the block from templates/defect-routing.md verbatim")
-# --dump-pins prints every pinned phrase as JSON and exits, so tests/test_validate.sh can delete each one in a copy of
+# --dump-pins prints every pinned phrase as JSON and exits, so tests/test_validate.py can delete each one in a copy of
 # the repo and check that this script then fails with the pin's message. It is an argument, not an environment
 # variable, so nothing in the environment can turn a normal run into one that checks nothing.
 pins = [[p, ph, f"{p} {m}"] for p, rules in AGENT_RULES.items() for ph, m in rules.items()]
