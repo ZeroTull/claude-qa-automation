@@ -29,6 +29,9 @@ out_lacks() { ! grep -q -- "$1" <<<"$out"; }
 # shellcheck disable=SC2317,SC2329
 out_lacks_file() { ! grep -qF -- "$1" "$2"; }
 
+# Octal permission bits of a file. GNU stat first: on Linux, "stat -f" is filesystem status and succeeds.
+file_mode() { stat -c %a "$1" 2>/dev/null || stat -f %Lp "$1"; }
+
 count_links() { find "$1" -type l | wc -l | tr -d ' '; }
 latest_backup_dir() { find "$CLAUDE_HOME/backups" -mindepth 1 -maxdepth 1 -type d | sort | tail -n 1; }
 deny_count() { python3 -c 'import json,sys; print(len(json.load(open(sys.argv[1]))["permissions"]["deny"]))' "$1"; }
@@ -249,7 +252,7 @@ assert "does not change it without --update" test "$(deny_count "$proj3/.claude/
 run --project "$proj3" --update
 assert "--update adds the missing deny rules" test "$(deny_count "$proj3/.claude/settings.json")" = "$n_deny"
 assert "--update keeps the other settings" python3 -c 'import json,sys; d=json.load(open(sys.argv[1])); sys.exit(0 if d["model"]=="x" and d["permissions"]["allow"]==["Bash(ls)"] else 1)' "$proj3/.claude/settings.json"
-assert "--update keeps the file mode" test "$(stat -f %Lp "$proj3/.claude/settings.json" 2>/dev/null || stat -c %a "$proj3/.claude/settings.json")" = 600
+assert "--update keeps the file mode" test "$(file_mode "$proj3/.claude/settings.json")" = 600
 proj2="$TMP/proj2"
 mkdir -p "$proj2/.claude"
 ln -s "$TMP/proj2-target.json" "$proj2/.claude/settings.json"
