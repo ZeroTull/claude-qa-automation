@@ -397,6 +397,196 @@ class InstallTest(unittest.TestCase):
                    (proj / ".claude" / "settings.json").read_text() == "custom\n")
         self.check("--update keeps CLAUDE.md", (proj / "CLAUDE.md").read_text() == "# existing\n")
 
+    def test_project_update_keeps_what_this_repo_lacks(self):
+        proj = self.tmp / "proj-keep"
+        proj.mkdir()
+        out = self.run_install("--project", proj)
+        self.check_out("the summary counts every entry as added", out, rf"^  added +{len(AGENTS) + len(SKILLS)}$")
+        self.check_out("the summary lists an added agent", out, rf"^ +agents/{re.escape(AGENT)}$")
+        self.check_out("the summary reaches the left line", out, r"^  left +0 ")
+        claude = proj / ".claude"
+        skill_md = claude / "skills" / SKILL / "SKILL.md"
+        self.write(claude / "skills" / SKILL / "notes.md", "team notes\n")
+        self.write(claude / "agents" / "team-agent.md", "team agent\n")
+        self.write(claude / "skills" / "team-skill" / "SKILL.md", "team skill\n")
+        (claude / "skills" / SKILL / "outside").symlink_to(self.tmp / "nowhere")
+        out = self.run_install("--project", proj)
+        self.check_out("files added inside a skill alone do not make it differ", out, rf"^  ok +.*skills/{SKILL}$")
+        self.check_out("reports a kept file", out, rf"^  kept +.*skills/{SKILL}/notes\.md \(not in this repo\)$")
+        with open(skill_md, "a") as f:
+            f.write("local edit\n")
+        with open(claude / "agents" / AGENT2, "a") as f:
+            f.write("local edit\n")
+        out = self.run_install("--project", proj, "--update")
+        self.check("exits 0", out.rc == 0, out.out)
+        self.check("--update copies the repo's SKILL.md over the edited one",
+                   skill_md.read_bytes() == (REPO / "skills" / SKILL / "SKILL.md").read_bytes())
+        self.check("--update keeps a file added inside the skill",
+                   (claude / "skills" / SKILL / "notes.md").read_text() == "team notes\n")
+        self.check("--update keeps a link added inside the skill", (claude / "skills" / SKILL / "outside").is_symlink())
+        self.check("--update keeps an agent this repo lacks", (claude / "agents" / "team-agent.md").read_text() == "team agent\n")
+        self.check("--update keeps a skill this repo lacks",
+                   (claude / "skills" / "team-skill" / "SKILL.md").read_text() == "team skill\n")
+        self.check_out("the summary counts the updated entries", out, r"^  updated +2$")
+        self.check_out("the summary names an updated skill", out, rf"^ +skills/{SKILL}$")
+        self.check_out("the summary names an updated agent", out, rf"^ +agents/{re.escape(AGENT2)}$")
+        self.check_out("the summary counts the unchanged entries", out, rf"^  unchanged +{len(AGENTS) + len(SKILLS) - 2}$")
+        self.check_out("the summary counts the left entries", out, r"^  left +2 \(not in this repo, kept as they are\)$")
+        self.check_out("the summary names a left agent", out, r"^ +agents/team-agent\.md$")
+        self.check_out("the summary names a left skill", out, r"^ +skills/team-skill$")
+        self.check_out("the summary counts the kept files", out, r"^  kept +2 ")
+        self.check_out("the summary names a kept file", out, rf"^ +skills/{SKILL}/notes\.md$")
+        self.check_lacks("no summary line for differs after --update", out, "  differs")
+        self.check_lacks("the old remove-by-hand note is gone", out, "remove them by hand")
+        with open(skill_md, "a") as f:
+            f.write("local edit\n")
+        out = self.run_install("--project", proj)
+        self.check_out("without --update the summary lists the differing skill", out, r"^  differs +1 \(run again with --update")
+        self.check("without --update the edit stays", "local edit" in skill_md.read_text())
+
+    def test_project_update_skips_a_nested_conflict(self):
+        proj = self.tmp / "proj-nested"
+        proj.mkdir()
+        self.run_install("--project", proj)
+        skill_md = proj / ".claude" / "skills" / SKILL / "SKILL.md"
+        skill_md.unlink()
+        self.write(skill_md / "inner.md", "a folder where the repo has a file\n")
+        out = self.run_install("--project", proj, "--update")
+        self.check("exits 0", out.rc == 0, out.out)
+        self.check_out("skips a skill with a nested type conflict", out,
+                       rf"^  SKIP +.*skills/{SKILL} \(SKILL\.md is a symlink or a different type - remove it, then run again\)$")
+        self.check("leaves the nested folder alone", (skill_md / "inner.md").is_file())
+        self.check_out("the summary lists the skipped skill", out, r"^  skipped +1 \(remove or fix the path named in each, then run again\)$")
+        shutil.rmtree(skill_md)
+        target = self.tmp / "link-target.md"
+        self.write(target, "outside\n")
+        skill_md.symlink_to(target)
+        out = self.run_install("--project", proj, "--update")
+        self.check_out("skips a skill whose file is a link", out, rf"^  SKIP +.*skills/{SKILL} \(SKILL\.md is a symlink")
+        self.check("does not write through the link", target.read_text() == "outside\n")
+
+    def test_project_conflict_on_a_plain_run_and_in_a_repo_folder(self):
+        repo_copy = copy_repo(self.tmp / "repo-nested")
+        self.write(repo_copy / "skills" / SKILL / "refs" / "guide.md", "guide\n")
+        proj = self.tmp / "proj-reverse"
+        proj.mkdir()
+        self.run_install("--project", proj, script=repo_copy / "install.sh")
+        refs = proj / ".claude" / "skills" / SKILL / "refs"
+        shutil.rmtree(refs)
+        self.write(refs, "a file where the repo has a folder\n")
+        skill_md = proj / ".claude" / "skills" / SKILL / "SKILL.md"
+        with open(skill_md, "a") as f:
+            f.write("local edit\n")
+        out = self.run_install("--project", proj, script=repo_copy / "install.sh")
+        self.check_out("a plain run skips a nested conflict too", out, rf"^  SKIP +.*skills/{SKILL} \(refs is a symlink")
+        out = self.run_install("--project", proj, "--update", script=repo_copy / "install.sh")
+        self.check_out("--update skips a file where the repo has a folder", out, rf"^  SKIP +.*skills/{SKILL} \(refs is a symlink")
+        self.check("leaves the file in place", refs.read_text() == "a file where the repo has a folder\n")
+        self.check("updates no file of a skipped skill", "local edit" in skill_md.read_text())
+
+    def test_project_update_hidden_and_read_only_files(self):
+        proj = self.tmp / "proj-hidden"
+        proj.mkdir()
+        self.run_install("--project", proj)
+        claude = proj / ".claude"
+        for junk in (claude / "agents" / ".DS_Store", claude / "skills" / ".DS_Store", claude / "skills" / SKILL / ".DS_Store"):
+            self.write(junk, "finder\n")
+        skill_md = claude / "skills" / SKILL / "SKILL.md"
+        with open(skill_md, "a") as f:
+            f.write("local edit\n")
+        skill_md.chmod(0o444)
+        out = self.run_install("--project", proj, "--update")
+        self.check("exits 0 with a read-only file to update", out.rc == 0, out.out)
+        self.check("--update replaces a read-only file",
+                   skill_md.read_bytes() == (REPO / "skills" / SKILL / "SKILL.md").read_bytes())
+        self.check_out("the summary is complete", out, r"^  left +0 ")
+        self.check_lacks("a .DS_Store is neither left nor kept", out, ".DS_Store")
+        self.check("the .DS_Store files stay", (claude / "skills" / SKILL / ".DS_Store").is_file())
+
+    @unittest.skipUnless(NON_ROOT, "root reads and writes everything")
+    def test_project_skips_what_it_cannot_read_or_write(self):
+        for case, rel, mode, problem in (("a folder it cannot read", "private", 0o000, "cannot read"),
+                                         ("a file it cannot read", "secret.md", 0o000, "cannot read"),
+                                         ("a folder it cannot write", "refs", 0o555, "cannot write to")):
+            with self.subTest(case):
+                repo_copy = copy_repo(self.tmp / f"repo-{rel}")
+                self.write(repo_copy / "skills" / SKILL / "refs" / "guide.md", "guide\n")
+                proj = self.tmp / f"proj-{rel}"
+                proj.mkdir()
+                self.run_install("--project", proj, script=repo_copy / "install.sh")
+                skill_dir = proj / ".claude" / "skills" / SKILL
+                with open(skill_dir / "SKILL.md", "a") as f:
+                    f.write("local edit\n")
+                (repo_copy / "skills" / SKILL / "refs" / "new.md").write_text("new\n")
+                path = skill_dir / rel
+                if rel == "private":
+                    self.write(path / "notes.md", "team notes\n")
+                elif rel == "secret.md":
+                    self.write(path, "team secret\n")
+                path.chmod(mode)
+                self.addCleanup(path.chmod, 0o755)
+                expected = rf"^  SKIP +.*skills/{SKILL} \({problem} .*skills/{SKILL}/{re.escape(rel)} - fix its permissions\)$"
+                for args in ((), ("--update",)) if problem == "cannot read" else (("--update",),):
+                    out = self.run_install("--project", proj, *args, script=repo_copy / "install.sh")
+                    self.check(f"{case} {args}: exits 0", out.rc == 0, out.out)
+                    self.check_out(f"{case} {args}: skips the skill and names the path", out, expected)
+                    self.check(f"{case} {args}: does not report it as ok or differing",
+                               not re.search(rf"^  (ok|DIFFERS|updated) +.*skills/{SKILL}( |$)", out.out, re.M), out.out)
+                    self.check_out(f"{case} {args}: the summary counts it as skipped", out, r"^  skipped +1 ")
+                    self.check_out(f"{case} {args}: the rest still runs", out, r"^  left +0 ")
+                path.chmod(0o755)
+                self.check(f"{case}: updates none of its files", "local edit" in (skill_dir / "SKILL.md").read_text())
+                self.check(f"{case}: writes nothing into it", not (skill_dir / "refs" / "new.md").exists())
+
+    @unittest.skipUnless(NON_ROOT, "root reads and writes everything")
+    def test_project_refuses_a_folder_it_cannot_write(self):
+        for sub, mode in (("agents", 0o555), ("skills", 0o000)):
+            with self.subTest(sub):
+                proj = self.tmp / f"proj-locked-{sub}"
+                locked = proj / ".claude" / sub
+                locked.mkdir(parents=True)
+                locked.chmod(mode)
+                self.addCleanup(locked.chmod, 0o755)
+                for args in ((), ("--update",)):
+                    out = self.run_install("--project", proj, *args)
+                    self.check(f"{sub} {args}: exits 1", out.rc == 1, out.out)
+                    self.check_out(f"{sub} {args}: names the folder", out,
+                                   rf"^error: cannot read and write .*\.claude/{sub} - fix its permissions")
+                    self.check(f"{sub} {args}: copies nothing", not any((proj / ".claude" / "agents").iterdir()))
+        complete = self.tmp / "proj-locked-complete"
+        complete.mkdir()
+        self.check("a complete install: the setup run succeeds", self.run_install("--project", complete).rc == 0)
+        agents = complete / ".claude" / "agents"
+        agents.chmod(0o555)
+        self.addCleanup(agents.chmod, 0o755)
+        out = self.run_install("--project", complete)
+        self.check("a complete install in a read-only folder: still refused", out.rc == 1, out.out)
+        self.check_out("a complete install in a read-only folder: names the folder", out,
+                       r"^error: cannot read and write .*\.claude/agents - fix its permissions")
+
+    def test_project_reports_a_failed_copy(self):
+        # A cp that fails only for one skill, as a full disk or an I/O error would.
+        fake = self.tmp / "fake-cp"
+        self.write(fake / "cp", f'''#!/bin/sh
+for a in "$@"; do case "$a" in */skills/{SKILL}|*/skills/{SKILL}/*) echo "cp: simulated failure" >&2; exit 1;; esac; done
+exec /bin/cp "$@"
+''', 0o755)
+        env = {"PATH": f"{fake}:{os.environ['PATH']}"}
+        proj = self.tmp / "proj-failed"
+        proj.mkdir()
+        out = self.run_install("--project", proj, env=env)
+        self.check("a failed new copy: exits 0", out.rc == 0, out.out)
+        self.check_out("a failed new copy: reports FAILED", out, rf"^  FAILED +.*skills/{SKILL} \(could not copy")
+        self.check_out("a failed new copy: the summary lists it", out, rf"^  failed +1 \(see the errors above")
+        self.check_out("a failed new copy: the other skills are still copied", out, rf"^  copied +.*skills/{SKILLS[1]}$")
+        self.run_install("--project", proj)
+        with open(proj / ".claude" / "skills" / SKILL / "SKILL.md", "a") as f:
+            f.write("local edit\n")
+        out = self.run_install("--project", proj, "--update", env=env)
+        self.check("a failed update: exits 0", out.rc == 0, out.out)
+        self.check_out("a failed update: reports FAILED", out, rf"^  FAILED +.*skills/{SKILL} \(could not copy every file")
+        self.check_out("a failed update: the summary still runs to the end", out, r"^  left +0 ")
+
     def test_project_file_modes(self):
         # Under umask 077 plain cp would make every copy 600 or 700; -p keeps the source's 644 and 755.
         repo_copy = copy_repo(self.tmp / "repo-copy")
@@ -849,10 +1039,10 @@ class InstallTest(unittest.TestCase):
         out = self.run_install("--help")
         self.check("--help exits 0", out.rc == 0)
         self.check("--help prints usage", "--settings" in out.out)
-        self.check("--help prints the whole header", "the team repo's git history is their backup" in out.out)
+        self.check("--help prints the whole header", "ends with a summary of what was added, updated and left" in out.out)
         self.check_lacks("--help does not print the shell options line", out, "set -euo pipefail")
         out = self.run_install("--bogus")
-        self.check("a bad argument prints the whole usage", "the team repo's git history is their backup" in out.out)
+        self.check("a bad argument prints the whole usage", "ends with a summary of what was added, updated and left" in out.out)
         self.check("missing project dir exits 1", self.run_install("--project", self.tmp / "nope").rc == 1)
         self.check("extra --settings argument exits 1", self.run_install("--settings", "extra").rc == 1)
         self.check("extra --uninstall argument exits 1", self.run_install("--uninstall", "extra").rc == 1)
