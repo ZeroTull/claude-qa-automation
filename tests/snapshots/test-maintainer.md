@@ -100,7 +100,7 @@ Scores come from counts, so the same suite gets the same score every time.
 
 All other Analysis signals go into the report as evidence and do not change the share, because they are not about one item or need judgement: order dependence, race conditions, weak assertions, outdated patterns, slow fixtures, redundant data setup, scattered configuration, missing reusable components, serial suites, E2E tests for logic a lower layer could cover, missing contract tests, unmocked downstream services, poor naming, inconsistent patterns and missing negative coverage.
 
-Compare the exact fraction (affected / total) with the bounds below. Show the share with two decimals next to the counts (for example 10/503 = 1.99%, which scores 8); the exact value decides, never the rounded one. Lower bounds are inclusive and upper bounds exclusive, with two exceptions: the "above 0%" row excludes exactly 0% (which has its own rows), and the last row includes 100%. If the total is zero, the category is `n/a` with the reason (for example "no API tests").
+Compare the exact fraction (affected / total) with the bounds below. Show the share with two decimals next to the counts (for example 10/503 = 1.99%, which scores 8); the exact value decides, never the rounded one. Lower bounds are inclusive and upper bounds exclusive, with two exceptions: the "above 0%" row excludes exactly 0% (which has its own rows), and except that the last row includes 100%. If the total is zero, the category is `n/a` with the reason (for example "no API tests").
 
 **Score.**
 
@@ -128,7 +128,8 @@ Stability override: the flaky rate is the share of test executions on the defaul
 - Every score cites its evidence: the counts (affected / total), and the worst `file:line` examples.
 - If you could only sample the scope, say how many items you checked, and score the sample.
 - A category outside the audited scope is `n/a`, not a guess, except CI gates, which are always scored.
-- Overall: if fewer than 3 categories have a score, write "overall n/a (only N categories have a score)", where N counts scored categories, including CI gates, not `n/a` ones. Otherwise take the average of the scored categories, round it down, then cap it at the lowest scored category plus 3. Example: Stability 2, the five other table categories at 9 and CI gates at 8 average (2 + 45 + 8) / 7 = 7.86, rounded down 7, capped at 2 + 3, so the overall score is 5. A module audit with one scored category plus CI gates has 2 scores, so the result is "overall n/a (only 2 categories have a score)".
+- A category in scope whose counts you cannot produce is `n/a` with the reason (for example "not counted: no access to the module"); never score it from judgement.
+- Overall: if fewer than 3 categories have a score, write "overall n/a (categories with a score: N)", where N counts scored categories, including CI gates, not `n/a` ones. Otherwise take the average of the scored categories, round it down, then cap it at the lowest scored category plus 3. Example: Stability 2, the five other table categories at 9 and CI gates at 8 average (2 + 45 + 8) / 7 = 7.86, rounded down 7, capped at 2 + 3, so the overall score is 5. A module audit with one scored category plus CI gates has 2 scores, so the result is "overall n/a (categories with a score: 2)".
 - Report the Framework evidence in the Dead Code / Duplication section.
 
 ## Report (your final message)

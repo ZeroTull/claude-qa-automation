@@ -464,7 +464,11 @@ AGENT_RULES = {
         "## Scoring": "must define how scores are given",
         "count the items affected by at least one of that category's countable signals": "must score each category from its own signals",
         "a test that cannot fail (no assertion, an assertion that is always true, or a failure swallowed in a catch)": "must count tests that cannot fail",
-        "the last row includes 100%": "must give 100% a score",
+        "except that the last row includes 100%": "must give 100% a score",
+        "Lower bounds are inclusive and upper bounds exclusive": "must define inclusive and exclusive bounds",
+        "with two exceptions: the \"above 0%\" row excludes exactly 0%": "must name the 0% exception",
+        "A category in scope whose counts you cannot produce is `n/a` with the reason": "must not score uncounted categories",
+        "never score it from judgement": "must not score from judgement",
         "the exact value decides, never the rounded one": "must not score a rounded share",
         "or with no executions in the last 30 days, there is no override": "must handle an empty flaky window",
         "except CI gates, which are always scored": "must exempt CI gates from n/a",
@@ -480,7 +484,7 @@ AGENT_RULES = {
         "A gate counts only if it runs in CI on the default branch and fails the pipeline when violated": "must define when a gate counts",
         "A missing or empty CI configuration counts as 0 gates": "must score a missing CI configuration",
         "Every score cites its evidence": "must cite evidence for every score",
-        "if fewer than 3 categories have a score, write \"overall n/a": "must handle too few scored categories",
+        "if fewer than 3 categories have a score, write \"overall n/a (categories with a score: N)\"": "must handle too few scored categories",
         "round it down, then cap it at the lowest scored category plus 3": "must define rounding and the cap",
         "overall X/10 (see Scoring)": "must report the overall score by the Scoring rules",
     },
@@ -629,10 +633,27 @@ for path, snap in SNAPSHOTS:
         a, b = text.split(b"\n"), want.split(b"\n")
         line = next((n for n, (x, y) in enumerate(zip(a, b), 1) if x != y), min(len(a), len(b)) + 1)
         err(f"{path} differs from {snap} (first difference at line {line}); update both when the change is intended")
+# The exact rows of the test-maintainer score table: a changed bound or score needs a deliberate edit here too.
+TM_ROWS = [
+    "| exactly 0%, with a guard | 10 | Excellent |",
+    "| exactly 0%, no guard | 9 | Excellent |",
+    "| above 0% to under 2% | 8 | Good |",
+    "| 2% to under 5% | 7 | Good |",
+    "| 5% to under 10% | 6 | Fair |",
+    "| 10% to under 15% | 5 | Fair |",
+    "| 15% to under 25% | 4 | Poor |",
+    "| 25% to under 40% | 3 | Poor |",
+    "| 40% to under 60% | 2 | Broken |",
+    "| 60% to under 80% | 1 | Broken |",
+    "| 80% to 100%, inclusive | 0 | Broken |"
+]
 # The test-maintainer score table must map every share to exactly one score: scores 10 down to 0, and share ranges
 # that start at 0%, touch without overlapping, and end at 100%. A row deleted from both the agent and its snapshot
 # still fails here.
 tm = read(f"{repo}/agents/test-maintainer.md")
+for row in TM_ROWS:
+    if row not in tm.split("\n"):
+        err(f"agents/test-maintainer.md: the score table row '{row}' is missing or changed")
 rows = re.findall(r"^\| (.+?) \| (\d+) \| (Excellent|Good|Fair|Poor|Broken) \|$", tm, re.M)
 BAND = {10: "Excellent", 9: "Excellent", 8: "Good", 7: "Good", 6: "Fair", 5: "Fair", 4: "Poor", 3: "Poor",
         2: "Broken", 1: "Broken", 0: "Broken"}

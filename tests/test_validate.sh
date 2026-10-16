@@ -569,6 +569,8 @@ expect_failure "score table with above on a middle row" "the score table's share
   "for f in agents/test-maintainer.md tests/snapshots/test-maintainer.md; do edit \"\$f\" -e 's#^| 2% to under 5% | 7 | Good |\$#| above 2% to under 5% | 7 | Good |#'; done"
 expect_failure "score table band mismatch" "a score table row has the wrong band for its score" \
   "for f in agents/test-maintainer.md tests/snapshots/test-maintainer.md; do edit \"\$f\" -e 's#^| 5% to under 10% | 6 | Fair |\$#| 5% to under 10% | 6 | Good |#'; done"
+expect_failure "score table bound moved in agent and snapshot" "the score table row '| 25% to under 40% | 3 | Poor |' is missing or changed" \
+  "for f in agents/test-maintainer.md tests/snapshots/test-maintainer.md; do edit \"\$f\" -e 's#^| 15% to under 25% | 4 | Poor |\$#| 15% to under 26% | 4 | Poor |#' -e 's#^| 25% to under 40% | 3 | Poor |\$#| 26% to under 40% | 3 | Poor |#'; done"
 expect_failure "senior snapshot emptied" "tests/snapshots/senior-automation-qa-engineer.md missing or empty" \
   ": > tests/snapshots/senior-automation-qa-engineer.md"
 expect_failure "senior snapshot missing" "tests/snapshots/senior-automation-qa-engineer.md missing or empty" \
