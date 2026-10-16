@@ -471,6 +471,7 @@ AGENT_RULES = {
         "never score it from judgement": "must not score from judgement",
         "the exact value decides, never the rounded one": "must not score a rounded share",
         "or with no executions in the last 30 days, there is no override": "must handle an empty flaky window",
+        "The override only caps a Stability score that the counts produced": "must not score Stability from the flaky rate alone",
         "except CI gates, which are always scored": "must exempt CI gates from n/a",
         "CI gates are always scored, also when the audit covers only one module": "must always score CI gates",
         "when this category's signal comes back": "must tie a guard to its category",
@@ -553,7 +554,7 @@ AGENT_RULES = {
     },
     "README.md": {
         "the five JVM settings the rule names": "must describe the closed JVM list",
-        "scored from counts against fixed bands (0-2 broken to 9-10 excellent, with the evidence)": "must describe the health score bands",
+        "scored from counts against fixed bands (0-2 broken, 3-4 poor, 5-6 fair, 7-8 good, 9-10 excellent, with the evidence)": "must describe the health score bands",
         "which agent, skill or the main session takes the first phase (its Phased Plan says who takes each phase)": "must describe the strategy Next Step",
         "a phased plan and measurable success criteria": "must describe the strategy report",
         "we don't recommend a wildcard allow rule for it": "must not recommend a git fetch allow rule",
@@ -650,6 +651,12 @@ TM_ROWS = [
     "| 60% to under 80% | 1 | Broken |",
     "| 80% to 100%, inclusive | 0 | Broken |"
 ]
+# The only lines outside the Score section that may mention a share range, matched exactly (no prefixes), so no
+# second mapping can be added in prose or another format.
+TM_RANGE_LINES = [
+    "Compare the exact fraction (affected / total) with the bounds below. Show the share with two decimals next to the counts (for example 10/503 = 1.99%, which scores 8); the exact value decides, never the rounded one. Lower bounds are inclusive and upper bounds exclusive, with two exceptions: the \"above 0%\" row excludes exactly 0% (which has its own rows), and the last row includes 100%. If the total is zero, the category is `n/a` with the reason (for example \"no API tests\").",
+    "Stability override: the flaky rate is the share of test executions on the default branch in the last 30 days that failed and then passed on a retry. Compare its exact fraction: from 5% to 10% inclusive, Stability is at most 4; above 10%, at most 2. Without a run history, or with no executions in the last 30 days, there is no override, and the report says so. The override only caps a Stability score that the counts produced: without Stability counts, Stability stays `n/a` and the report gives the flaky rate as evidence."
+]
 # The test-maintainer score table must map every share to exactly one score: scores 10 down to 0, and share ranges
 # that start at 0%, touch without overlapping, and end at 100%. A row deleted from both the agent and its snapshot
 # still fails here.
@@ -665,11 +672,10 @@ else:
     section = [l for l in lines[start + 1:end] if l.strip()]
     if section != ["| Affected share | Score | Band |", "|---|---|---|"] + TM_ROWS:
         err("agents/test-maintainer.md: the Score section must contain exactly the 11 score table rows, in order")
-    stray = [l for n, l in enumerate(lines) if not start < n < end and "%" in l
-             and re.search(r"\b(Excellent|Good|Fair|Poor|Broken)\b", l) and re.search(r"\d+%", l)
-             and not l.startswith("Score: 5 gates")]
+    share_range = re.compile(r"\d+(?:\.\d+)?\s*%\s*to\s+(?:under\s+)?\d+|above\s+0\s*%")
+    stray = [l for n, l in enumerate(lines) if not start < n < end and share_range.search(l) and l not in TM_RANGE_LINES]
     if stray:
-        err(f"agents/test-maintainer.md: a share-to-band mapping outside the Score section: {stray[0][:60]}")
+        err(f"agents/test-maintainer.md: a share range outside the Score section: {stray[0][:60]}")
 rows = re.findall(r"^\| (.+?) \| (\d+) \| (Excellent|Good|Fair|Poor|Broken) \|$", tm, re.M)
 BAND = {10: "Excellent", 9: "Excellent", 8: "Good", 7: "Good", 6: "Fair", 5: "Fair", 4: "Poor", 3: "Poor",
         2: "Broken", 1: "Broken", 0: "Broken"}
