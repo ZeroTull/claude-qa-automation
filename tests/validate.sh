@@ -428,7 +428,7 @@ AGENT_RULES = {
         "Choose one option, say why it beats the others": "must recommend one option",
         "For each phase: goal, concrete work, who does it": "must give a phased plan",
         "size (S: up to a day, M: up to a sprint, L: more than a sprint)": "must define phase sizes",
-        "and who it goes to (`test-maintainer`": "must say where each phase goes",
+        "and who it goes to (`test-maintainer` to audit an existing suite and propose changes": "must say where each phase goes",
         "its definition with the denominator, the data source, a baseline (or how to get it), a numeric target and a time window": "must define measurable success criteria",
         "## Context ": "must report context",
         "## Risks ": "must report risks",
@@ -522,7 +522,7 @@ AGENT_RULES = {
     },
     "README.md": {
         "the five JVM settings the rule names": "must describe the closed JVM list",
-        "which agent or skill takes the first phase (its Phased Plan says who takes each phase)": "must describe the strategy Next Step",
+        "which agent, skill or the main session takes the first phase (its Phased Plan says who takes each phase)": "must describe the strategy Next Step",
         "a phased plan and measurable success criteria": "must describe the strategy report",
         "we don't recommend a wildcard allow rule for it": "must not recommend a git fetch allow rule",
         "quotes only what the allow-list in `templates/safety.md` permits": "must point to the full build-file allow-list",
@@ -581,18 +581,19 @@ if mode == "dump-pins":
 pin_count = read(f"{repo}/tests/pin-count").strip()
 if pin_count != str(len(pins)):
     err(f"tests/pin-count says {pin_count or 'nothing'}, but this script defines {len(pins)} pins; update both together")
-# Section snapshots: a whole section of an entry must equal a file under tests/snapshots/, so every rule in it is
-# covered, not only the pinned phrases. Change both together when a change is intended.
-SNAPSHOTS = [("agents/senior-automation-qa-engineer.md", "## Method\n", "## What you draw on\n",
-              "tests/snapshots/senior-method-report.md")]
-for path, start, end, snap in SNAPSHOTS:
+# Section snapshots: everything from a heading to the end of an entry must equal a file under tests/snapshots/, so
+# every rule in it is covered, not only the pinned phrases. The heading must appear exactly once. Change both together
+# when a change is intended.
+SNAPSHOTS = [("agents/senior-automation-qa-engineer.md", "## Method\n", "tests/snapshots/senior-method-report.md")]
+for path, start, snap in SNAPSHOTS:
     text = read(f"{repo}/{path}")
     want = read(f"{repo}/{snap}")
-    i, j = text.find("\n" + start), text.find("\n" + end)
     if not want:
         err(f"{snap} missing or empty")
-    elif i < 0 or j < 0 or text[i + 1:j + 1] != want:
-        err(f"{path}: the section from '{start.strip()}' to '{end.strip()}' differs from {snap}; update both when the change is intended")
+    elif text.count("\n" + start) != 1:
+        err(f"{path}: '{start.strip()}' must appear exactly once")
+    elif text[text.index("\n" + start) + 1:] != want:
+        err(f"{path}: the text from '{start.strip()}' to the end differs from {snap}; update both when the change is intended")
 for path, rules in AGENT_RULES.items():
     text = read(f"{repo}/{path}")
     for phrase, message in rules.items():

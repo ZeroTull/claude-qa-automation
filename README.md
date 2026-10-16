@@ -119,7 +119,7 @@ A printed plan is not approval: it still stops at every gate. It ends a request 
 ### How approvals work
 
 - **Skills** stop at each gate ("Proceed with these 4 tests?") and continue when you answer.
-- **Agents** can't pause mid-task, so they finish with a report and a question such as "Which findings should be implemented?". `senior-automation-qa-engineer` ends with a Next Step: one question, the default if you agree, and which agent or skill takes the first phase (its Phased Plan says who takes each phase). The `pr-reviewer` and `test-maintainer` reports end with "Apply Rules" for the main conversation. Answer in the same chat ("apply 1, 3 and 5"), and Claude applies only those items, following those rules, then runs the impacted tests.
+- **Agents** can't pause mid-task, so they finish with a report and a question such as "Which findings should be implemented?". `senior-automation-qa-engineer` ends with a Next Step: one question, the default if you agree, and which agent, skill or the main session takes the first phase (its Phased Plan says who takes each phase). The `pr-reviewer` and `test-maintainer` reports end with "Apply Rules" for the main conversation. Answer in the same chat ("apply 1, 3 and 5"), and Claude applies only those items, following those rules, then runs the impacted tests.
 
 Nothing is written, run, posted to a tracker or pushed until you say so.
 
@@ -194,7 +194,7 @@ The agents never handle tokens. Authentication stays in tools that manage it the
 ## Customizing
 
 - **Adding an entry:** add an agent (`agents/<name>.md`) or skill (`skills/<name>/SKILL.md`), a row in `catalog.tsv`, a line in this README and in `templates/CLAUDE.md`. Each entry must include the blocks from `templates/safety.md` and `templates/platforms.md` verbatim, and every entry except `framework-map` the block from `templates/project-map.md`. `ci-failure-diagnoser`, `flaky-test-triager`, `qa-lead`, `bug-ticket` and `test-developer` recommend what to do with a defect, so they also carry `templates/defect-routing.md`; so must any other entry with a `## Defect routing` section. The CI checks that each copy matches and that the template still has its key routes.
-- **Pins and snapshots:** `tests/validate.sh` pins key phrases (each is mutation-tested, and `tests/pin-count` holds their exact number) and checks whole sections against `tests/snapshots/` (the strategy agent's Method and Report). When you change a pinned phrase or a snapshotted section on purpose, update the pin, the count or the snapshot in the same change.
+- **Pins and snapshots:** `tests/validate.sh` pins key phrases (each is mutation-tested, and `tests/pin-count` holds their exact number) and checks whole sections against `tests/snapshots/` (the strategy agent from `## Method` to the end). When you change a pinned phrase or a snapshotted section on purpose, update the pin, the count or the snapshot in the same change.
 - **Other platforms:** add a column to `templates/platforms.md`, then copy the new block into every entry.
 - **Other languages:** the files assume Java; adjust the build and test commands (for example `pytest` instead of `mvn`).
 
