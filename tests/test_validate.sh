@@ -551,6 +551,8 @@ expect_failure "senior Method heading duplicated" "differs from tests/snapshots/
   "printf '\\n## Method\\n\\nAnything goes.\\n' >> agents/senior-automation-qa-engineer.md"
 expect_failure "senior agent converted to CRLF" "agents/senior-automation-qa-engineer.md differs from tests/snapshots/senior-automation-qa-engineer.md (first difference at line 1)" \
   "python3 -c 'import sys; p=sys.argv[1]; d=open(p,\"rb\").read(); open(p,\"wb\").write(d.replace(b\"\\n\", b\"\\r\\n\"))' agents/senior-automation-qa-engineer.md"
+expect_failure "test-maintainer band edited" "agents/test-maintainer.md differs from tests/snapshots/test-maintainer.md" \
+  "edit agents/test-maintainer.md -e 's|Only isolated cases (a few files)|Some problems|'"
 expect_failure "senior snapshot emptied" "tests/snapshots/senior-automation-qa-engineer.md missing or empty" \
   ": > tests/snapshots/senior-automation-qa-engineer.md"
 expect_failure "senior snapshot missing" "tests/snapshots/senior-automation-qa-engineer.md missing or empty" \

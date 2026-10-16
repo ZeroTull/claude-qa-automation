@@ -460,6 +460,15 @@ AGENT_RULES = {
         "correlating a slowdown with the code or infrastructure change behind it": "must correlate performance regressions",
         "**Tools:**": "must keep a tool list",
     },
+    "agents/test-maintainer.md": {
+        "## Scoring": "must define how scores are given",
+        "| 0-2 | Broken |": "must define the score bands",
+        "Every score cites its evidence": "must cite evidence for every score",
+        "give the lower score and say why. Do not give 7-8 by default": "must not inflate scores",
+        "never more than 3 above the lowest category": "must not let one broken area hide",
+        "0-1 gates is 0-2, 2 is 3-4, 3 is 5-6, 4 is 7-8, and all 5 is 9-10": "must score CI gates by count",
+        "overall X/10 (see Scoring)": "must report the overall score by the Scoring rules",
+    },
     "agents/pr-reviewer.md": {
         "never assume `main`": "must take the base branch from the PR, not assume main",
         "git symbolic-ref --short refs/remotes/origin/HEAD": "must fall back to the repo's default branch",
@@ -522,6 +531,7 @@ AGENT_RULES = {
     },
     "README.md": {
         "the five JVM settings the rule names": "must describe the closed JVM list",
+        "scored against fixed bands (0-2 broken to 9-10 excellent, with the evidence)": "must describe the health score bands",
         "which agent, skill or the main session takes the first phase (its Phased Plan says who takes each phase)": "must describe the strategy Next Step",
         "a phased plan and measurable success criteria": "must describe the strategy report",
         "we don't recommend a wildcard allow rule for it": "must not recommend a git fetch allow rule",
@@ -583,7 +593,8 @@ if pin_count != str(len(pins)):
     err(f"tests/pin-count says {pin_count or 'nothing'}, but this script defines {len(pins)} pins; update both together")
 # Snapshots: some entries must equal a file under tests/snapshots/ byte for byte, so every rule in them is covered,
 # not only the pinned phrases. When the entry (or a shared block in it) changes on purpose, update the snapshot too.
-SNAPSHOTS = [("agents/senior-automation-qa-engineer.md", "tests/snapshots/senior-automation-qa-engineer.md")]
+SNAPSHOTS = [("agents/senior-automation-qa-engineer.md", "tests/snapshots/senior-automation-qa-engineer.md"),
+             ("agents/test-maintainer.md", "tests/snapshots/test-maintainer.md")]
 def read_bytes(path):
     try:
         with open(path, "rb") as f:

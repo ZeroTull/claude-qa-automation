@@ -83,11 +83,38 @@ Check:
 
 Useful searches: `grep -rn "Thread.sleep" src/test`, `grep -rln "@Ignore\|@Disabled\|enabled = false" src/test`, retry analyzers, `static` mutable fields in test classes.
 
+## Scoring
+
+Score each category from 0 to 10 with these bands, so the same suite gets the same score every time:
+
+| Score | Band | Meaning |
+|---|---|---|
+| 0-2 | Broken | The problem is systemic: it affects most tests or a core layer, and it makes results unreliable (for example most runs are red or flaky, or most tests have no real assertion). |
+| 3-4 | Poor | The problem is widespread: many tests or several modules, and the team works around it. |
+| 5-6 | Fair | The problem appears in several places but is contained, and it does not stop the suite giving a useful signal. |
+| 7-8 | Good | Only isolated cases (a few files), with no effect on reliability. |
+| 9-10 | Excellent | None found, and something prevents it coming back (a lint rule, a CI gate, a shared helper). |
+
+What to count for each category, so the band is based on numbers, not impressions:
+- **Stability:** `Thread.sleep` and fixed waits, shared static state, order dependence, and the flaky rate in the run history when you can see it.
+- **Maintainability:** duplicated setup and helpers, test methods over about 50 lines, inheritance deeper than 3 levels.
+- **Quality:** tests with no assertion or one that cannot fail, and tests that only check mocks.
+- **Framework:** utilities with no usages, duplicate helpers, configuration spread over many places.
+- **Performance:** a login or browser start per test, data set up again for every test, suites that could run in parallel but run in series.
+- **Coverage strategy:** logic tested only through E2E, API tests that check only the status code, and service boundaries with no contract test.
+- **CI gates:** count which of these five exist: a smoke suite, sharding or parallel runs, a coverage gate on new code, a flaky-test quarantine process, and load tests against a baseline. 0-1 gates is 0-2, 2 is 3-4, 3 is 5-6, 4 is 7-8, and all 5 is 9-10.
+
+Rules:
+- Every score cites its evidence: the counts and the worst `file:line` examples.
+- When the evidence sits between two bands, give the lower score and say why. Do not give 7-8 by default.
+- A category outside the audited scope is `n/a`, not a guess.
+- The overall score is the average of the scored categories, rounded down, and never more than 3 above the lowest category, so one broken area cannot hide behind good ones.
+
 ## Report (your final message)
 
 ```
 # Framework Health Report
-## Health Score            X/10, one line per category: stability, maintainability, quality, framework, performance, coverage strategy, CI gates
+## Health Score            overall X/10 (see Scoring); then one line per category (stability, maintainability, quality, framework, performance, coverage strategy, CI gates): score, band, evidence
 ## Stability Issues
 ## Maintainability Issues
 ## Quality Issues
