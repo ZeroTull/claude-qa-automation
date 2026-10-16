@@ -473,8 +473,11 @@ AGENT_RULES = {
         "the exact value decides, never the rounded one": "must not score a rounded share",
         "or with no executions in the last 30 days, there is no override": "must handle an empty flaky window",
         "The override only caps a Stability score that the counts produced": "must not score Stability from the flaky rate alone",
-        "except CI gates, which are always scored": "must exempt CI gates from n/a",
-        "CI gates are always scored, also when the audit covers only one module": "must always score CI gates",
+        "except CI gates, which are scored whenever their configuration can be read": "must exempt CI gates from n/a",
+        "CI gates are always scored when the configuration can be read": "must always score readable CI gates",
+        "one that exists but cannot be read makes CI gates `n/a` with the reason": "must handle an unreadable CI configuration",
+        "A category has a guard only if every countable signal it lists has one": "must require a guard for every signal",
+        "`continueOnError` (Azure DevOps)": "must exclude Azure DevOps continueOnError",
         "when this category's signal comes back": "must tie a guard to its category",
         "go into the report as evidence and do not change the share": "must keep judgement signals out of the share",
         "Compare the exact fraction (affected / total) with the bounds below": "must compare exact fractions",
@@ -494,7 +497,7 @@ AGENT_RULES = {
         "apply the Stability override first": "must apply the override before the overall score",
         "with the same bands as the table": "must give CI scores a band",
         "The categories in scope are the ones the request names, or all seven if it names none": "must define which categories are in scope",
-        "overall X/10 (see Scoring)": "must report the overall score by the Scoring rules",
+        "overall X/10, or overall n/a (categories with a score: N) (see Scoring)": "must report the overall score by the Scoring rules",
     },
     "agents/pr-reviewer.md": {
         "never assume `main`": "must take the base branch from the PR, not assume main",
@@ -659,6 +662,7 @@ TM_ROWS = [
 # second mapping can be added in prose or any other format.
 TM_RANGE_LINES = [
     "Compare the exact fraction (affected / total) with the bounds below. Show the share with two decimals next to the counts (for example 10/503 = 1.99%, which scores 8); the exact value decides, never the rounded one. Lower bounds are inclusive and upper bounds exclusive, with two exceptions: the \"above 0%\" row excludes exactly 0% (which has its own rows), and the last row includes 100%. If the total is zero, the category is `n/a` with the reason (for example \"no API tests\").",
+    "A guard is a checkable artifact that fails the build when this category's signal comes back, and that you can cite by `file:line`: a lint or ArchUnit rule, or a CI job that fails on the pattern. A shared helper that does not force its use is not a guard. A category has a guard only if every countable signal it lists has one; otherwise it is \"exactly 0%, no guard\".",
     "Stability override: the flaky rate is the share of test executions on the default branch in the last 30 days that failed and then passed on a retry. Compare its exact fraction: from 5% to 10% inclusive, Stability is the lower of its counted score and 4; above 10%, the lower of its counted score and 2. The override never raises a score. Without a run history, or with no executions in the last 30 days, there is no override, and the report says so. The override only caps a Stability score that the counts produced: without Stability counts, Stability stays `n/a` and the report gives the flaky rate as evidence."
 ]
 # The test-maintainer score table must map every share to exactly one score: scores 10 down to 0, and share ranges
