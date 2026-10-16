@@ -335,12 +335,12 @@ else:
 # Behaviour rules that agents depend on: each phrase pins one rule, so an edit cannot drop it silently.
 AGENT_RULES = {
     "templates/safety.md": {
-        "you may use dependency coordinates and versions, plugin names and their test settings": "must allow the build-file details diagnosis needs",
-        "never quote server, repository, distribution or credential blocks": "must forbid quoting credential blocks from build files",
+        "quote only what this list allows. For anything else, name the element, property or key and write `<redacted>`": "must quote only allow-listed build-file values",
+        "dependency and plugin coordinates and versions": "must allow the build-file details diagnosis needs",
+        "Never quote server, repository, distribution or credential blocks": "must forbid quoting credential blocks from build files",
+        "a URL, connection string or command-line argument that contains a credential": "must forbid quoting credentials inside URLs and arguments",
+        "names, not values, of environment variables and properties": "must allow variable names but not their values",
         "Maven `settings.xml` or `settings-security.xml`, `gradle.properties`": "must forbid reading Maven settings and gradle.properties",
-        "whose name contains password, passwd, secret, token, key, credential, auth, user, login or proxy": "must forbid quoting secret-named values from build files",
-        "a URL or host that contains user info": "must forbid quoting URLs with user info",
-        "name the element and write `<redacted>`": "must redact when unsure",
     },
     "agents/ci-failure-diagnoser.md": {
         "Until the evidence rules the product out": "must not rule out a product defect for timeouts or reruns without evidence",

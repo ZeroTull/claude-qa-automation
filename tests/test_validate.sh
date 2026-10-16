@@ -361,19 +361,19 @@ expect_failure "verdicts without routing cases" "must map every verdict to a rou
 expect_failure "flaky verdict without ruling out the product" "must rule out the product before calling a test genuinely flaky" \
   "edit agents/flaky-test-triager.md -e 's|cause identified in the test and product ruled out (case 2)|cause identified (case 2)|'"
 expect_failure "safety rule that hides versions again" "templates/safety.md must allow the build-file details diagnosis needs" \
-  "edit templates/safety.md -e 's|you may use dependency coordinates and versions, plugin names and their test settings|use only dependency and plugin names|'"
+  "edit templates/safety.md -e 's|dependency and plugin coordinates and versions|dependency and plugin names|'"
 expect_failure "safety rule that allows credential blocks" "templates/safety.md must forbid quoting credential blocks from build files" \
-  "edit templates/safety.md -e 's|never quote server, repository, distribution or credential blocks|quote what you need|'"
+  "edit templates/safety.md -e 's|Never quote server, repository, distribution or credential blocks|Quote what you need|'"
 expect_failure "safety rule that reads settings.xml" "templates/safety.md must forbid reading Maven settings and gradle.properties" \
   "edit templates/safety.md -e 's|Maven .settings.xml. or .settings-security.xml., .gradle.properties. or other|or other|'"
 expect_failure "project settings.xml readable" "settings.example.json misses deny rules: Read(**/settings.xml)" \
   "edit settings.example.json -e '/\"Read(\\*\\*\\/settings.xml)\",/d'"
-expect_failure "safety rule that quotes secret-named values" "templates/safety.md must forbid quoting secret-named values from build files" \
-  "edit templates/safety.md -e 's|whose name contains password, passwd, secret, token, key, credential, auth, user, login or proxy|that looks secret|'"
-expect_failure "safety rule that quotes URLs with user info" "templates/safety.md must forbid quoting URLs with user info" \
-  "edit templates/safety.md -e 's|, a URL or host that contains user info||'"
-expect_failure "safety rule without redaction" "templates/safety.md must redact when unsure" \
-  "edit templates/safety.md -e 's| If you are unsure whether a value is secret, name the element and write .<redacted>.[.]||'"
+expect_failure "safety rule that quotes anything not forbidden" "templates/safety.md must quote only allow-listed build-file values" \
+  "edit templates/safety.md -e 's|quote only what this list allows[.] For anything else, name the element, property or key and write .<redacted>.|quote freely|'"
+expect_failure "safety rule that quotes credentials in URLs" "templates/safety.md must forbid quoting credentials inside URLs and arguments" \
+  "edit templates/safety.md -e 's|, or a URL, connection string or command-line argument that contains a credential|.|'"
+expect_failure "safety rule that quotes variable values" "templates/safety.md must allow variable names but not their values" \
+  "edit templates/safety.md -e 's|names, not values, of environment variables and properties|environment variables and properties|'"
 expect_failure "mapper that reads Maven settings" "must skip Maven settings and gradle.properties by name" \
   "edit skills/framework-map/SKILL.md -e 's|.settings.xml., .gradle.properties., ..npmrc. and ..netrc.|.npmrc|'"
 expect_failure "mapper that reads build files freely" "must read build files only as Safety allows" \

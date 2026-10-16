@@ -253,6 +253,37 @@ run --project "$proj3" --update
 assert "--update adds the missing deny rules" test "$(deny_count "$proj3/.claude/settings.json")" = "$n_deny"
 assert "--update keeps the other settings" python3 -c 'import json,sys; d=json.load(open(sys.argv[1])); sys.exit(0 if d["model"]=="x" and d["permissions"]["allow"]==["Bash(ls)"] else 1)' "$proj3/.claude/settings.json"
 assert "--update keeps the file mode" test "$(file_mode "$proj3/.claude/settings.json")" = 600
+assert "--update backs the project settings up" grep -q "backup: .*/project-settings.json" <<<"$out"
+bak="$(sed -n 's|.*backup: \(.*project-settings.json\)).*|\1|p' <<<"$out")"
+assert "the backup has the original rules" test "$(deny_count "$bak")" = 1
+assert "no temp file is left behind" test -z "$(find "$proj3/.claude" -name '.settings.*')"
+proj4="$TMP/proj4"
+mkdir -p "$proj4/.claude"
+printf '{\n    "permissions": {\n        "deny": []\n    }\n}\n' >"$proj4/.claude/settings.json"
+run --project "$proj4" --update
+assert "--update keeps a 4-space indent" grep -q '^        "deny": \[' "$proj4/.claude/settings.json"
+proj5="$TMP/proj5"
+mkdir -p "$proj5/.claude"
+echo '[]' >"$proj5/.claude/settings.json"
+run --project "$proj5" --update
+assert "a wrong-shaped project settings.json is left alone" test "$(cat "$proj5/.claude/settings.json")" = "[]"
+assert "says why it was not checked" grep -q "could not check its deny rules: settings.json has an unexpected shape" <<<"$out"
+proj6="$TMP/proj6"
+mkdir -p "$proj6/.claude/agents" "$proj6/.claude/skills"
+echo '{"permissions": {"deny": []}}' >"$proj6/.claude/settings.json"
+# The agents and skills folders stay writable; only .claude itself refuses the temp file the merge needs.
+chmod 500 "$proj6/.claude"
+run --project "$proj6" --update
+chmod 700 "$proj6/.claude"
+assert "a failed write is reported" grep -q "FAILED .*settings.json (could not add the deny rules; the file is unchanged)" <<<"$out"
+assert "a failed write leaves the file unchanged" test "$(deny_count "$proj6/.claude/settings.json")" = 0
+assert "a failed write still finishes the install" grep -q "Next: open Claude Code" <<<"$out"
+proj7="$TMP/proj7"
+mkdir -p "$proj7/.claude"
+echo '{"permissions": {"deny": []}}' >"$proj7/.claude/settings.json"
+out="$(PATH="$TMP/stubpath:$PATH" QA_PY_STUB="$TMP/stubpath/python3" QA_OS=Darwin QA_XCODE_SELECT="$stubs/xcode-none" "$REPO/install.sh" --project "$proj7" --update 2>&1)"
+assert "without python3 the project settings are skipped" grep -q "SKIP .*settings.json (exists; checking its deny rules needs python3" <<<"$out"
+assert "without python3 the file is unchanged" test "$(cat "$proj7/.claude/settings.json")" = '{"permissions": {"deny": []}}'
 proj2="$TMP/proj2"
 mkdir -p "$proj2/.claude"
 ln -s "$TMP/proj2-target.json" "$proj2/.claude/settings.json"

@@ -5,7 +5,8 @@
 #   ./install.sh --settings                  add this repo's secret deny rules to ~/.claude/settings.json (Claude Code)
 #   ./install.sh --project <path> [--update] copy the agents and skills into <path>/.claude for a team
 #   ./install.sh [--copilot] --uninstall     remove what the install added and restore what it replaced
-# It never touches ~/.claude/CLAUDE.md, and changes settings.json only with --settings (after a backup).
+# It never touches ~/.claude/CLAUDE.md. It changes ~/.claude/settings.json only with --settings, and a team repo's
+# .claude/settings.json only with --project --update, both after a backup and only to add deny rules.
 # Anything an install replaces is moved to <target>/backups/qa-<timestamp>-NNN/ first.
 set -euo pipefail
 
@@ -159,8 +160,14 @@ project_settings() {
   if [[ -z "$missing" ]]; then
     echo "  ok        $target has every deny rule from settings.example.json"
   elif [[ "$update" == yes ]]; then
-    settings_tool merge "$target"
-    echo "  added     $(wc -l <<<"$missing" | tr -d ' ') deny rule(s) to $target"
+    init_backup_dir
+    mkdir -p "$BACKUP_DIR"
+    cp -p "$target" "$BACKUP_DIR/project-settings.json"
+    if ! settings_tool merge "$target"; then
+      echo "  FAILED    $target (could not add the deny rules; the file is unchanged)"
+      return
+    fi
+    echo "  added     $(wc -l <<<"$missing" | tr -d ' ') deny rule(s) to $target (backup: $BACKUP_DIR/project-settings.json)"
   else
     echo "  MISSING   $target lacks $(wc -l <<<"$missing" | tr -d ' ') deny rule(s) from settings.example.json (--update adds them):"
     while IFS= read -r r; do echo "              $r"; done <<<"$missing"
@@ -196,7 +203,7 @@ have_python3() {
 # file can't be read or has an unexpected shape, and merge writes atomically.
 settings_tool() {
   python3 - "$1" "$REPO/settings.example.json" "${2:-$CLAUDE_HOME/settings.json}" <<'PY'
-import json, os, stat, sys, tempfile
+import json, os, re, stat, sys, tempfile
 mode, example, target = sys.argv[1:4]
 
 def fail(msg):
@@ -212,6 +219,13 @@ if os.path.exists(target):
             data = json.load(f)
     except ValueError as e:
         fail(f"settings.json is not valid JSON ({e})")
+# Keep the file's own indentation (spaces or a tab), so a merge does not reformat a team's file.
+indent = 2
+if os.path.exists(target):
+    with open(target, encoding="utf-8") as f:
+        m = re.search(r"\n([ \t]+)\S", f.read())
+    if m:
+        indent = m.group(1)
 if not isinstance(data, dict):
     fail("settings.json has an unexpected shape: the top level is not an object")
 perms = data.get("permissions")
@@ -232,12 +246,18 @@ data["permissions"] = perms
 perms["deny"] = deny + missing
 folder = os.path.dirname(target) or "."
 fd, tmp = tempfile.mkstemp(dir=folder, prefix=".settings.", suffix=".json")
-# mkstemp creates the file as 0600; keep the existing file's permissions (or the usual 0644 for a new one).
-os.chmod(tmp, stat.S_IMODE(os.stat(target).st_mode) if os.path.exists(target) else 0o644)
-with os.fdopen(fd, "w", encoding="utf-8") as f:
-    json.dump(data, f, indent=2, ensure_ascii=False)
-    f.write("\n")
-os.replace(tmp, target)
+try:
+    # mkstemp creates the file as 0600; keep the existing file's permissions (or the usual 0644 for a new one).
+    os.chmod(tmp, stat.S_IMODE(os.stat(target).st_mode) if os.path.exists(target) else 0o644)
+    with os.fdopen(fd, "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=indent, ensure_ascii=False)
+        f.write("\n")
+    os.replace(tmp, target)
+except BaseException:
+    # Never leave a half-written temp file behind, where it could end up committed in a team repo.
+    if os.path.exists(tmp):
+        os.unlink(tmp)
+    raise
 PY
 }
 
