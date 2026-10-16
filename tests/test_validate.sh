@@ -500,6 +500,10 @@ expect_failure "git remote -v not allowed" "settings.example.json must allow Bas
   "edit settings.example.json -e '/\"Bash(git remote -v)\"/d'"
 expect_failure "git remote allowed in a changing form" "allows a git remote form that can change remotes" \
   "edit settings.example.json -e 's|\"Bash(git remote -v)\"|\"Bash(git remote -v)\", \"Bash(git remote *)\"|'"
+expect_failure "a pin removed without updating the count" "tests/pin-count says 140, but this script defines 139 pins" \
+  "echo 140 > tests/pin-count"
+expect_failure "pin count file missing" "tests/pin-count says nothing" \
+  "rm tests/pin-count"
 expect_failure "personal entry in the QA repo" "unknown group 'personal'" \
   "edit catalog.tsv -e 's/^pr-reviewer\tagent\tqa/pr-reviewer\tagent\tpersonal/'"
 expect_failure "machine path in settings.example.json" "settings.example.json contains a machine-specific /Users/ path" \
@@ -525,10 +529,10 @@ open(path, "w", encoding="utf-8").write(text.replace(phrase, ""))
 DROP
 }
 n_pins=$(python3 -c 'import json,sys; print(len(json.load(open(sys.argv[1]))))' "$TMP/pins.json" 2>/dev/null || echo 0)
-# A failed or shrunken dump must fail here, not pass by checking nothing. Raise the floor when pins are added.
-min_pins=130
-if [[ $dump_rc -ne 0 || "$n_pins" -lt $min_pins ]]; then
-  echo "  FAIL  pin dump failed or lists only $n_pins pins (expected at least $min_pins)"
+# A failed or changed dump must fail here, not pass by checking fewer pins. tests/pin-count is the exact count.
+expected_pins="$(tr -d '[:space:]' <"$REPO/tests/pin-count")"
+if [[ $dump_rc -ne 0 || "$n_pins" != "$expected_pins" ]]; then
+  echo "  FAIL  pin dump failed or lists $n_pins pins (tests/pin-count says $expected_pins)"
   fail=1
 fi
 assert_pins=0

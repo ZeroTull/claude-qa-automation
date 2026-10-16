@@ -505,12 +505,16 @@ else:
             err(f"{path}: does not contain the block from templates/defect-routing.md verbatim")
 # QA_DUMP_PINS=1 prints every pinned phrase as JSON and exits, so tests/test_validate.sh can delete each one in a
 # copy of the repo and check that this script then fails with the pin's message.
+pins = [[p, ph, f"{p} {m}"] for p, rules in AGENT_RULES.items() for ph, m in rules.items()]
+pins += [["skills/framework-map/SKILL.md", ph, f"skills/framework-map/SKILL.md {m}"] for ph, m in MAPPER_RULES.items()]
+pins += [["templates/defect-routing.md", ph, f"templates/defect-routing.md {m}"] for ph, m in DEFECT_ROUTES.items()]
 if os.environ.get("QA_DUMP_PINS"):
-    pins = [[p, ph, f"{p} {m}"] for p, rules in AGENT_RULES.items() for ph, m in rules.items()]
-    pins += [["skills/framework-map/SKILL.md", ph, f"skills/framework-map/SKILL.md {m}"] for ph, m in MAPPER_RULES.items()]
-    pins += [["templates/defect-routing.md", ph, f"templates/defect-routing.md {m}"] for ph, m in DEFECT_ROUTES.items()]
     print(json.dumps(pins))
     sys.exit(0)
+# tests/pin-count holds the exact number of pins, so a pin removed from this script fails instead of going untested.
+pin_count = read(f"{repo}/tests/pin-count").strip()
+if pin_count != str(len(pins)):
+    err(f"tests/pin-count says {pin_count or 'nothing'}, but this script defines {len(pins)} pins; update both together")
 for path, rules in AGENT_RULES.items():
     text = read(f"{repo}/{path}")
     for phrase, message in rules.items():
