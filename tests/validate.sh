@@ -336,7 +336,8 @@ AGENT_RULES = {
         "list every plausible one, ranked": "must list every plausible cause when the evidence is inconclusive",
         "## Other Possible Causes": "must report other possible causes",
         "Do not call it \"not a code defect\" without that evidence": "must not call a timeout 'not a code defect' without evidence",
-        "suspected flaky-environment (product not ruled out)": "must label timeouts as suspected flaky with the product not ruled out",
+        "suspected flaky/environment (product not ruled out)": "must label timeouts as suspected flaky with the product not ruled out",
+        "recommend fixing it on the branch that introduced it": "must send a defect from the change under test back to its branch",
         "**Product defect (pre-existing, confirmed):**": "must have a label for confirmed pre-existing product defects",
         "if the evidence is inconclusive, say so and point to Other Possible Causes": "must not present a guess as the root cause",
     },
@@ -347,6 +348,9 @@ AGENT_RULES = {
         "never for an intermittent product defect or a likely regression": "must not add product defects to known-flaky-tests.md",
         "Use intermittent product defect only when the product cause is confirmed": "must say when a product defect is confirmed versus inconclusive",
         "Do not call a test genuinely flaky until a product cause is ruled out": "must rule out a product cause before calling a test flaky",
+    },
+    "README.md": {
+        "suspected flaky/environment (product not ruled out)": "trace example must use the diagnoser's suspected-flaky label",
     },
 }
 for path, rules in AGENT_RULES.items():

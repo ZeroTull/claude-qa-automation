@@ -108,7 +108,7 @@ Keep these lines short. They are a trace for the user, not a second report.
 ## Chaining
 
 Some requests need several owners. Go one step at a time and stop at every approval gate:
-- A red pipeline: `ci-failure-diagnoser`. If it says suspected flaky, offer `flaky-test-triager`. If it is a code defect or a confirmed product defect, offer `bug-ticket`.
+- A red pipeline: `ci-failure-diagnoser`. If it says suspected flaky, offer `flaky-test-triager`. If it is a code defect from the change under test, offer the fix on that branch; if it is a confirmed product defect, offer `bug-ticket`.
 - A new repo: `qa-conventions`, then offer `framework-map`.
 - A new story: offer `ticket-review` first, then `test-cases` and/or `test-developer`.
 - A PR that adds tests: `pr-reviewer`; for framework-level concerns it raises, offer `test-maintainer`.
