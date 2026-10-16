@@ -412,14 +412,17 @@ AGENT_RULES = {
         "`gh pr view --json baseRefName -q .baseRefName`": "must name the GitHub target branch command",
         "`glab mr view -F json` (the `target_branch` field)": "must name the GitLab target branch command",
         "On a detached HEAD there is no branch to look up, so go to step 2": "must handle a detached HEAD",
-        "exits non-zero with a \"no pull request / merge request found\" message, there is no open PR/MR: go to step 2": "must fall through when no PR/MR exists",
+        "reports that no pull request or merge request exists for the branch": "must fall through when no PR/MR exists",
+        "means the PR target is unknown, so do not fall back to the default branch: go to step 3": "must not guess the base after a lookup error",
+        "For a PR from a fork, use \"Read a PR/MR\" instead": "must use the platform diff for fork PRs",
         "name the base branch and how you found it": "must report the base branch",
     },
     "skills/pr-description/SKILL.md": {
         "never assume `main`": "must take the target branch from the PR, not assume main",
         "git symbolic-ref --short refs/remotes/origin/HEAD": "must fall back to the repo's default branch",
         "prints `origin/develop`, so `<target>` is `develop`": "must strip origin/ from the default branch",
-        "a lookup that prints nothing or reports \"no pull request / merge request found\" means there is none": "must fall through when no PR/MR exists",
+        "reports that no PR/MR exists for the branch means there is none": "must fall through when no PR/MR exists",
+        "any other lookup error means the target is unknown, so ask": "must not guess the target after a lookup error",
         "Run `git fetch origin <target>:refs/remotes/origin/<target>` first; if that fails, say the base may be out of date": "must refresh the base before diffing",
     },
     "skills/bug-ticket/SKILL.md": {
@@ -558,10 +561,16 @@ if example:
                 "Read(**/secrets/**/*.txt)",
                 "Read(~/.ssh/**)", "Read(~/.azure/**)", "Read(~/.config/gh/**)", "Read(**/*.pem)",
                 "Read(**/settings.xml)", "Read(**/gradle.properties)", "Read(~/.m2/settings-security.xml)",
-                "Read(**/settings-security.xml)",
+                "Read(**/settings-security.xml)", "Bash(git fetch *--*)", "Bash(git fetch *+*)",
                 "Bash(glab ci get *--with-variables*)"]
     if "/Users/" in json.dumps(example[0]):
         err("settings.example.json contains a machine-specific /Users/ path")
+    allow = example[0].get("permissions", {}).get("allow", []) if isinstance(example[0], dict) else []
+    if "Bash(git symbolic-ref --short refs/remotes/origin/HEAD)" not in allow:
+        err("settings.example.json must allow exactly `git symbolic-ref --short refs/remotes/origin/HEAD`")
+    loose = [r for r in allow if r.startswith("Bash(git symbolic-ref") and r != "Bash(git symbolic-ref --short refs/remotes/origin/HEAD)"]
+    if loose:
+        err(f"settings.example.json allows a git symbolic-ref form that can write refs: {', '.join(loose)}")
     missing = [r for r in required if r not in deny]
     if missing:
         err(f"settings.example.json misses deny rules: {', '.join(missing)}")

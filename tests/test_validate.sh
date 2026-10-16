@@ -459,9 +459,23 @@ expect_failure "reviewer reading glab text output" "agents/pr-reviewer.md must n
 expect_failure "reviewer stuck on a detached HEAD" "agents/pr-reviewer.md must handle a detached HEAD" \
   "edit agents/pr-reviewer.md -e 's| On a detached HEAD there is no branch to look up, so go to step 2[.]||'"
 expect_failure "reviewer stuck when a branch has no PR" "agents/pr-reviewer.md must fall through when no PR/MR exists" \
-  "edit agents/pr-reviewer.md -e 's|exits non-zero with a \"no pull request / merge request found\" message, there is no open PR/MR: go to step 2|fails, stop|'"
+  "edit agents/pr-reviewer.md -e 's|reports that no pull request or merge request exists for the branch|fails|'"
 expect_failure "PR description stuck when a branch has no PR" "skills/pr-description/SKILL.md must fall through when no PR/MR exists" \
-  "edit skills/pr-description/SKILL.md -e 's| (a lookup that prints nothing or reports \"no pull request / merge request found\" means there is none)||'"
+  "edit skills/pr-description/SKILL.md -e 's|reports that no PR/MR exists for the branch means there is none|fails means stop|'"
+expect_failure "reviewer guessing after a lookup error" "agents/pr-reviewer.md must not guess the base after a lookup error" \
+  "edit agents/pr-reviewer.md -e 's|means the PR target is unknown, so do not fall back to the default branch: go to step 3|is fine: say so and go to step 2|'"
+expect_failure "reviewer fetching a fork PR from origin" "agents/pr-reviewer.md must use the platform diff for fork PRs" \
+  "edit agents/pr-reviewer.md -e 's|For a PR from a fork, use \"Read a PR/MR\" instead|For a fork PR, fetch from origin|'"
+expect_failure "PR description guessing after a lookup error" "skills/pr-description/SKILL.md must not guess the target after a lookup error" \
+  "edit skills/pr-description/SKILL.md -e 's|; any other lookup error means the target is unknown, so ask||'"
+expect_failure "symbolic-ref allowed in a writing form" "allows a git symbolic-ref form that can write refs" \
+  "edit settings.example.json -e 's|\"Bash(git symbolic-ref --short refs/remotes/origin/HEAD)\"|\"Bash(git symbolic-ref --short refs/remotes/origin/HEAD)\", \"Bash(git symbolic-ref *)\"|'"
+expect_failure "symbolic-ref not allowed" "settings.example.json must allow exactly" \
+  "edit settings.example.json -e '/git symbolic-ref --short refs.remotes.origin.HEAD/d'"
+expect_failure "fetch options not denied" "settings.example.json misses deny rules: Bash(git fetch *--*)" \
+  "edit settings.example.json -e '/git fetch [*]--[*]/d'"
+expect_failure "fetch force refspec not denied" "settings.example.json misses deny rules: Bash(git fetch *+*)" \
+  "edit settings.example.json -e '/git fetch [*][+][*]/d'"
 expect_failure "personal entry in the QA repo" "unknown group 'personal'" \
   "edit catalog.tsv -e 's/^pr-reviewer\tagent\tqa/pr-reviewer\tagent\tpersonal/'"
 expect_failure "machine path in settings.example.json" "settings.example.json contains a machine-specific /Users/ path" \

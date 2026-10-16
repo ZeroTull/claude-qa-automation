@@ -6,7 +6,7 @@
       "Bash(git diff *)",
       "Bash(git log *)",
       "Bash(git merge-base *)",
-      "Bash(git symbolic-ref --short refs/remotes/*)",
+      "Bash(git symbolic-ref --short refs/remotes/origin/HEAD)",
       "Bash(az boards work-item show *)",
       "Bash(az boards query *)",
       "Bash(az repos pr show *)",
@@ -77,6 +77,8 @@
       "Read(**/settings-security.xml)",
       "Bash(rm -rf *)",
       "Bash(glab ci get *--with-variables*)",
+      "Bash(git fetch *--*)",
+      "Bash(git fetch *+*)",
       "Bash(git diff *--output*)"
     ]
   }

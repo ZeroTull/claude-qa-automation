@@ -71,7 +71,7 @@ Then, in the work repo, start `claude` and run `/qa-conventions`, then `/framewo
 
 ## Agents and skills
 
-**Agents** run in a separate context and return a report. They don't change anything: Claude Code disables their file-editing tools, and their instructions limit the shell to read-only commands, plus a `git fetch` of the branches a review compares, which updates only remote-tracking refs. That fetch is not pre-approved in `settings.example.json`, because it is a network call: without an allow rule Claude asks first, or the reviewer uses the platform diff. To allow it, add `Bash(git fetch origin *:refs/remotes/origin/*)` and deny `Bash(git fetch *+*)`. Claude picks one from your request, or you can name it ("use the pr-reviewer agent").
+**Agents** run in a separate context and return a report. They don't change anything: Claude Code disables their file-editing tools, and their instructions limit the shell to read-only commands, plus a `git fetch` of the branches a review compares, which updates only remote-tracking refs. That fetch is not pre-approved in `settings.example.json`, because it is a network call: without an allow rule Claude asks first, or the reviewer uses the platform diff. To allow it, add `Bash(git fetch origin *:refs/remotes/origin/*)`; `settings.example.json` already denies `Bash(git fetch *--*)` and `Bash(git fetch *+*)`, so no option or force refspec (such as `--tags` or `--prune`) can ride along. Claude picks one from your request, or you can name it ("use the pr-reviewer agent").
 
 | Agent | Use it for |
 |---|---|
