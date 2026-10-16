@@ -84,7 +84,7 @@ Input: a PR/MR link or number (Azure DevOps, GitHub or GitLab), or "current bran
 
   Set `<remote>` to `origin`, unless the PR targets a branch on another remote (a fork, where the base lives on `upstream`): then use that remote instead of `origin` below, or use "Read a PR/MR". To tell, compare the PR's base repository with the URLs in `git remote -v`. The PR's own URL names the base repository (`gh pr view --json url,isCrossRepository` gives `https://github.com/<base-owner>/<repo>/pull/N`, and `isCrossRepository` is true for a fork).
 
-  Then `git fetch <remote> <base>:refs/remotes/<remote>/<base>` and `git diff $(git merge-base HEAD <remote>/<base>)...HEAD`. If the fetch fails or is not allowed, say the diff may be out of date, or use "Read a PR/MR" when there is an open PR. (A team that wants the fetch to run without a prompt adds an allow rule for this exact form; see the README.)
+  Then `git fetch <remote> <base>:refs/remotes/<remote>/<base>` and `git diff $(git merge-base HEAD <remote>/<base>)...HEAD`. If the fetch fails or is not allowed, say the diff may be out of date, or use "Read a PR/MR" when there is an open PR. (The fetch is not pre-approved, so Claude may ask the user first.)
 
 In the PR Overview, name the base branch and how you found it (PR target, repo default, or the user), so a wrong scope is visible.
 

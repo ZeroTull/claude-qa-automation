@@ -405,6 +405,7 @@ AGENT_RULES = {
         "stop and return a one-line request for the base branch": "must ask when the base branch is unknown",
         "The one allowed exception is the `git fetch` in Phase 1, in exactly the form": "must state that git fetch is the only allowed git write",
         "Never add `--all`, `--prune`, `--force` or a `+` refspec": "must restrict the fetch form",
+        "The fetch is not pre-approved, so Claude may ask the user first": "must say the fetch is not pre-approved",
         "prints `origin/develop`, so `<base>` is `develop`": "must strip origin/ from the default branch",
         "`targetRefName` without `refs/heads/`": "must name the Azure DevOps target branch command",
         "use that remote instead of `origin` below": "must handle PRs from forks",
@@ -460,6 +461,7 @@ AGENT_RULES = {
     },
     "README.md": {
         "the five JVM settings the rule names": "must describe the closed JVM list",
+        "we don't recommend a wildcard allow rule for it": "must not recommend a git fetch allow rule",
         "quotes only what the allow-list in `templates/safety.md` permits": "must point to the full build-file allow-list",
         "The file is rewritten as JSON, so its values stay the same": "must say the settings merge rewrites the file",
         "suspected flaky/environment (product not ruled out)": "trace example must use the diagnoser's suspected-flaky label",
@@ -616,24 +618,15 @@ if example:
     wide_remote = [r for r in allow if r.startswith("Bash(git remote") and r != "Bash(git remote -v)"]
     if wide_remote:
         err(f"settings.example.json allows a git remote form that can change remotes: {', '.join(wide_remote)}")
-    # Behaviour check of the fetch rules with glob matching (an approximation of Claude Code's matcher): with the
-    # README's suggested allow rule, the agent's one fetch form must run, and nothing that could write a local ref.
+    # The agents' one fetch form must not be denied (glob matching, an approximation of Claude Code's matcher). No
+    # allow rule is recommended for it, because globs cannot model shell syntax; the deny rules are only a backstop.
     from fnmatch import fnmatchcase
     bash_deny = [r[5:-1] for r in deny if r.startswith("Bash(") and r.endswith(")")]
-    suggested_allow = "git fetch origin *:refs/remotes/origin/*"
-    def fetch_runs(cmd):
-        return fnmatchcase(cmd, suggested_allow) and not any(fnmatchcase(cmd, d) for d in bash_deny)
-    if not fetch_runs("git fetch origin develop:refs/remotes/origin/develop"):
+    if any(fnmatchcase("git fetch origin develop:refs/remotes/origin/develop", d) for d in bash_deny):
         err("settings.example.json denies the one git fetch form the agents use")
-    for cmd in ["git fetch origin main:refs/remotes/origin/main main:refs/heads/main",
-                "git fetch origin main:refs/remotes/origin/main b:c",
-                "git fetch origin main:refs/heads/main",
-                "git fetch origin v1:refs/tags/v1",
-                "git fetch origin main:refs/remotes/origin/main --tags",
-                "git fetch origin main:refs/remotes/origin/main -t",
-                "git fetch origin +main:refs/remotes/origin/main"]:
-        if fetch_runs(cmd):
-            err(f"settings.example.json lets this fetch through with the README's allow rule: {cmd}")
+    allow_rules = example[0].get("permissions", {}).get("allow", []) if isinstance(example[0], dict) else []
+    if any(r.startswith("Bash(git fetch") for r in allow_rules):
+        err("settings.example.json must not pre-approve git fetch")
     missing = [r for r in required if r not in deny]
     if missing:
         err(f"settings.example.json misses deny rules: {', '.join(missing)}")

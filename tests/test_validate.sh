@@ -500,12 +500,12 @@ expect_failure "git remote -v not allowed" "settings.example.json must allow Bas
   "edit settings.example.json -e '/\"Bash(git remote -v)\"/d'"
 expect_failure "git remote allowed in a changing form" "allows a git remote form that can change remotes" \
   "edit settings.example.json -e 's|\"Bash(git remote -v)\"|\"Bash(git remote -v)\", \"Bash(git remote *)\"|'"
-expect_failure "a pin removed without updating the count" "tests/pin-count says 140, but this script defines 139 pins" \
-  "echo 140 > tests/pin-count"
+expect_failure "a pin count that does not match the pins" "tests/pin-count says 999, but this script defines" \
+  "echo 999 > tests/pin-count"
 expect_failure "pin count file missing" "tests/pin-count says nothing" \
   "rm tests/pin-count"
-expect_failure "second refspec not denied" "lets this fetch through with the README's allow rule: git fetch origin main:refs/remotes/origin/main b:c" \
-  "edit settings.example.json -e '/\"Bash(git fetch [*] [*] [*])\"/d'"
+expect_failure "git fetch pre-approved" "settings.example.json must not pre-approve git fetch" \
+  "edit settings.example.json -e 's|\"Bash(git remote -v)\"|\"Bash(git remote -v)\", \"Bash(git fetch origin *:refs/remotes/origin/*)\"|'"
 expect_failure "local branch fetch not denied" "misses deny rules: Bash(git fetch *:refs/heads/*)" \
   "edit settings.example.json -e '/refs.heads/d'"
 expect_failure "tag fetch not denied" "misses deny rules: Bash(git fetch *:refs/tags/*)" \
