@@ -13,15 +13,16 @@ import subprocess
 import tempfile
 import unittest
 from pathlib import Path
-from unittest import mock
 
 REPO = Path(__file__).resolve().parent.parent
 INSTALL = REPO / "install.sh"
 IGNORE = shutil.ignore_patterns(".git", ".idea", "__pycache__")
 EMPTY_DENY = '{"permissions": {"deny": []}}\n'
 NON_ROOT = hasattr(os, "geteuid") and os.geteuid() != 0
-# Environment variables install.sh reads (test_install_knobs_are_all_listed keeps this complete). A value left in a
-# developer's shell must not leak into a test, so setUp drops them; tests that need one set it explicitly.
+# Environment variables install.sh reads as settings. A value left in a developer's shell must not leak into a test, so
+# make_env drops them; tests that need one set it explicitly. test_install_knobs_are_all_listed catches a new
+# ${NAME:-default} or os.environ.get("NAME") read; a bare $NAME read must be added here by hand (HOME is one).
+# PATH, TMPDIR, LANG/LC_* and the like are inherited on purpose: the tests need the developer's real python3 and tools.
 INSTALL_KNOBS = ("CLAUDE_HOME", "COPILOT_HOME", "HOME", "BACKUP_STAMP", "AZURE_EXTENSION_DIR", "COPILOT_MCP_SERVERS",
                  "QA_OS", "QA_PY_STUB", "QA_XCODE_SELECT", "QA_FAIL_SETTINGS_WRITE")
 
@@ -82,10 +83,7 @@ class InstallTest(unittest.TestCase):
         self.addCleanup(tmp.cleanup)
         self.tmp = Path(tmp.name)
         self.home = self.tmp / "home"
-        # Never let a test fall back to the real ~/.claude or ~/.copilot, or read anything else under the real HOME.
-        inherited = {k: v for k, v in os.environ.items() if k not in INSTALL_KNOBS and not k.startswith("QA_")}
-        self.env = {**inherited, "HOME": str(self.tmp / "home-root"), "CLAUDE_HOME": str(self.home),
-                    "COPILOT_HOME": str(self.tmp / "copilot-default")}
+        self.env = self.make_env(os.environ)
         # Per-test stubs, so the "never runs" markers start empty in every test.
         self.stubs = self.tmp / "stubs"
         self.stub_marks = self.tmp / "marks"
@@ -99,6 +97,12 @@ class InstallTest(unittest.TestCase):
         self.stubpath = self.tmp / "stubpath"
         self.stubpath.mkdir()
         (self.stubpath / "python3").symlink_to(self.stubs / "py-stub")
+
+    def make_env(self, environ):
+        """The environment for install.sh: never the real ~/.claude, ~/.copilot or HOME, and no inherited settings."""
+        inherited = {k: v for k, v in environ.items() if k not in INSTALL_KNOBS and not k.startswith("QA_")}
+        return {**inherited, "HOME": str(self.tmp / "home-root"), "CLAUDE_HOME": str(self.home),
+                "COPILOT_HOME": str(self.tmp / "copilot-default")}
 
     def _stub(self, name, body):
         self.write(self.stubs / name, "#!/bin/sh\n" + body, 0o755)
@@ -731,7 +735,7 @@ class InstallTest(unittest.TestCase):
         (self.tmp / "copilot_agent.sh").write_text(fn)
         rel = subprocess.run(["bash", "-c", '. "$1"; REPO=.; COPILOT_TOOLS="x"; COPILOT_MARKER="m"; '
                               "copilot_agent agents/qa-lead.md", "_", str(self.tmp / "copilot_agent.sh")],
-                             cwd=src2, capture_output=True, text=True)
+                             cwd=src2, env=self.env, capture_output=True, text=True)
         self.check("the converter ran with a relative path", re.search(r"^agents: \[", rel.stdout, re.M), rel.stderr)
         self.check("a relative source path does not list the lead as its own subagent", "'qa-lead'" not in rel.stdout)
 
@@ -821,13 +825,21 @@ class InstallTest(unittest.TestCase):
         self.assertEqual(read - set(INSTALL_KNOBS), set(), "add these to INSTALL_KNOBS")
 
     def test_a_knob_in_the_developer_shell_does_not_leak_in(self):
-        with mock.patch.dict(os.environ, {"COPILOT_MCP_SERVERS": "github"}):
-            self.setUp()  # again, so self.env is built from the patched environment
-            cop = self.tmp / "copilot"
-            self.copilot_install(cop)
+        self.env = self.make_env({**os.environ, "COPILOT_MCP_SERVERS": "github"})
+        cop = self.tmp / "copilot"
+        out = self.copilot_install(cop)
+        self.assertEqual(out.rc, 0, out.out)
         gen = (cop / "agents" / f"{AGENT_STEM}.agent.md").read_text()
         self.check("a shell COPILOT_MCP_SERVERS is ignored",
                    "tools: ['read', 'search', 'execute', 'web', 'todo']" in gen.split("\n"))
+
+    def test_no_setting_is_inherited(self):
+        own = {"HOME": "x", "CLAUDE_HOME": "x", "COPILOT_HOME": "x"}  # make_env sets these itself
+        env = self.make_env({**os.environ, **{k: "leaked" for k in INSTALL_KNOBS}, "QA_FUTURE_HOOK": "leaked"})
+        for name in [k for k in INSTALL_KNOBS if k not in own] + ["QA_FUTURE_HOOK"]:
+            self.check(f"{name} is not inherited", name not in env)
+        for name in own:
+            self.check(f"{name} is the test's own", env[name] != "leaked")
 
     def test_check_file_lacks_fails_on_a_missing_file(self):
         with self.assertRaises(FileNotFoundError):
