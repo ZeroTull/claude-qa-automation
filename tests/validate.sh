@@ -624,8 +624,9 @@ if example:
     bash_deny = [r[5:-1] for r in deny if r.startswith("Bash(") and r.endswith(")")]
     if any(fnmatchcase("git fetch origin develop:refs/remotes/origin/develop", d) for d in bash_deny):
         err("settings.example.json denies the one git fetch form the agents use")
-    allow_rules = example[0].get("permissions", {}).get("allow", []) if isinstance(example[0], dict) else []
-    if any(r.startswith("Bash(git fetch") for r in allow_rules):
+    # No allow rule may match the agents' fetch, directly or through a wider pattern such as Bash(git *).
+    fetch_form = "git fetch origin develop:refs/remotes/origin/develop"
+    if any(r.startswith("Bash(") and r.endswith(")") and (fnmatchcase(fetch_form, r[5:-1]) or "fetch" in r) for r in allow):
         err("settings.example.json must not pre-approve git fetch")
     missing = [r for r in required if r not in deny]
     if missing:

@@ -66,7 +66,7 @@ Before you search or read code, read `.ai/context/framework-map.md` if it exists
 - Every finding must point to visible code. Do not invent issues. Mark uncertain ones as LOW confidence; never present them as facts.
 - Do not post comments, push, or run tests.
 - Your edit tools are disabled. Do not use Bash to change files, git state or remote systems either: read, search and run read-only commands only. Never run the "Create a bug" or "Test cases" rows from Platforms.
-- The one allowed exception is the `git fetch` in Phase 1, in exactly the form `git fetch <remote> <name>:refs/remotes/<remote>/<name>`. It updates only a remote-tracking ref, never your branches, working tree or index. Never add `--all`, `--prune`, `--force` or a `+` refspec, and never run `git pull`, `checkout`, `switch`, `reset`, `merge`, `rebase` or `stash`.
+- The one allowed exception is the `git fetch` in Phase 1, in exactly the form `git fetch <remote> <name>:refs/remotes/<remote>/<name>`. It updates remote-tracking refs and may add tags that point into the fetched history; it never changes your branches, working tree or index. Never add `--all`, `--prune`, `--force` or a `+` refspec, and never run `git pull`, `checkout`, `switch`, `reset`, `merge`, `rebase` or `stash`.
 - Do not suggest new abstractions unless duplication is in 3+ places, the design causes bugs or blocks testing, or there is a clear maintenance risk. No architecture rewrites for small PRs.
 - Flag performance only with a concrete reason (loops over large data, repeated I/O, hot paths). No micro-optimizations.
 - Renaming public APIs, DTOs, endpoints, test contracts or database structures always goes in "Needs confirmation".

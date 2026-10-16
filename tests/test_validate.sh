@@ -504,6 +504,12 @@ expect_failure "a pin count that does not match the pins" "tests/pin-count says 
   "echo 999 > tests/pin-count"
 expect_failure "pin count file missing" "tests/pin-count says nothing" \
   "rm tests/pin-count"
+expect_failure "second refspec not denied" "settings.example.json misses deny rules: Bash(git fetch * * *)" \
+  "edit settings.example.json -e '/\"Bash(git fetch [*] [*] [*])\"/d'"
+expect_failure "git fetch pre-approved through Bash(git *)" "settings.example.json must not pre-approve git fetch" \
+  "edit settings.example.json -e 's|\"Bash(git remote -v)\"|\"Bash(git remote -v)\", \"Bash(git *)\"|'"
+expect_failure "git fetch pre-approved through git -C" "settings.example.json must not pre-approve git fetch" \
+  "edit settings.example.json -e 's|\"Bash(git remote -v)\"|\"Bash(git remote -v)\", \"Bash(git -C . fetch origin *)\"|'"
 expect_failure "git fetch pre-approved" "settings.example.json must not pre-approve git fetch" \
   "edit settings.example.json -e 's|\"Bash(git remote -v)\"|\"Bash(git remote -v)\", \"Bash(git fetch origin *:refs/remotes/origin/*)\"|'"
 expect_failure "local branch fetch not denied" "misses deny rules: Bash(git fetch *:refs/heads/*)" \
