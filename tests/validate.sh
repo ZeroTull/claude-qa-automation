@@ -464,7 +464,10 @@ AGENT_RULES = {
         "## Scoring": "must define how scores are given",
         "count the items affected by at least one of that category's countable signals": "must score each category from its own signals",
         "a test that cannot fail (no assertion, an assertion that is always true, or a failure swallowed in a catch)": "must count tests that cannot fail",
-        "except that the last row includes 100%": "must give 100% a score",
+        "the last row includes 100%": "must give 100% a score",
+        "the exact value decides, never the rounded one": "must not score a rounded share",
+        "or with no executions in the last 30 days, there is no override": "must handle an empty flaky window",
+        "except CI gates, which are always scored": "must exempt CI gates from n/a",
         "CI gates are always scored, also when the audit covers only one module": "must always score CI gates",
         "when this category's signal comes back": "must tie a guard to its category",
         "go into the report as evidence and do not change the share": "must keep judgement signals out of the share",
@@ -472,7 +475,7 @@ AGENT_RULES = {
         "If the total is zero, the category is `n/a` with the reason": "must handle an empty denominator",
         "A guard is a checkable artifact that fails the build": "must define a guard",
         "the flaky rate is the share of test executions on the default branch in the last 30 days": "must define the flaky rate",
-        "Without a run history there is no override, and the report says so": "must handle a missing run history",
+        "Without a run history, or with no executions": "must handle a missing run history",
         "**CI gates use their own scale**": "must say CI gates use their own scale",
         "A gate counts only if it runs in CI on the default branch and fails the pipeline when violated": "must define when a gate counts",
         "A missing or empty CI configuration counts as 0 gates": "must score a missing CI configuration",
@@ -630,15 +633,21 @@ for path, snap in SNAPSHOTS:
 # that start at 0%, touch without overlapping, and end at 100%. A row deleted from both the agent and its snapshot
 # still fails here.
 tm = read(f"{repo}/agents/test-maintainer.md")
-rows = re.findall(r"^\| (.+?) \| (\d+) \| (?:Excellent|Good|Fair|Poor|Broken) \|$", tm, re.M)
+rows = re.findall(r"^\| (.+?) \| (\d+) \| (Excellent|Good|Fair|Poor|Broken) \|$", tm, re.M)
+BAND = {10: "Excellent", 9: "Excellent", 8: "Good", 7: "Good", 6: "Fair", 5: "Fair", 4: "Poor", 3: "Poor",
+        2: "Broken", 1: "Broken", 0: "Broken"}
 if [int(r[1]) for r in rows] != list(range(10, -1, -1)):
     err("agents/test-maintainer.md: the score table must list scores 10 down to 0, once each")
+elif any(BAND[int(r[1])] != r[2] for r in rows):
+    err("agents/test-maintainer.md: a score table row has the wrong band for its score")
 else:
     labels = [r[0] for r in rows]
     bounds = []
     for k, label in enumerate(labels[2:]):
         last = k == len(labels) - 3
-        m = re.fullmatch(r"(\d+)% to 100%, inclusive" if last else r"(?:above )?(\d+)% to under (\d+)%", label)
+        first = k == 0
+        pattern = r"(\d+)% to 100%, inclusive" if last else r"above (0)% to under (\d+)%" if first else r"(\d+)% to under (\d+)%"
+        m = re.fullmatch(pattern, label)
         bounds.append(None if not m else (int(m.group(1)), 100 if last else int(m.group(2))))
     ok = (labels[0] == "exactly 0%, with a guard" and labels[1] == "exactly 0%, no guard"
           and None not in bounds and labels[2].startswith("above 0%") and bounds[0][0] == 0

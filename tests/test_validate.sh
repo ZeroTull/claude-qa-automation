@@ -565,6 +565,10 @@ expect_failure "score table bound without under" "the score table's share ranges
   "for f in agents/test-maintainer.md tests/snapshots/test-maintainer.md; do edit \"\$f\" -e 's#^| 2% to under 5% | 7 | Good |\$#| 2% to 5% | 7 | Good |#'; done"
 expect_failure "score table without an inclusive 100%" "the score table's share ranges must start at 0%, touch without overlapping, and end at 100%" \
   "for f in agents/test-maintainer.md tests/snapshots/test-maintainer.md; do edit \"\$f\" -e 's#^| 80% to 100%, inclusive | 0 | Broken |\$#| 80% to under 100% | 0 | Broken |#'; done"
+expect_failure "score table with above on a middle row" "the score table's share ranges must start at 0%, touch without overlapping, and end at 100%" \
+  "for f in agents/test-maintainer.md tests/snapshots/test-maintainer.md; do edit \"\$f\" -e 's#^| 2% to under 5% | 7 | Good |\$#| above 2% to under 5% | 7 | Good |#'; done"
+expect_failure "score table band mismatch" "a score table row has the wrong band for its score" \
+  "for f in agents/test-maintainer.md tests/snapshots/test-maintainer.md; do edit \"\$f\" -e 's#^| 5% to under 10% | 6 | Fair |\$#| 5% to under 10% | 6 | Good |#'; done"
 expect_failure "senior snapshot emptied" "tests/snapshots/senior-automation-qa-engineer.md missing or empty" \
   ": > tests/snapshots/senior-automation-qa-engineer.md"
 expect_failure "senior snapshot missing" "tests/snapshots/senior-automation-qa-engineer.md missing or empty" \

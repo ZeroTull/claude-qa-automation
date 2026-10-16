@@ -98,9 +98,9 @@ Scores come from counts, so the same suite gets the same score every time.
 | Performance | test classes | a login, browser start or full data setup in every test method |
 | Coverage strategy | API tests | an API test that checks only the status code |
 
-Other Analysis signals are not about one item or need judgement (scattered configuration, missing reusable components, serial suites, E2E tests for logic a lower layer could cover, missing contract tests, unmocked downstream services, poor naming, inconsistent patterns, missing negative coverage). They go into the report as evidence and do not change the share.
+All other Analysis signals go into the report as evidence and do not change the share, because they are not about one item or need judgement: order dependence, race conditions, weak assertions, outdated patterns, slow fixtures, redundant data setup, scattered configuration, missing reusable components, serial suites, E2E tests for logic a lower layer could cover, missing contract tests, unmocked downstream services, poor naming, inconsistent patterns and missing negative coverage.
 
-Compare the exact fraction (affected / total) with the bounds below. Show the share with two decimals next to the counts (for example 10/501 = 1.99%); never round before comparing. Lower bounds are inclusive and upper bounds exclusive, except that the last row includes 100%. If the total is zero, the category is `n/a` with the reason (for example "no API tests").
+Compare the exact fraction (affected / total) with the bounds below. Show the share with two decimals next to the counts (for example 10/503 = 1.99%, which scores 8); the exact value decides, never the rounded one. Lower bounds are inclusive and upper bounds exclusive, with two exceptions: the "above 0%" row excludes exactly 0% (which has its own rows), and the last row includes 100%. If the total is zero, the category is `n/a` with the reason (for example "no API tests").
 
 **Score.**
 
@@ -120,15 +120,15 @@ Compare the exact fraction (affected / total) with the bounds below. Show the sh
 
 A guard is a checkable artifact that fails the build when this category's signal comes back, and that you can cite by `file:line`: a lint or ArchUnit rule, or a CI job that fails on the pattern. A shared helper that does not force its use is not a guard.
 
-Stability override: the flaky rate is the share of test executions on the default branch in the last 30 days that failed and then passed on a retry. Compare its exact fraction: from 5% to 10% inclusive, Stability is at most 4; above 10%, at most 2. Without a run history there is no override, and the report says so.
+Stability override: the flaky rate is the share of test executions on the default branch in the last 30 days that failed and then passed on a retry. Compare its exact fraction: from 5% to 10% inclusive, Stability is at most 4; above 10%, at most 2. Without a run history, or with no executions in the last 30 days, there is no override, and the report says so.
 
 **CI gates use their own scale**, because they measure missing safety nets, not how widespread a problem is. Count which of these five gates exist: a smoke suite, sharding or parallel runs, a coverage gate on new code, a flaky-test quarantine process, and load tests against a baseline. A gate counts only if it runs in CI on the default branch and fails the pipeline when violated; one with `allow_failure`, `continue-on-error` or a threshold of 0 does not count. A missing or empty CI configuration counts as 0 gates. CI gates are always scored, also when the audit covers only one module, because the pipeline belongs to the whole repo. Score: 5 gates is 10, 4 is 8, 3 is 6, 2 is 4, 1 is 2, 0 is 0.
 
 **Rules.**
 - Every score cites its evidence: the counts (affected / total), and the worst `file:line` examples.
 - If you could only sample the scope, say how many items you checked, and score the sample.
-- A category outside the audited scope is `n/a`, not a guess.
-- Overall: if fewer than 3 categories have a score, write "overall n/a (only N categories have a score)", where N counts scored categories, not `n/a` ones. Otherwise take the average of the scored categories, round it down, then cap it at the lowest scored category plus 3. Example: Stability 2 and six other categories at 9 average 8, so the cap makes the overall score 5. A module audit with one scored category plus CI gates has 2 scores, so the result is "overall n/a (only 2 categories have a score)".
+- A category outside the audited scope is `n/a`, not a guess, except CI gates, which are always scored.
+- Overall: if fewer than 3 categories have a score, write "overall n/a (only N categories have a score)", where N counts scored categories, including CI gates, not `n/a` ones. Otherwise take the average of the scored categories, round it down, then cap it at the lowest scored category plus 3. Example: Stability 2, the five other table categories at 9 and CI gates at 8 average (2 + 45 + 8) / 7 = 7.86, rounded down 7, capped at 2 + 3, so the overall score is 5. A module audit with one scored category plus CI gates has 2 scores, so the result is "overall n/a (only 2 categories have a score)".
 - Report the Framework evidence in the Dead Code / Duplication section.
 
 ## Report (your final message)
