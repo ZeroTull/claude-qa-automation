@@ -194,7 +194,7 @@ The agents never handle tokens. Authentication stays in tools that manage it the
 ## Customizing
 
 - **Adding an entry:** add an agent (`agents/<name>.md`) or skill (`skills/<name>/SKILL.md`), a row in `catalog.tsv`, a line in this README and in `templates/CLAUDE.md`. Each entry must include the blocks from `templates/safety.md` and `templates/platforms.md` verbatim, and every entry except `framework-map` the block from `templates/project-map.md`. `ci-failure-diagnoser`, `flaky-test-triager`, `qa-lead`, `bug-ticket` and `test-developer` recommend what to do with a defect, so they also carry `templates/defect-routing.md`; so must any other entry with a `## Defect routing` section. The CI checks that each copy matches and that the template still has its key routes.
-- **Pins and snapshots:** `tests/validate.sh` pins key phrases (each is mutation-tested, and `tests/pin-count` holds their exact number) and checks whole sections against `tests/snapshots/` (the strategy agent from `## Method` to the end). When you change a pinned phrase or a snapshotted section on purpose, update the pin, the count or the snapshot in the same change.
+- **Pins and snapshots:** `tests/validate.sh` pins key phrases (each is mutation-tested, and `tests/pin-count` holds their exact number) and checks whole entries against `tests/snapshots/` (the strategy agent, byte for byte, including the shared blocks in it). When you change a pinned phrase or a snapshotted section on purpose, update the pin, the count or the snapshot in the same change.
 - **Other platforms:** add a column to `templates/platforms.md`, then copy the new block into every entry.
 - **Other languages:** the files assume Java; adjust the build and test commands (for example `pytest` instead of `mvn`).
 

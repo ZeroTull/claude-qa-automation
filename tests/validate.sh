@@ -426,7 +426,7 @@ AGENT_RULES = {
         "Give 2-3 realistic options, one of which keeps the current approach": "must compare options",
         "(with no suite yet: the smallest viable start": "must handle a framework with no suite yet",
         "Choose one option, say why it beats the others": "must recommend one option",
-        "For each phase: goal, concrete work, who does it": "must give a phased plan",
+        "For each phase: goal, work, who does it": "must give a phased plan",
         "size (S: up to a day, M: up to a sprint, L: more than a sprint)": "must define phase sizes",
         "and who it goes to (`test-maintainer` to audit an existing suite and propose changes": "must say where each phase goes",
         "its definition with the denominator, the data source, a baseline (or how to get it), a numeric target and a time window": "must define measurable success criteria",
@@ -581,19 +581,18 @@ if mode == "dump-pins":
 pin_count = read(f"{repo}/tests/pin-count").strip()
 if pin_count != str(len(pins)):
     err(f"tests/pin-count says {pin_count or 'nothing'}, but this script defines {len(pins)} pins; update both together")
-# Section snapshots: everything from a heading to the end of an entry must equal a file under tests/snapshots/, so
-# every rule in it is covered, not only the pinned phrases. The heading must appear exactly once. Change both together
-# when a change is intended.
-SNAPSHOTS = [("agents/senior-automation-qa-engineer.md", "## Method\n", "tests/snapshots/senior-method-report.md")]
-for path, start, snap in SNAPSHOTS:
+# Snapshots: some entries must equal a file under tests/snapshots/ byte for byte, so every rule in them is covered,
+# not only the pinned phrases. When the entry (or a shared block in it) changes on purpose, update the snapshot too.
+SNAPSHOTS = [("agents/senior-automation-qa-engineer.md", "tests/snapshots/senior-automation-qa-engineer.md")]
+for path, snap in SNAPSHOTS:
     text = read(f"{repo}/{path}")
     want = read(f"{repo}/{snap}")
-    if not want:
+    if not text:
+        err(f"{path} missing or empty")
+    elif not want:
         err(f"{snap} missing or empty")
-    elif text.count("\n" + start) != 1:
-        err(f"{path}: '{start.strip()}' must appear exactly once")
-    elif text[text.index("\n" + start) + 1:] != want:
-        err(f"{path}: the text from '{start.strip()}' to the end differs from {snap}; update both when the change is intended")
+    elif text != want:
+        err(f"{path} differs from {snap}; update both when the change is intended")
 for path, rules in AGENT_RULES.items():
     text = read(f"{repo}/{path}")
     for phrase, message in rules.items():
