@@ -400,6 +400,10 @@ expect_failure "version shape widened" "templates/safety.md must allow sensitive
   "edit templates/safety.md -e 's|(digits, dots, a range or a .[$]{...}. reference)|(any value)|'"
 expect_failure "README calls the JVM list open" "README.md must describe the closed JVM list" \
   "edit README.md -e 's|the five JVM settings the rule names|standard JVM settings|'"
+expect_failure "suite file parameters quoted" "templates/safety.md must redact suite file parameter values" \
+  "edit templates/safety.md -e 's|; .<parameter>. values in suite files are redacted like any other value, for example .<parameter name=\"password\" value=\"<redacted>\"/>.||'"
+expect_failure "Gradle settings outside the rule" "templates/safety.md must cover Gradle settings and version catalogs" \
+  "edit templates/safety.md -e 's|.settings.gradle., .settings.gradle.kts., .gradle/libs.versions.toml., ||'"
 expect_failure "personal entry in the QA repo" "unknown group 'personal'" \
   "edit catalog.tsv -e 's/^pr-reviewer\tagent\tqa/pr-reviewer\tagent\tpersonal/'"
 expect_failure "machine path in settings.example.json" "settings.example.json contains a machine-specific /Users/ path" \

@@ -340,6 +340,8 @@ AGENT_RULES = {
         "but only if the value looks like a version (digits, dots, a range or a `${...}` reference)": "must allow sensitive-named versions only for version-shaped values",
         "wherever they appear (`argLine`, `jvmArgs`, `systemPropertyVariables`, `jvm.config`)": "must apply the JVM list wherever the key appears",
         "and TestNG suite files (`testng*.xml` or any XML with a `<suite>` root)": "must cover test suite files",
+        "`<parameter>` values in suite files are redacted like any other value": "must redact suite file parameter values",
+        "`settings.gradle`, `settings.gradle.kts`, `gradle/libs.versions.toml`": "must cover Gradle settings and version catalogs",
         "Never quote server, repository, distribution or credential blocks": "must forbid quoting credential blocks from build files",
         "a URL, connection string or command-line argument that contains a credential": "must forbid quoting credentials inside URLs and arguments",
         "write every other `-D` pair as `-Dname=<redacted>`": "must redact JVM -D pairs by default",

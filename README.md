@@ -172,7 +172,7 @@ Those rules are instructions to the model. What Claude Code itself enforces are 
 - key stores
 - `~/.ssh`, `~/.gnupg`, `~/.aws` and `~/.azure`
 - `gh`, `glab`, git and Docker credentials
-- Maven and Gradle credential files: `settings.xml`, `settings-security.xml` and `gradle.properties`, in your home folder and in the project. This also blocks harmless files with those names (for example a test resource called `settings.xml`); remove the rule in a project's settings if it gets in the way. `./install.sh --project <repo> --update` adds new deny rules to a team repo's existing `.claude/settings.json`, after backing it up to `~/.claude/backups/`, and keeps its indentation.
+- Maven and Gradle credential files: `settings.xml`, `settings-security.xml` and `gradle.properties`, in your home folder and in the project. This also blocks harmless files with those names (for example a test resource called `settings.xml`); remove the rule in a project's settings if it gets in the way. `./install.sh --project <repo> --update` adds new deny rules to a team repo's existing `.claude/settings.json`, after backing it up to `~/.claude/backups/`, and keeps its indentation. If it can't (unreadable file, failed backup or write), it prints a `SKIP` or `FAILED` line, leaves the file unchanged and finishes the rest of the install.
 
 Committed templates such as `.env.example` stay readable, because a deny rule can't have exceptions. That also means an unusual variant (say `.env.mybox`) isn't covered. Add it to your settings if you use one.
 
