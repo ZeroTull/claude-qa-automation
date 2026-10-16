@@ -9,7 +9,8 @@
 # rules after a backup. --project copies settings.example.json (allow and deny lists) into a team repo that has no
 # .claude/settings.json; for an existing one it adds only the missing deny rules, with --update and after a backup.
 # Anything a link install replaces is moved to <target>/backups/qa-<timestamp>-NNN/ first. --project --update
-# overwrites the copied agents and skills in place (the team repo's git history is their backup).
+# copies this repo's files over the copied agents and skills (the team repo's git history is the backup of local
+# edits), keeps files and entries this repo lacks, and ends with a summary of what was added, updated and left.
 set -euo pipefail
 
 # Resolve the script's real location, so running it through a symlink still finds the repo.
@@ -124,24 +125,120 @@ user_entries() {
 
 kind() { if [[ -d "$1" ]]; then echo dir; else echo file; fi; }
 
+# What --project did to each entry, for the summary at the end: newline-separated names relative to .claude/.
+sum_added="" sum_updated="" sum_unchanged="" sum_differs="" sum_skipped="" sum_left="" sum_kept=""
+note() { printf -v "$1" '%s%s\n' "${!1}" "$2"; }
+
+# Prints the first path under $src whose counterpart under $dest is a link or a different type (empty if none).
+conflict_in() {
+  local src="$1" dest="$2" rel
+  [[ -d "$src" ]] || return 0
+  while IFS= read -r rel; do
+    rel="${rel#./}"
+    if [[ -L "$dest/$rel" ]] || [[ -e "$dest/$rel" && "$(kind "$src/$rel")" != "$(kind "$dest/$rel")" ]]; then
+      echo "$rel"
+      return 0
+    fi
+  done < <(cd "$src" && find . -mindepth 1)
+}
+
+# True when every file of $src has an identical copy in $dest; files that only $dest has don't count.
+same_content() {
+  local src="$1" dest="$2" rel
+  if [[ -f "$src" ]]; then cmp -s "$src" "$dest"; return; fi
+  while IFS= read -r rel; do
+    cmp -s "$src/$rel" "$dest/$rel" || return 1
+  done < <(cd "$src" && find . -type f)
+}
+
+# Prints the files and links under $dest that $src lacks: files the team added, or ones this repo has since removed.
+extra_files() {
+  local src="$1" dest="$2" rel
+  [[ -d "$src" ]] || return 0
+  while IFS= read -r rel; do
+    rel="${rel#./}"
+    [[ -e "$src/$rel" || -L "$src/$rel" ]] || echo "$rel"
+  done < <(cd "$dest" && find . ! -type d)
+}
+
+# Copies one agent or skill into a team repo. --update copies this repo's files over the existing ones (local edits
+# to them are overwritten; the team repo's git history is their backup) and never deletes a file this repo lacks.
 copy_one() {
-  local src="$1" dest="$2" update="$3"
+  local src="$1" dest="$2" update="$3" name conflict extra
+  name="${dest#"$project/.claude/"}"
   if [[ -L "$dest" ]]; then
     echo "  SKIP      $dest (is a symlink - remove it to install a copy)"
+    note sum_skipped "$name (a symlink)"
+    return
   elif [[ -e "$dest" && "$(kind "$src")" != "$(kind "$dest")" ]]; then
     echo "  SKIP      $dest (exists as a different type - remove it to install)"
+    note sum_skipped "$name (a different type)"
+    return
   elif [[ ! -e "$dest" ]]; then
     cp -Rp "$src" "$dest"
     echo "  copied    $dest"
-  elif diff -rq "$src" "$dest" >/dev/null 2>&1; then
-    echo "  ok        $dest"
-  elif [[ "$update" == yes ]]; then
-    rm -rf "$dest"
-    cp -Rp "$src" "$dest"
-    echo "  updated   $dest (local edits and added files replaced)"
-  else
-    echo "  DIFFERS   $dest (--update replaces it, including local edits)"
+    note sum_added "$name"
+    return
   fi
+  conflict="$(conflict_in "$src" "$dest")"
+  if [[ -n "$conflict" ]]; then
+    echo "  SKIP      $dest ($conflict is a symlink or a different type - remove it to install)"
+    note sum_skipped "$name ($conflict is a symlink or a different type)"
+    return
+  fi
+  if same_content "$src" "$dest"; then
+    echo "  ok        $dest"
+    note sum_unchanged "$name"
+  elif [[ "$update" == yes ]]; then
+    if [[ -d "$src" ]]; then cp -Rp "$src/." "$dest/"; else cp -p "$src" "$dest"; fi
+    echo "  updated   $dest"
+    note sum_updated "$name"
+  else
+    echo "  DIFFERS   $dest (--update copies this repo's version over it, including local edits)"
+    note sum_differs "$name"
+  fi
+  while IFS= read -r extra; do
+    [[ -n "$extra" ]] || continue
+    echo "  kept      $dest/$extra (not in this repo)"
+    note sum_kept "$name/$extra"
+  done < <(extra_files "$src" "$dest")
+}
+
+# Notes the agents and skills in the team repo that this repo doesn't have; they are left as they are.
+note_left() {
+  local entry base
+  for entry in "$project/.claude/agents"/* "$project/.claude/agents"/.[!.]*; do
+    [[ -e "$entry" || -L "$entry" ]] || continue
+    base="$(basename "$entry")"
+    [[ "$base" == *.md && -f "$REPO/agents/$base" ]] || note sum_left "agents/$base"
+  done
+  for entry in "$project/.claude/skills"/* "$project/.claude/skills"/.[!.]*; do
+    [[ -e "$entry" || -L "$entry" ]] || continue
+    base="$(basename "$entry")"
+    [[ -d "$REPO/skills/$base" && ! -L "$REPO/skills/$base" ]] || note sum_left "skills/$base"
+  done
+}
+
+summary_line() {
+  local label="$1" list="$2" hint="${3:-}" count item
+  count="$(grep -c . <<<"$list" || true)"
+  printf '  %-10s %s%s\n' "$label" "$count" "${hint:+ ($hint)}"
+  [[ "$count" -gt 0 && "$label" != unchanged ]] || return 0
+  while IFS= read -r item; do
+    if [[ -n "$item" ]]; then echo "               $item"; fi
+  done <<<"$list"
+}
+
+project_summary() {
+  echo
+  echo "Summary for $project/.claude:"
+  summary_line added "$sum_added"
+  summary_line updated "$sum_updated"
+  summary_line unchanged "$sum_unchanged"
+  [[ -z "$sum_differs" ]] || summary_line differs "$sum_differs" "run again with --update to copy this repo's version"
+  [[ -z "$sum_skipped" ]] || summary_line skipped "$sum_skipped" "remove them, then run again"
+  summary_line left "$sum_left" "not in this repo, kept as they are"
+  [[ -z "$sum_kept" ]] || summary_line kept "$sum_kept" "files inside an agent or skill that this repo lacks, kept"
 }
 
 # A team repo's .claude/settings.json: created from settings.example.json if absent. If it exists, it is checked for
@@ -676,11 +773,12 @@ case "${1:-}" in
     echo "QA agents and skills -> $project/.claude"
     for f in "$REPO"/agents/*.md; do copy_one "$f" "$project/.claude/agents/$(basename "$f")" "$update"; done
     for d in "$REPO"/skills/*/; do d="${d%/}"; copy_one "$d" "$project/.claude/skills/$(basename "$d")" "$update"; done
+    note_left
     project_settings "$project/.claude/settings.json" "$update"
     copy_if_absent "$REPO/templates/CLAUDE.md" "$project/CLAUDE.md" "add the sections from templates/CLAUDE.md by hand"
     check_dependencies
+    project_summary
     echo
-    echo "Note: agents or skills removed from this repo are not deleted from $project/.claude - remove them by hand."
     echo "Next: open Claude Code in $project and run /qa-conventions, then /framework-map."
     ;;
   --uninstall)
