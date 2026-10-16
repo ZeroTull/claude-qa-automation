@@ -559,6 +559,12 @@ expect_failure "score table bounds overlap" "the score table's share ranges must
   "for f in agents/test-maintainer.md tests/snapshots/test-maintainer.md; do edit \"\$f\" -e 's#^| 10% to under 15% | 5 | Fair |\$#| 8% to under 15% | 5 | Fair |#'; done"
 expect_failure "score table missing 0% guard row" "the score table's share ranges must start at 0%" \
   "for f in agents/test-maintainer.md tests/snapshots/test-maintainer.md; do edit \"\$f\" -e 's#^| exactly 0%, with a guard | 10 | Excellent |\$#| 0% to under 0% | 10 | Excellent |#'; done"
+expect_failure "score table range inverted" "the score table's share ranges must start at 0%, touch without overlapping, and end at 100%" \
+  "for f in agents/test-maintainer.md tests/snapshots/test-maintainer.md; do edit \"\$f\" -e 's#^| 5% to under 10% | 6 | Fair |\$#| 5% to under 3% | 6 | Fair |#' -e 's#^| 10% to under 15% | 5 | Fair |\$#| 3% to under 15% | 5 | Fair |#'; done"
+expect_failure "score table bound without under" "the score table's share ranges must start at 0%, touch without overlapping, and end at 100%" \
+  "for f in agents/test-maintainer.md tests/snapshots/test-maintainer.md; do edit \"\$f\" -e 's#^| 2% to under 5% | 7 | Good |\$#| 2% to 5% | 7 | Good |#'; done"
+expect_failure "score table without an inclusive 100%" "the score table's share ranges must start at 0%, touch without overlapping, and end at 100%" \
+  "for f in agents/test-maintainer.md tests/snapshots/test-maintainer.md; do edit \"\$f\" -e 's#^| 80% to 100%, inclusive | 0 | Broken |\$#| 80% to under 100% | 0 | Broken |#'; done"
 expect_failure "senior snapshot emptied" "tests/snapshots/senior-automation-qa-engineer.md missing or empty" \
   ": > tests/snapshots/senior-automation-qa-engineer.md"
 expect_failure "senior snapshot missing" "tests/snapshots/senior-automation-qa-engineer.md missing or empty" \

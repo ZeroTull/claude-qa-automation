@@ -462,11 +462,15 @@ AGENT_RULES = {
     },
     "agents/test-maintainer.md": {
         "## Scoring": "must define how scores are given",
-        "count the items affected by at least one countable signal": "must score from counts",
+        "count the items affected by at least one of that category's countable signals": "must score each category from its own signals",
+        "a test that cannot fail (no assertion, an assertion that is always true, or a failure swallowed in a catch)": "must count tests that cannot fail",
+        "except that the last row includes 100%": "must give 100% a score",
+        "CI gates are always scored, also when the audit covers only one module": "must always score CI gates",
+        "when this category's signal comes back": "must tie a guard to its category",
         "go into the report as evidence and do not change the share": "must keep judgement signals out of the share",
         "Compare the exact fraction (affected / total) with the bounds below": "must compare exact fractions",
         "If the total is zero, the category is `n/a` with the reason": "must handle an empty denominator",
-        "A guard is a checkable artifact that fails the build when the problem comes back": "must define a guard",
+        "A guard is a checkable artifact that fails the build": "must define a guard",
         "the flaky rate is the share of test executions on the default branch in the last 30 days": "must define the flaky rate",
         "Without a run history there is no override, and the report says so": "must handle a missing run history",
         "**CI gates use their own scale**": "must say CI gates use their own scale",
@@ -632,13 +636,15 @@ if [int(r[1]) for r in rows] != list(range(10, -1, -1)):
 else:
     labels = [r[0] for r in rows]
     bounds = []
-    for label in labels[2:]:
-        m = re.fullmatch(r"(?:above )?(\d+)% to (?:under )?(\d+)%", label)
-        bounds.append((int(m.group(1)), int(m.group(2))) if m else None)
+    for k, label in enumerate(labels[2:]):
+        last = k == len(labels) - 3
+        m = re.fullmatch(r"(\d+)% to 100%, inclusive" if last else r"(?:above )?(\d+)% to under (\d+)%", label)
+        bounds.append(None if not m else (int(m.group(1)), 100 if last else int(m.group(2))))
     ok = (labels[0] == "exactly 0%, with a guard" and labels[1] == "exactly 0%, no guard"
-          and None not in bounds and bounds[0][0] == 0 and labels[2].startswith("above 0%")
+          and None not in bounds and labels[2].startswith("above 0%") and bounds[0][0] == 0
+          and all(lo < hi for lo, hi in bounds)
           and all(bounds[k][1] == bounds[k + 1][0] for k in range(len(bounds) - 1))
-          and bounds[-1][1] == 100 and labels[-1] == f"{bounds[-1][0]}% to 100%")
+          and bounds[-1][1] == 100)
     if not ok:
         err("agents/test-maintainer.md: the score table's share ranges must start at 0%, touch without overlapping, and end at 100%")
 for path, rules in AGENT_RULES.items():
