@@ -361,6 +361,11 @@ assert "a number JSON cannot write back is reported" grep -q "could not write .*
 assert "it is not turned into Infinity" cmp -s "$big/.claude/settings.json" "$TMP/big-copy.json"
 assert "it prints no traceback" out_lacks "Traceback"
 assert "it leaves no temp file" test -z "$(find "$big/.claude" -name '.settings.*')"
+empty="$TMP/proj-empty"
+mkdir -p "$empty/.claude"
+: >"$empty/.claude/settings.json"
+run --project "$empty" --update
+assert "an empty settings.json gets the deny rules" test "$(deny_count "$empty/.claude/settings.json")" = "$n_deny"
 dup="$TMP/proj-dup"
 mkdir -p "$dup/.claude"
 printf '{"permissions": {"deny": ["Read(**/.env)"]}, "permissions": {"deny": []}}\n' >"$dup/.claude/settings.json"
@@ -576,6 +581,10 @@ echo "arguments"
 run --help
 assert "--help exits 0" test "$rc" = 0
 assert "--help prints usage" grep -q -- "--settings" <<<"$out"
+assert "--help prints the whole header" grep -q "the team repo's git history is their backup" <<<"$out"
+assert "--help does not print the shell options line" out_lacks "set -euo pipefail"
+run --bogus
+assert "a bad argument prints the whole usage" grep -q "the team repo's git history is their backup" <<<"$out"
 run --project "$TMP/nope"
 assert "missing project dir exits 1" test "$rc" = 1
 run --settings extra

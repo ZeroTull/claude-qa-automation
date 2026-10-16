@@ -418,6 +418,8 @@ expect_failure "undefined version range" "templates/safety.md must define a vers
   "edit templates/safety.md -e 's|a range made only of digits, dots, commas, spaces, .[*]., .\\[., .\\]., .(. and .).|a range|'"
 expect_failure "odd version values quoted" "templates/safety.md must redact version values that do not look like versions" \
   "edit templates/safety.md -e 's| Write any other version value as .<redacted>.[.]||'"
+expect_failure "open-ended version qualifiers" "templates/safety.md must allow only a closed list of version qualifiers" \
+  "edit templates/safety.md -e 's|optionally followed by exactly one of|optionally followed by a qualifier such as|'"
 expect_failure "personal entry in the QA repo" "unknown group 'personal'" \
   "edit catalog.tsv -e 's/^pr-reviewer\tagent\tqa/pr-reviewer\tagent\tpersonal/'"
 expect_failure "machine path in settings.example.json" "settings.example.json contains a machine-specific /Users/ path" \

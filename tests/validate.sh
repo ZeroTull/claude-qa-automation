@@ -348,6 +348,7 @@ AGENT_RULES = {
         "version values (a `<version>` element, a `version =` setting, or a property whose name ends in `version`": "must shape-check every version value",
         "a range made only of digits, dots, commas, spaces, `*`, `[`, `]`, `(` and `)`": "must define a version range",
         "Write any other version value as `<redacted>`": "must redact version values that do not look like versions",
+        "optionally followed by exactly one of `-SNAPSHOT`, `.RELEASE`, `.Final`": "must allow only a closed list of version qualifiers",
         "a URL, connection string or command-line argument that contains a credential": "must forbid quoting credentials inside URLs and arguments",
         "write every other `-D` pair as `-Dname=<redacted>`": "must redact JVM -D pairs by default",
         "`user.timezone`, `user.language`, `user.country`, `file.encoding` and `java.awt.headless`. Other standard JDK settings": "must allow only a closed list of JVM settings",
