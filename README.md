@@ -16,7 +16,7 @@ cd ~/projects/claude-qa-automation
 ```
 
 - **What `./install.sh` does:** it links each agent and skill into `~/.claude`, so `git pull` here updates them. Anything it replaces (a file, a broken link, or a link from another setup) is moved to `~/.claude/backups/qa-<timestamp>-NNN/` first. It refuses to run if `~/.claude/agents` or `~/.claude/skills` is itself a link. At the end it reports whether your settings lack the deny rules and which optional tools are missing.
-- **What `--settings` does:** it adds only the missing deny rules and backs up your settings first. It stops without changes if `settings.json` isn't valid JSON or has an unexpected shape. If your `settings.json` is a link into another repo, it doesn't write through the link: it lists the rules to add in that repo instead.
+- **What `--settings` does:** it adds only the missing deny rules and backs up your settings first. The backup keeps the file's permissions, minus write access for your group and other users. It warns if `settings.json` itself is writable by other users or your group, because then they could remove the deny rules. It stops without changes if `settings.json` isn't valid JSON or has an unexpected shape. If your `settings.json` is a link into another repo, it doesn't write through the link: it lists the rules to add in that repo instead.
 - **Uninstall:** `./install.sh --uninstall` removes the links and puts back what they replaced.
 
 Restart Claude Code afterwards, then check with `/agents` and by typing `/`.
@@ -63,9 +63,9 @@ This installs into `~/.copilot` and doesn't touch `~/.claude`.
 ./install.sh --project ~/path/to/work-repo
 ```
 
-This copies the agents and skills into `<repo>/.claude/`. It also adds `.claude/settings.json` (the allow and deny lists from `settings.example.json`) and a `CLAUDE.md` (from `templates/CLAUDE.md`) if they don't exist yet. Commit the result and the whole team gets the same agents.
+This copies the agents and skills into `<repo>/.claude/`, keeping their file permissions. It also adds `.claude/settings.json` (the allow and deny lists from `settings.example.json`) and a `CLAUDE.md` (from `templates/CLAUDE.md`) if they don't exist yet. Commit the result and the whole team gets the same agents.
 
-To update later, run `git pull` here, then `./install.sh --project <repo> --update`. It replaces the entries whose content changed, including local edits. It adds missing deny rules to the team's `.claude/settings.json` (after a backup), and never changes the rest of its settings or `CLAUDE.md`.
+To update later, run `git pull` here, then `./install.sh --project <repo> --update`. It replaces the entries whose content changed: local edits are overwritten, and files you added inside a replaced agent or skill are deleted without a backup, so move anything you want to keep first. An entry that is a link, or a file where the repo has a folder (or the reverse), is skipped with a message: remove it, then run again. Agents or skills removed from this repo are not deleted from the work repo; remove them by hand. It adds missing deny rules to the team's `.claude/settings.json` (after a backup), and never changes the rest of its settings or `CLAUDE.md`.
 
 Then, in the work repo, start `claude` and run `/qa-conventions`, then `/framework-map`.
 
@@ -76,10 +76,10 @@ Then, in the work repo, start `claude` and run `/qa-conventions`, then `/framewo
 | Agent | Use it for |
 |---|---|
 | `qa-lead` | **One agent for everything.** Select it once and give it any QA task. It sends review, audit, CI-failure, flaky-test and strategy work to the specialists below. It runs the workflows (writing tests, test cases, bugs, ticket reviews, PR descriptions) itself, stopping for your approval at each step, and applies only the changes you approve. Unlike the specialists, it can edit files and use all your MCP servers. |
-| `pr-reviewer` | Review a Java PR or MR (Azure DevOps, GitHub or GitLab): correctness, conventions, performance, security, concurrency, tests. Missing tests for changed behavior block approval. Findings with severity, confidence and a fix plan. |
+| `pr-reviewer` | Review a Java PR or MR (Azure DevOps, GitHub or GitLab): correctness, conventions, performance, security, concurrency, tests. Missing tests for changed behavior block approval. It diffs against the PR's real target branch (never assumes `main`), asks when it can't find it, and names it in the report. Findings with severity, confidence and a fix plan. |
 | `test-maintainer` | Audit a test framework for flakiness, duplication, weak assertions, dead code, slow setup, test-layer balance, contract/performance testing and CI quality gates. Gives a health report with each category scored from counts against fixed bands (0-2 broken, 3-4 poor, 5-6 fair, 7-8 good, 9-10 excellent, with the evidence), and an improvement plan. |
-| `ci-failure-diagnoser` | Find the root cause of a failed pipeline run (Azure Pipelines, GitHub Actions or GitLab CI), with log evidence. |
-| `flaky-test-triager` | Decide whether an intermittent failure is flaky, an intermittent product defect (such as a race condition), or a real regression, based on run history. |
+| `ci-failure-diagnoser` | Find the root cause of a failed pipeline run (Azure Pipelines, GitHub Actions or GitLab CI), with log evidence. Classifies it as a code defect in this change, a confirmed product defect, a suspected flaky test or environment issue (with the product not yet ruled out), a dependency, or a pipeline config problem. It doesn't blame a timeout or rerun on the environment without evidence, and when the evidence is inconclusive it lists every plausible cause, ranked. |
+| `flaky-test-triager` | Decide whether an intermittent failure is flaky, an intermittent product defect (such as a race condition), or a real regression, based on run history. Other verdicts: a stale test after an intended change, an environment or pipeline config cause, or inconclusive. It calls a test flaky only after ruling out a product cause, and never quarantines a test that catches a real bug. |
 | `senior-automation-qa-engineer` | Test strategy and framework design: which test layers to invest in, a new automation framework, contract, performance and E2E strategy. Answers with context, ranked risks, 2-3 options with trade-offs, a recommendation, a phased plan and measurable success criteria. |
 
 **Skills** run in your conversation, so they can ask questions and wait for approval at each step. Start one with a slash command, or describe the task.
@@ -115,6 +115,22 @@ A printed plan is not approval: it still stops at every gate. It ends a request 
 
 - **GitHub Copilot:** pick `qa-lead` in the Agent dropdown. The Copilot install gives it no tools list (every tool, including your MCP servers and the `agent` tool) and lists the specialists in its `agents` field, so it can run them as subagents ([custom agents](https://code.visualstudio.com/docs/copilot/customization/custom-agents)).
 - **Claude Code:** start the session as the lead with `claude --agent qa-lead`, or make it the default for a project with `"agent": "qa-lead"` in that project's `.claude/settings.json` ([subagents](https://code.claude.com/docs/en/sub-agents)). Run as the main session, it can start the specialist agents and wait for your answers. Its instructions then replace Claude Code's default system prompt for that session, so start a plain `claude` session for work outside QA.
+
+### What happens to a failure: defect routing
+
+The agents and skills that handle failures (`qa-lead`, `ci-failure-diagnoser`, `flaky-test-triager`, `/bug-ticket`, `/test-developer`) carry the same routing text, `templates/defect-routing.md`, and CI checks that each copy matches it. Here it is, copied from the template; if the two ever differ, the template is what the agents follow:
+
+> The change under test is the branch or PR whose pipeline or tests you are looking at, until it is merged. Before recommending what to do with a failure, take the first case that fits:
+> 1. **Dependency or pipeline config:** name the file, version, variable or permission to change. If an intended dependency change only breaks a test's old assertion, it is case 2; if it breaks product code, it is case 3.
+> 2. **Test defect, product correct** (the test asserts behaviour that an intended change replaced, or fails consistently because of its own code; an intermittent failure reaches this case only through case 4): fix the test on a branch, naming the commit that made it stale if there is one. Do not file a bug. If the change was not intended, it is case 3 once the product defect is confirmed, and case 5 until then.
+> 3. **Confirmed product defect**, routed by where it came from:
+>    - **from the change under test:** fix it on that branch, naming the file and the commit;
+>    - **from a change already merged into a shared branch** (a regression with a known commit): name the commit, then offer a fix-forward change (a new commit on the shared branch that corrects it) or the `bug-ticket` skill, and let the user choose;
+>    - **pre-existing, with no identifiable commit:** the `bug-ticket` skill.
+> 4. **Intermittent, with no product cause confirmed:** flaky triage with the `flaky-test-triager` agent; its verdict then picks case 1, 2, 3 or 5. A consistent failure skips triage: take case 1, 2 or 5, or case 3 once the product defect is confirmed.
+> 5. **Inconclusive:** list the candidate causes, product first, each with what would confirm or rule it out. Do not file a bug and do not record the test as known flaky until one is confirmed.
+>
+> Never quarantine a test that catches a real bug.
 
 ### How approvals work
 
