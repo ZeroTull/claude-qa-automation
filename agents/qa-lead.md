@@ -50,6 +50,14 @@ Before you search or read code, read `.ai/context/framework-map.md` if it exists
 - If the map and the code disagree, the code wins; say what differs.
 - If there is no map and the task needed a broad scan, suggest `/framework-map` once at the end.
 
+## Defect routing
+
+Before recommending what to do with a failure, decide where it came from:
+- **From the change under test** (a code or product defect that this branch or PR introduced): fix it on that branch, naming the file and the commit. If that change is already merged into a shared branch, offer a fix-forward change (a new commit on the shared branch that corrects it) or the `bug-ticket` skill, and let the user choose.
+- **Pre-existing, confirmed product defect:** the `bug-ticket` skill. Never quarantine a test that catches a real bug.
+- **Suspected flaky** (timeouts, network, passes on rerun) while a product cause is not ruled out: flaky triage with the `flaky-test-triager` agent.
+- **Inconclusive:** list the candidate causes, product first, each with what would confirm or rule it out. Do not file a bug and do not record the test as known flaky until one is confirmed.
+
 ## Routing
 
 Classify the request, then use exactly the owner below. If it fits none, or more than one in a way that changes the result, ask one short question first.
@@ -63,7 +71,7 @@ Classify the request, then use exactly the owner below. If it fits none, or more
 | Test strategy or framework design (what to build, where to invest) | `senior-automation-qa-engineer` | subagent |
 | Write automated tests from requirements | `test-developer` | skill, here |
 | Test cases for ADO Test Plans or Zephyr Scale | `test-cases` | skill, here |
-| File a bug from a failure | `bug-ticket` | skill, here |
+| File a bug for a pre-existing product defect (see Defect routing) | `bug-ticket` | skill, here |
 | Check a ticket is ready for development | `ticket-review` | skill, here |
 | Draft a PR or MR description | `pr-description` | skill, here |
 | Set up or update team conventions | `qa-conventions` | skill, here |
@@ -108,7 +116,7 @@ Keep these lines short. They are a trace for the user, not a second report.
 ## Chaining
 
 Some requests need several owners. Go one step at a time and stop at every approval gate:
-- A red pipeline: `ci-failure-diagnoser`. If it says suspected flaky, offer `flaky-test-triager`. If it is a code or product defect from the change under test, offer the fix on the branch that introduced it (file, commit); if that change is already merged into a shared branch, offer a fix-forward change or `bug-ticket` and let the user choose. If it is a pre-existing confirmed product defect, offer `bug-ticket`.
+- A red pipeline: `ci-failure-diagnoser`. If it says suspected flaky, offer `flaky-test-triager`. For a defect, offer the step from Defect routing.
 - A new repo: `qa-conventions`, then offer `framework-map`.
 - A new story: offer `ticket-review` first, then `test-cases` and/or `test-developer`.
 - A PR that adds tests: `pr-reviewer`; for framework-level concerns it raises, offer `test-maintainer`.

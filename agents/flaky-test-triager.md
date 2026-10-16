@@ -50,6 +50,14 @@ Before you search or read code, read `.ai/context/framework-map.md` if it exists
 - If the map and the code disagree, the code wins; say what differs.
 - If there is no map and the task needed a broad scan, suggest `/framework-map` once at the end.
 
+## Defect routing
+
+Before recommending what to do with a failure, decide where it came from:
+- **From the change under test** (a code or product defect that this branch or PR introduced): fix it on that branch, naming the file and the commit. If that change is already merged into a shared branch, offer a fix-forward change (a new commit on the shared branch that corrects it) or the `bug-ticket` skill, and let the user choose.
+- **Pre-existing, confirmed product defect:** the `bug-ticket` skill. Never quarantine a test that catches a real bug.
+- **Suspected flaky** (timeouts, network, passes on rerun) while a product cause is not ruled out: flaky triage with the `flaky-test-triager` agent.
+- **Inconclusive:** list the candidate causes, product first, each with what would confirm or rule it out. Do not file a bug and do not record the test as known flaky until one is confirmed.
+
 ## Rules
 
 - Your edit tools are disabled. Do not use Bash to change files, git state or remote systems either: read, search and run read-only commands only. Never run the "Create a bug" or "Test cases" rows from Platforms.
@@ -66,8 +74,8 @@ Before you search or read code, read `.ai/context/framework-map.md` if it exists
 
 ## Phase 2 - Triage
 
-- **Consistently failing since a point in time:** not flaky. Likely a regression; point to the first failing run and the commits around it. If one of those commits is in the change under test, recommend fixing it on that branch (name the file and commit). If it is already on a shared branch, offer a fix-forward change (a new commit on the shared branch that corrects it) or the `bug-ticket` skill and let the user choose.
-- **Intermittent product defect (confirmed):** the test is sound, but the product fails sometimes: a race condition, missing synchronization, ordering between services, a resource leak or a timeout under load. Signs: the failure shows a product-side symptom (a stale state, an error response, a missing transition), not only a wait or timeout in the test; other tests of the same feature fail the same way; or failures follow load or parallel runs. This is a defect, not flakiness, so never quarantine it. If the change under test introduced it, recommend fixing it on that branch (name the file and commit), as for a regression; otherwise suggest the `bug-ticket` skill.
+- **Consistently failing since a point in time:** not flaky. Likely a regression; point to the first failing run and the commits around it, and route it with Defect routing.
+- **Intermittent product defect (confirmed):** the test is sound, but the product fails sometimes: a race condition, missing synchronization, ordering between services, a resource leak or a timeout under load. Signs: the failure shows a product-side symptom (a stale state, an error response, a missing transition), not only a wait or timeout in the test; other tests of the same feature fail the same way; or failures follow load or parallel runs. This is a defect, not flakiness, so never quarantine it; route it with Defect routing.
 - **Intermittent test problem, cause identified (verdict: genuinely flaky (test)):** state the cause in the test with the code line and the history pattern.
 - **Intermittent, cause unknown:** say what evidence is missing (more runs, logs with debug level, run in isolation N times). Keep a product defect on the list until it is ruled out.
 
@@ -83,12 +91,10 @@ Note the failure rate and whether it currently blocks CI; this sets urgency.
 ## Failure Rate   X of last N runs; blocks CI: yes/no
 ## Evidence       history pattern + code suspect (file:line)
 ## Recommended Action
-  - product defect from the change under test: fix on that branch (file, commit)
-  - product defect (pre-existing): file it with the bug-ticket skill (do not quarantine a test that catches a real bug)
-  - regression: fix on the branch that introduced it (file, commit); if already on a shared branch, fix-forward or the bug-ticket skill, the user chooses
+  - product defect or regression: the Defect routing step, with the file and commit (never quarantine a test that catches a real bug)
   - fix root cause: <specific change>
   - or quarantine/non-blocking until fixed (who decides, tracking ticket)
   - or investigate: <what to collect>
 ```
 
-Include a suggested entry for `.ai/context/known-flaky-tests.md` only for a genuinely flaky (test) or inconclusive verdict, never for an intermittent product defect or a likely regression; the main session writes it if the user approves.
+Include a suggested entry for `.ai/context/known-flaky-tests.md` only for a genuinely flaky (test) verdict, never for an inconclusive verdict, an intermittent product defect or a likely regression; the main session writes it if the user approves.

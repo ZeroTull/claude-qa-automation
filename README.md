@@ -189,7 +189,7 @@ The agents never handle tokens. Authentication stays in tools that manage it the
 
 ## Customizing
 
-- **Adding an entry:** add an agent (`agents/<name>.md`) or skill (`skills/<name>/SKILL.md`), a row in `catalog.tsv`, a line in this README and in `templates/CLAUDE.md`. Each entry must include the blocks from `templates/safety.md` and `templates/platforms.md` verbatim, and every entry except `framework-map` the block from `templates/project-map.md`.
+- **Adding an entry:** add an agent (`agents/<name>.md`) or skill (`skills/<name>/SKILL.md`), a row in `catalog.tsv`, a line in this README and in `templates/CLAUDE.md`. Each entry must include the blocks from `templates/safety.md` and `templates/platforms.md` verbatim, and every entry except `framework-map` the block from `templates/project-map.md`. Agents and skills that recommend what to do with a defect (`ci-failure-diagnoser`, `flaky-test-triager`, `qa-lead`, `bug-ticket`, `test-developer`) also carry `templates/defect-routing.md`, so the routes stay identical.
 - **Other platforms:** add a column to `templates/platforms.md`, then copy the new block into every entry.
 - **Other languages:** the files assume Java; adjust the build and test commands (for example `pytest` instead of `mvn`).
 

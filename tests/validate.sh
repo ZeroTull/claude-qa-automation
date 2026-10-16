@@ -335,11 +335,10 @@ AGENT_RULES = {
         "Until the evidence rules the product out": "must not rule out a product defect for timeouts or reruns without evidence",
         "list every plausible one, ranked": "must list every plausible cause when the evidence is inconclusive",
         "## Other Possible Causes": "must report other possible causes",
+        "Recommend the next step for each cause with Defect routing": "must route each cause with Defect routing",
         "product defect (confirmed), suspected flaky/environment": "description must list the product-defect and suspected-flaky classes",
         "Do not call it \"not a code defect\" without that evidence": "must not call a timeout 'not a code defect' without evidence",
         "suspected flaky/environment (product not ruled out)": "must label timeouts as suspected flaky with the product not ruled out",
-        "For a code or product defect from this change, recommend fixing it on the branch that introduced it": "must send a defect from the change under test back to its branch",
-        "For a pre-existing confirmed product defect, recommend `/bug-ticket`": "must file only pre-existing product defects",
         "list the candidates, product first": "must list the product cause first",
         "**Product defect (pre-existing, confirmed):**": "must have a label for confirmed pre-existing product defects",
         "if the evidence is inconclusive, say so and point to Other Possible Causes": "must not present a guess as the root cause",
@@ -347,25 +346,24 @@ AGENT_RULES = {
     "agents/flaky-test-triager.md": {
         "**Intermittent product defect (confirmed):**": "must recognise intermittent product defects",
         "an intermittent product defect (for example a race condition) or a regression": "description must name the product-defect verdict",
-        "  - regression: fix on the branch that introduced it": "must give an action for a regression",
-        "If the change under test introduced it, recommend fixing it on that branch": "must send a product defect from the change under test back to its branch",
-        "  - product defect from the change under test: fix on that branch": "must give a branch-fix action for a product defect from the change under test",
         "## Verdict        genuinely flaky (test) / intermittent product defect (confirmed) /": "must offer an intermittent product defect verdict",
-        "do not quarantine a test that catches a real bug": "must not quarantine a test that catches a real bug",
-        "never for an intermittent product defect or a likely regression": "must not add product defects to known-flaky-tests.md",
+        "never quarantine a test that catches a real bug": "must not quarantine a test that catches a real bug",
+        "the Defect routing step, with the file and commit": "must give the Defect routing action for a defect",
+        "route it with Defect routing.": "must route regressions and product defects with Defect routing",
+        "never for an inconclusive verdict, an intermittent product defect or a likely regression": "must add only genuinely flaky tests to known-flaky-tests.md",
         "Use intermittent product defect only when the product cause is confirmed": "must say when a product defect is confirmed versus inconclusive",
         "Do not call a test genuinely flaky until a product cause is ruled out": "must rule out a product cause before calling a test flaky",
-        "If one of those commits is in the change under test, recommend fixing it on that branch": "must send a regression from the change under test back to its branch",
     },
     "agents/qa-lead.md": {
-        "If it is a code or product defect from the change under test, offer the fix on the branch that introduced it": "must route a defect from the change under test to a branch fix",
-        "If it is a pre-existing confirmed product defect, offer `bug-ticket`": "must offer bug-ticket only for pre-existing product defects",
+        "For a defect, offer the step from Defect routing": "must route defects with Defect routing",
         "for a pre-existing confirmed product defect, or a regression on a shared branch if the user chooses it": "plan example must file bugs only for confirmed product defects or shared-branch regressions",
-        "if that change is already merged into a shared branch, offer a fix-forward change or `bug-ticket`": "must cover a defect whose change is already merged",
     },
     "skills/bug-ticket/SKILL.md": {
         "An intermittent failure can still be a product defect": "must not dismiss intermittent failures as non-bugs",
-        "a defect from the change under test goes back to its branch instead": "must not file a defect from the change under test",
+        "File only what Defect routing sends here": "must file only what Defect routing sends to it",
+    },
+    "skills/test-developer/SKILL.md": {
+        "report it as a possible defect and route it with Defect routing": "must route a failing requirement with Defect routing",
     },
     "README.md": {
         "suspected flaky/environment (product not ruled out)": "trace example must use the diagnoser's suspected-flaky label",
@@ -373,6 +371,17 @@ AGENT_RULES = {
         "an intermittent product defect (such as a race condition)": "must describe the triager's product-defect verdict",
     },
 }
+# Where a failure goes is defined once, in templates/defect-routing.md, and must appear verbatim in every
+# agent and skill that recommends what to do with a defect, so the routes cannot drift apart.
+DEFECT_ROUTING_FILES = ["agents/ci-failure-diagnoser.md", "agents/flaky-test-triager.md", "agents/qa-lead.md",
+                        "skills/bug-ticket/SKILL.md", "skills/test-developer/SKILL.md"]
+defect_routing = read(f"{repo}/templates/defect-routing.md").strip()
+if not defect_routing:
+    err("templates/defect-routing.md missing or empty")
+else:
+    for path in DEFECT_ROUTING_FILES:
+        if defect_routing not in read(f"{repo}/{path}"):
+            err(f"{path}: does not contain the block from templates/defect-routing.md verbatim")
 for path, rules in AGENT_RULES.items():
     text = read(f"{repo}/{path}")
     for phrase, message in rules.items():
