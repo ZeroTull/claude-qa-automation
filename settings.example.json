@@ -69,6 +69,7 @@
       "Read(~/.aws/**)",
       "Read(~/.azure/**)",
       "Read(~/.m2/settings.xml)",
+      "Read(~/.m2/settings-security.xml)",
       "Read(~/.gradle/gradle.properties)",
       "Read(**/settings.xml)",
       "Read(**/gradle.properties)",

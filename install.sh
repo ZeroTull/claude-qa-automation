@@ -137,6 +137,36 @@ copy_one() {
   fi
 }
 
+# A team repo's .claude/settings.json: created from settings.example.json if absent. If it exists, it is checked for
+# the deny rules from settings.example.json, and --update adds the missing ones (nothing else in the file changes).
+project_settings() {
+  local target="$1" update="$2" missing errfile
+  if [[ -L "$target" || ! -e "$target" ]]; then
+    copy_if_absent "$REPO/settings.example.json" "$target" "merge settings.example.json by hand"
+    return
+  fi
+  if ! have_python3; then
+    echo "  SKIP      $target (exists; checking its deny rules needs python3 - compare with settings.example.json by hand)"
+    return
+  fi
+  errfile="$(mktemp)"
+  if ! missing="$(settings_tool check "$target" 2>"$errfile")"; then
+    echo "  SKIP      $target (exists; could not check its deny rules: $(tail -n 1 "$errfile"))"
+    rm -f "$errfile"
+    return
+  fi
+  rm -f "$errfile"
+  if [[ -z "$missing" ]]; then
+    echo "  ok        $target has every deny rule from settings.example.json"
+  elif [[ "$update" == yes ]]; then
+    settings_tool merge "$target"
+    echo "  added     $(wc -l <<<"$missing" | tr -d ' ') deny rule(s) to $target"
+  else
+    echo "  MISSING   $target lacks $(wc -l <<<"$missing" | tr -d ' ') deny rule(s) from settings.example.json (--update adds them):"
+    while IFS= read -r r; do echo "              $r"; done <<<"$missing"
+  fi
+}
+
 copy_if_absent() {
   local src="$1" dest="$2" hint="$3"
   if [[ -L "$dest" ]]; then
@@ -161,11 +191,11 @@ have_python3() {
   fi
 }
 
-# settings_tool <check|merge>: check prints the deny rules from settings.example.json that ~/.claude/settings.json
-# lacks, one per line; merge adds them. Both fail with a one-line reason if settings.json can't be read or has an
-# unexpected shape, and merge writes atomically.
+# settings_tool <check|merge> [file]: check prints the deny rules from settings.example.json that the file
+# (~/.claude/settings.json by default) lacks, one per line; merge adds them. Both fail with a one-line reason if the
+# file can't be read or has an unexpected shape, and merge writes atomically.
 settings_tool() {
-  python3 - "$1" "$REPO/settings.example.json" "$CLAUDE_HOME/settings.json" <<'PY'
+  python3 - "$1" "$REPO/settings.example.json" "${2:-$CLAUDE_HOME/settings.json}" <<'PY'
 import json, os, stat, sys, tempfile
 mode, example, target = sys.argv[1:4]
 
@@ -558,7 +588,7 @@ case "${1:-}" in
     echo "QA agents and skills -> $project/.claude"
     for f in "$REPO"/agents/*.md; do copy_one "$f" "$project/.claude/agents/$(basename "$f")" "$update"; done
     for d in "$REPO"/skills/*/; do d="${d%/}"; copy_one "$d" "$project/.claude/skills/$(basename "$d")" "$update"; done
-    copy_if_absent "$REPO/settings.example.json" "$project/.claude/settings.json" "merge settings.example.json by hand"
+    project_settings "$project/.claude/settings.json" "$update"
     copy_if_absent "$REPO/templates/CLAUDE.md" "$project/CLAUDE.md" "add the sections from templates/CLAUDE.md by hand"
     check_dependencies
     echo

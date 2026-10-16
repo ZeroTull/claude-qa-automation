@@ -223,6 +223,8 @@ MAPPER_RULES = {
     "Quoted or dotted YAML keys may be missed": "must note that quoted or dotted YAML keys may be missed",
     "The grep can still show a key that is a host name": "must say not to repeat host-name keys",
     "Never copy URLs, hosts, IP addresses or account names": "must not copy URLs, hosts or account names",
+    "`settings.xml`, `gradle.properties`, `.npmrc` and `.netrc`": "must skip Maven settings and gradle.properties by name",
+    "From build files use only what Safety allows": "must read build files only as Safety allows",
 }
 # Run the skill's YAML key pattern on a sample: it must list keys and never a host:port list item.
 yaml_grep = re.search(r"`grep -oE '([^']+)' <file>` for YAML", mapper)
@@ -333,15 +335,19 @@ else:
 # Behaviour rules that agents depend on: each phrase pins one rule, so an edit cannot drop it silently.
 AGENT_RULES = {
     "templates/safety.md": {
-        "you may use dependency coordinates and versions, plugin configuration, profiles and test filters": "must allow the build-file details diagnosis needs",
+        "you may use dependency coordinates and versions, plugin names and their test settings": "must allow the build-file details diagnosis needs",
         "never quote server, repository, distribution or credential blocks": "must forbid quoting credential blocks from build files",
-        "Maven `settings.xml`, `gradle.properties`": "must forbid reading Maven settings.xml and gradle.properties",
+        "Maven `settings.xml` or `settings-security.xml`, `gradle.properties`": "must forbid reading Maven settings and gradle.properties",
+        "whose name contains password, passwd, secret, token, key, credential, auth, user, login or proxy": "must forbid quoting secret-named values from build files",
+        "a URL or host that contains user info": "must forbid quoting URLs with user info",
+        "name the element and write `<redacted>`": "must redact when unsure",
     },
     "agents/ci-failure-diagnoser.md": {
         "Until the evidence rules the product out": "must not rule out a product defect for timeouts or reruns without evidence",
         "list every plausible one, ranked": "must list every plausible cause when the evidence is inconclusive",
         "## Other Possible Causes": "must report other possible causes",
         "Recommend the next step for each cause with Defect routing": "must route each cause with Defect routing",
+        "take the resolved version from the build log": "must not guess versions it may not read",
         "If it fails consistently rather than intermittently, it is not a case for the triager": "must route consistent timeouts without the triager",
         "case 2 when the test's own code is the cause, otherwise case 5": "must route a consistent failure caused by the test to case 2",
         "product defect (confirmed), suspected flaky/environment": "description must list the product-defect and suspected-flaky classes",
@@ -508,7 +514,7 @@ if example:
                 "Read(**/secrets/**/*.properties)", "Read(**/secrets/**/*.env)", "Read(**/secrets/**/*.conf)",
                 "Read(**/secrets/**/*.txt)",
                 "Read(~/.ssh/**)", "Read(~/.azure/**)", "Read(~/.config/gh/**)", "Read(**/*.pem)",
-                "Read(**/settings.xml)", "Read(**/gradle.properties)",
+                "Read(**/settings.xml)", "Read(**/gradle.properties)", "Read(~/.m2/settings-security.xml)",
                 "Bash(glab ci get *--with-variables*)"]
     if "/Users/" in json.dumps(example[0]):
         err("settings.example.json contains a machine-specific /Users/ path")

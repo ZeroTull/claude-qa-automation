@@ -232,9 +232,24 @@ assert "creates settings.json from the example" cmp -s "$proj/.claude/settings.j
 assert "keeps existing CLAUDE.md" test "$(cat "$proj/CLAUDE.md")" = "# existing"
 assert "copies the framework-map skill" test -f "$proj/.claude/skills/framework-map/SKILL.md"
 assert "next steps name /framework-map" grep -q "/qa-conventions, then /framework-map" <<<"$out"
+run --project "$proj"
+assert "reports a complete project settings.json" grep -q "ok .*settings.json has every deny rule" <<<"$out"
 echo "custom" >"$proj/.claude/settings.json"
 run --project "$proj"
 assert "keeps an existing settings.json" test "$(cat "$proj/.claude/settings.json")" = "custom"
+assert "says an unreadable settings.json could not be checked" grep -q "could not check its deny rules" <<<"$out"
+proj3="$TMP/proj3"
+mkdir -p "$proj3/.claude"
+printf '{"model": "x", "permissions": {"allow": ["Bash(ls)"], "deny": ["Read(**/.env)"]}}\n' >"$proj3/.claude/settings.json"
+chmod 600 "$proj3/.claude/settings.json"
+run --project "$proj3"
+assert "lists the project's missing deny rules" grep -q "MISSING .*settings.json lacks $((n_deny - 1)) deny rule" <<<"$out"
+assert "names a missing rule" grep -qF "Read(**/settings.xml)" <<<"$out"
+assert "does not change it without --update" test "$(deny_count "$proj3/.claude/settings.json")" = 1
+run --project "$proj3" --update
+assert "--update adds the missing deny rules" test "$(deny_count "$proj3/.claude/settings.json")" = "$n_deny"
+assert "--update keeps the other settings" python3 -c 'import json,sys; d=json.load(open(sys.argv[1])); sys.exit(0 if d["model"]=="x" and d["permissions"]["allow"]==["Bash(ls)"] else 1)' "$proj3/.claude/settings.json"
+assert "--update keeps the file mode" test "$(stat -f %Lp "$proj3/.claude/settings.json" 2>/dev/null || stat -c %a "$proj3/.claude/settings.json")" = 600
 proj2="$TMP/proj2"
 mkdir -p "$proj2/.claude"
 ln -s "$TMP/proj2-target.json" "$proj2/.claude/settings.json"
@@ -246,6 +261,7 @@ run --project "$proj"
 assert "reports a changed agent" grep -q "DIFFERS .*agents/$agent" <<<"$out"
 run --project "$proj" --update
 assert "--update replaces it" cmp -s "$proj/.claude/agents/$agent" "$REPO/agents/$agent"
+assert "--update leaves an unreadable settings.json alone" test "$(cat "$proj/.claude/settings.json")" = "custom"
 assert "--update keeps CLAUDE.md" test "$(cat "$proj/CLAUDE.md")" = "# existing"
 
 echo "--copilot"
