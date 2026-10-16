@@ -260,6 +260,16 @@ expect_failure "host-name key note dropped" "must say not to repeat host-name ke
   "edit skills/framework-map/SKILL.md -e 's|The grep can still show a key that is a host name|Keys are safe|'"
 expect_failure "agents read another map file" "templates/project-map.md must name" \
   "edit templates/project-map.md -e 's|framework-map\.md|map.md|'"
+expect_failure "diagnoser that rules out the product" "must not rule out a product defect for timeouts or reruns without evidence" \
+  "edit agents/ci-failure-diagnoser.md -e 's|Until the evidence rules the product out|Always|'"
+expect_failure "diagnoser that picks one cause" "must list every plausible cause when the evidence is inconclusive" \
+  "edit agents/ci-failure-diagnoser.md -e 's|list every plausible one, ranked|pick the likeliest|'"
+expect_failure "diagnoser without other causes" "must report other possible causes" \
+  "edit agents/ci-failure-diagnoser.md -e 's|^## Other Possible Causes|## Notes|'"
+expect_failure "triager without product defects" "must recognise intermittent product defects" \
+  "edit agents/flaky-test-triager.md -e 's|^- [*][*]Intermittent product defect:[*][*]|- Other:|'"
+expect_failure "triager that calls flaky too early" "must rule out a product cause before calling a test flaky" \
+  "edit agents/flaky-test-triager.md -e 's|^Do not call a test genuinely flaky until a product cause is ruled out|Call it flaky|'"
 expect_failure "personal entry in the QA repo" "unknown group 'personal'" \
   "edit catalog.tsv -e 's/^pr-reviewer\tagent\tqa/pr-reviewer\tagent\tpersonal/'"
 expect_failure "machine path in settings.example.json" "settings.example.json contains a machine-specific /Users/ path" \

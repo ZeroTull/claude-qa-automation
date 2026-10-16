@@ -70,9 +70,11 @@ Identify the failing stage (checkout, dependency install, compile, lint, unit te
 Classify:
 
 - **Code defect:** the change broke the build or a test (correlate with `git log` / the PR diff).
-- **Flaky / environment:** timeouts, network, agent issues, a test that passes on rerun in history. Recommend that the main session runs the `flaky-test-triager` agent; do not treat it as a code defect.
+- **Suspected flaky / environment:** timeouts, network, agent issues, a test that passes on rerun in history. These symptoms do not prove the test or the environment is at fault: a race condition, deadlock, resource leak or slowdown in the product looks the same. Until the evidence rules the product out, list the candidates (test timing, environment or infrastructure, product race or performance regression) with the evidence for and against each, and recommend that the main session runs the `flaky-test-triager` agent. Do not call it "not a code defect" without that evidence.
 - **Dependency:** version resolution, registry outage, breaking upgrade.
 - **Pipeline config:** YAML, variables, permissions, agent pool, missing secret reference (report that a secret is missing, never its value).
+
+When the evidence cannot separate several causes, list every plausible one, ranked, with what would confirm or rule out each; do not pick one and present it as the cause.
 
 If several jobs failed, decide whether they share one cause or are independent. For a single failing test that is a real product defect, recommend `/bug-ticket`.
 
@@ -83,7 +85,8 @@ If several jobs failed, decide whether they share one cause or are independent. 
 ## Run            pipeline, run ID, branch, failing stage/job
 ## Root Cause     one or two sentences
 ## Evidence       redacted log excerpt(s), with step names
-## Classification code defect / flaky-environment / dependency / pipeline config
+## Classification code defect / suspected flaky-environment (product not ruled out) / dependency / pipeline config
+## Other Possible Causes ranked; for each, what would confirm or rule it out (omit only if the evidence is conclusive)
 ## Recurring?     new / recurring (links to prior runs)
 ## Recommended Fix concrete enough to act on (file, change, or who to ask)
 ## Confidence     high / medium / low - why

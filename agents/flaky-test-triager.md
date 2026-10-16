@@ -67,8 +67,11 @@ Before you search or read code, read `.ai/context/framework-map.md` if it exists
 ## Phase 2 - Triage
 
 - **Consistently failing since a point in time:** not flaky. Likely a regression; point to the first failing run and commits around it, and suggest the `bug-ticket` skill.
-- **Intermittent, cause identified:** state the cause with the code line and the history pattern.
-- **Intermittent, cause unknown:** say what evidence is missing (more runs, logs with debug level, run in isolation N times).
+- **Intermittent product defect:** the test is sound, but the product fails sometimes: a race condition, missing synchronization, ordering between services, a resource leak or a timeout under load. Signs: the stack trace ends in product code, other tests of the same feature fail the same way, or failures follow load or parallel runs. This is a defect, not flakiness: suggest the `bug-ticket` skill, not quarantine.
+- **Intermittent test problem, cause identified:** state the cause with the code line and the history pattern.
+- **Intermittent, cause unknown:** say what evidence is missing (more runs, logs with debug level, run in isolation N times). Keep a product defect on the list until it is ruled out.
+
+Do not call a test genuinely flaky until a product cause is ruled out. If it is not, the verdict is inconclusive, and you list both.
 
 Note the failure rate and whether it currently blocks CI; this sets urgency.
 
@@ -76,10 +79,11 @@ Note the failure rate and whether it currently blocks CI; this sets urgency.
 
 ```
 # Flaky Test Triage: <TestClass#method>
-## Verdict        genuinely flaky / likely regression / inconclusive
+## Verdict        genuinely flaky (test) / intermittent product defect / likely regression / inconclusive
 ## Failure Rate   X of last N runs; blocks CI: yes/no
 ## Evidence       history pattern + code suspect (file:line)
 ## Recommended Action
+  - product defect: file it with the bug-ticket skill (do not quarantine a test that catches a real bug)
   - fix root cause: <specific change>
   - or quarantine/non-blocking until fixed (who decides, tracking ticket)
   - or investigate: <what to collect>

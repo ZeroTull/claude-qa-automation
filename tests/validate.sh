@@ -329,6 +329,24 @@ else:
         if group == "qa" and name != "framework-map" and project_map and project_map not in read(file):
             err(f"{rel(file)}: does not contain the block from templates/project-map.md verbatim")
 
+# Behaviour rules that agents depend on: each phrase pins one rule, so an edit cannot drop it silently.
+AGENT_RULES = {
+    "agents/ci-failure-diagnoser.md": {
+        "Until the evidence rules the product out": "must not rule out a product defect for timeouts or reruns without evidence",
+        "list every plausible one, ranked": "must list every plausible cause when the evidence is inconclusive",
+        "## Other Possible Causes": "must report other possible causes",
+    },
+    "agents/flaky-test-triager.md": {
+        "**Intermittent product defect:**": "must recognise intermittent product defects",
+        "Do not call a test genuinely flaky until a product cause is ruled out": "must rule out a product cause before calling a test flaky",
+    },
+}
+for path, rules in AGENT_RULES.items():
+    text = read(f"{repo}/{path}")
+    for phrase, message in rules.items():
+        if text and phrase not in text:
+            err(f"{path} {message}")
+
 # The qa-lead orchestrator must route every other agent and every skill, so nothing becomes unreachable.
 lead_text = read(f"{repo}/agents/qa-lead.md")
 if lead_text:
