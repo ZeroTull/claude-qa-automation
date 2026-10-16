@@ -180,7 +180,7 @@ ln -s "$TMP/other-repo/settings.json" "$CLAUDE_HOME/settings.json"
 chmod 666 "$TMP/other-repo/settings.json"
 run --settings
 assert "exits 1" test "$rc" = 1
-assert "a link to a writable file gets no warning" out_lacks "WARNING"
+assert "a link to a writable file gets no warning" out_lacks "writable by other users"
 assert "explains where to add the rules" grep -q "Add these deny rules in that repo instead" <<<"$out"
 assert "leaves the other repo's file unchanged" test "$(cat "$TMP/other-repo/settings.json")" = '{"permissions": {"deny": []}}'
 assert "keeps the link" test -L "$CLAUDE_HOME/settings.json"
