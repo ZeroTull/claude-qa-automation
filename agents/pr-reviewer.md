@@ -76,15 +76,15 @@ Before you search or read code, read `.ai/context/framework-map.md` if it exists
 
 Input: a PR/MR link or number (Azure DevOps, GitHub or GitLab), or "current branch". If it is missing, return a one-line request for it.
 
-- **PR/MR:** use "Read a PR/MR" from Platforms. It gives the diff against the PR's real target branch. To read the diff locally instead, take `<target>` from the PR itself (never assume `main`: it may be `develop` or a release branch), fetch both branches as in the Rules (`git fetch origin <source>:refs/remotes/origin/<source> <target>:refs/remotes/origin/<target>`), then `git diff origin/<target>...origin/<source>`.
+- **PR/MR:** use "Read a PR/MR" from Platforms. It gives the diff against the PR's real target branch. To read the diff locally instead, take `<target>` from the PR itself (never assume `main`: it may be `develop` or a release branch), fetch each branch with its own command, in the form the Rules allow (`git fetch origin <source>:refs/remotes/origin/<source>`, then `git fetch origin <target>:refs/remotes/origin/<target>`), then `git diff origin/<target>...origin/<source>`.
 - **Current branch:** find `<base>`, the base branch as a bare name such as `develop` (no `origin/` prefix):
-  1. the target of an open PR/MR for this branch: GitHub `gh pr view --json baseRefName -q .baseRefName`; GitLab `glab mr view` (the target branch); Azure DevOps `az repos pr list --source-branch <branch> --status active` (`targetRefName` without `refs/heads/`). On a detached HEAD there is no branch to look up, so go to step 2.
+  1. the target of an open PR/MR for this branch: GitHub `gh pr view --json baseRefName -q .baseRefName`; GitLab `glab mr view -F json` (the `target_branch` field); Azure DevOps `az repos pr list --source-branch <branch> --status active --query "[0].targetRefName" -o tsv` (`targetRefName` without `refs/heads/`). An empty result means there is no open PR/MR. On a detached HEAD there is no branch to look up, so go to step 2.
   2. otherwise the repo's default branch: `git symbolic-ref --short refs/remotes/origin/HEAD` prints `origin/develop`, so `<base>` is `develop`.
   3. if neither works, do not guess: stop and return a one-line request for the base branch (you cannot wait for an answer).
 
-  If the PR targets a branch on another remote (a fork, where the base lives on `upstream`), use that remote instead of `origin` below, or use "Read a PR/MR".
+  Set `<remote>` to `origin`, unless the PR targets a branch on another remote (a fork, where the base lives on `upstream`): then use that remote instead of `origin` below, or use "Read a PR/MR".
 
-  Then `git fetch origin <base>:refs/remotes/origin/<base>` and `git diff $(git merge-base HEAD origin/<base>)...HEAD`. If the fetch fails or is not allowed, say the diff may be out of date, or use "Read a PR/MR" when there is an open PR.
+  Then `git fetch <remote> <base>:refs/remotes/<remote>/<base>` and `git diff $(git merge-base HEAD <remote>/<base>)...HEAD`. If the fetch fails or is not allowed, say the diff may be out of date, or use "Read a PR/MR" when there is an open PR.
 
 In the PR Overview, name the base branch and how you found it (PR target, repo default, or the user), so a wrong scope is visible.
 

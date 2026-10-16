@@ -450,6 +450,14 @@ expect_failure "PR description without the default-branch fallback" "skills/pr-d
   "edit skills/pr-description/SKILL.md -e 's|git symbolic-ref --short refs/remotes/origin/HEAD|origin/main|'"
 expect_failure "PR description on a stale base" "skills/pr-description/SKILL.md must refresh the base before diffing" \
   "edit skills/pr-description/SKILL.md -e 's|Run .git fetch origin <target>:refs/remotes/origin/<target>. first; if that fails, say the base may be out of date[.] ||'"
+expect_failure "reviewer fetching two refspecs at once" "agents/pr-reviewer.md must fetch PR branches in the allowed form" \
+  "edit agents/pr-reviewer.md -e 's|fetch each branch with its own command, in the form the Rules allow|fetch both branches|'"
+expect_failure "reviewer without a GitHub base lookup" "agents/pr-reviewer.md must name the GitHub target branch command" \
+  "edit agents/pr-reviewer.md -e 's|.gh pr view --json baseRefName -q .baseRefName.|gh|'"
+expect_failure "reviewer reading glab text output" "agents/pr-reviewer.md must name the GitLab target branch command" \
+  "edit agents/pr-reviewer.md -e 's|.glab mr view -F json. (the .target_branch. field)|glab mr view|'"
+expect_failure "reviewer stuck on a detached HEAD" "agents/pr-reviewer.md must handle a detached HEAD" \
+  "edit agents/pr-reviewer.md -e 's| On a detached HEAD there is no branch to look up, so go to step 2[.]||'"
 expect_failure "personal entry in the QA repo" "unknown group 'personal'" \
   "edit catalog.tsv -e 's/^pr-reviewer\tagent\tqa/pr-reviewer\tagent\tpersonal/'"
 expect_failure "machine path in settings.example.json" "settings.example.json contains a machine-specific /Users/ path" \

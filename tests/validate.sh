@@ -408,6 +408,10 @@ AGENT_RULES = {
         "prints `origin/develop`, so `<base>` is `develop`": "must strip origin/ from the default branch",
         "`targetRefName` without `refs/heads/`": "must name the Azure DevOps target branch command",
         "use that remote instead of `origin` below": "must handle PRs from forks",
+        "fetch each branch with its own command, in the form the Rules allow": "must fetch PR branches in the allowed form",
+        "`gh pr view --json baseRefName -q .baseRefName`": "must name the GitHub target branch command",
+        "`glab mr view -F json` (the `target_branch` field)": "must name the GitLab target branch command",
+        "On a detached HEAD there is no branch to look up, so go to step 2": "must handle a detached HEAD",
         "name the base branch and how you found it": "must report the base branch",
     },
     "skills/pr-description/SKILL.md": {

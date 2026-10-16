@@ -6,7 +6,7 @@
       "Bash(git diff *)",
       "Bash(git log *)",
       "Bash(git merge-base *)",
-      "Bash(git symbolic-ref *)",
+      "Bash(git symbolic-ref --short refs/remotes/*)",
       "Bash(az boards work-item show *)",
       "Bash(az boards query *)",
       "Bash(az repos pr show *)",
