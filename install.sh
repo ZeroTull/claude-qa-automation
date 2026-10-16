@@ -126,8 +126,11 @@ user_entries() {
 kind() { if [[ -d "$1" ]]; then echo dir; else echo file; fi; }
 
 # What --project did to each entry, for the summary at the end: newline-separated names relative to .claude/.
-sum_added="" sum_updated="" sum_unchanged="" sum_differs="" sum_skipped="" sum_left="" sum_kept=""
+sum_added="" sum_updated="" sum_failed="" sum_unchanged="" sum_differs="" sum_skipped="" sum_left="" sum_kept=""
 note() { printf -v "$1" '%s%s\n' "${!1}" "$2"; }
+
+# conflict_in, same_content and extra_files read the listing through < <(...), where a failure would be silent;
+# copy_one runs unreadable_in first, so by then every folder they list can be read.
 
 # Prints the first path under $src whose counterpart under $dest is a link or a different type (empty if none).
 conflict_in() {
@@ -161,8 +164,34 @@ extra_files() {
   done < <(cd "$dest" && find . ! -type d)
 }
 
-# True when find can list every folder under $1 (a file counts as listable).
-listable() { [[ ! -d "$1" ]] || find "$1" >/dev/null 2>&1; }
+# Prints the first path at or under $1 that can't be read (a folder needs r and x, a file r); empty if none.
+# find still lists a folder it can't open, so the loop sees it. Links are checked by conflict_in instead.
+unreadable_in() {
+  local path
+  while IFS= read -r path; do
+    [[ -L "$path" ]] && continue
+    if [[ -d "$path" && ( ! -r "$path" || ! -x "$path" ) ]] || [[ -f "$path" && ! -r "$path" ]]; then
+      echo "$path"
+      return 0
+    fi
+  done < <(find "$1" 2>/dev/null)
+}
+
+# Prints the first folder of $dest that --update would write into but can't; empty if none.
+unwritable_in() {
+  local src="$1" dest="$2" rel
+  if [[ ! -d "$src" ]]; then
+    [[ -w "$(dirname "$dest")" ]] || dirname "$dest"
+    return 0
+  fi
+  while IFS= read -r rel; do
+    if [[ "$rel" == . ]]; then rel=""; else rel="/${rel#./}"; fi
+    if [[ -d "$dest$rel" && ! -w "$dest$rel" ]]; then
+      echo "$dest$rel"
+      return 0
+    fi
+  done < <(cd "$src" && find . -type d)
+}
 
 # Reports the files and links the team has inside $dest that this repo's $src lacks (Finder's .DS_Store aside).
 note_kept() {
@@ -178,7 +207,7 @@ note_kept() {
 # to them are overwritten; the team repo's git history is their backup) and never deletes a file this repo lacks.
 # One link or file/folder mismatch anywhere in an entry skips the whole entry, so nothing is written through a link.
 copy_one() {
-  local src="$1" dest="$2" update="$3" name conflict
+  local src="$1" dest="$2" update="$3" name conflict blocked copied
   name="${dest#"$project/.claude/"}"
   if [[ -L "$dest" ]]; then
     echo "  SKIP      $dest (is a symlink - remove it to install a copy)"
@@ -193,9 +222,11 @@ copy_one() {
     echo "  copied    $dest"
     note sum_added "$name"
     return
-  elif ! listable "$dest"; then
-    echo "  SKIP      $dest (could not read all of it - fix its permissions)"
-    note sum_skipped "$name (could not read all of it)"
+  fi
+  blocked="$(unreadable_in "$dest")"
+  if [[ -n "$blocked" ]]; then
+    echo "  SKIP      $dest (cannot read $blocked - fix its permissions)"
+    note sum_skipped "$name (cannot read $blocked)"
     return
   fi
   conflict="$(conflict_in "$src" "$dest")"
@@ -208,10 +239,23 @@ copy_one() {
     echo "  ok        $dest"
     note sum_unchanged "$name"
   elif [[ "$update" == yes ]]; then
+    blocked="$(unwritable_in "$src" "$dest")"
+    if [[ -n "$blocked" ]]; then
+      echo "  SKIP      $dest (cannot write to $blocked - fix its permissions)"
+      note sum_skipped "$name (cannot write to $blocked)"
+      return
+    fi
     # -f replaces a read-only file instead of failing on it.
-    if [[ -d "$src" ]]; then cp -Rpf "$src/." "$dest/"; else cp -pf "$src" "$dest"; fi
-    echo "  updated   $dest"
-    note sum_updated "$name"
+    copied=yes
+    if [[ -d "$src" ]]; then cp -Rpf "$src/." "$dest/" || copied=no; else cp -pf "$src" "$dest" || copied=no; fi
+    if [[ "$copied" == yes ]]; then
+      echo "  updated   $dest"
+      note sum_updated "$name"
+    else
+      echo "  FAILED    $dest (could not copy every file, see the error above; files copied before it stay)"
+      note sum_failed "$name"
+      return
+    fi
   else
     echo "  DIFFERS   $dest (--update copies this repo's version over it, including local edits)"
     note sum_differs "$name"
@@ -252,7 +296,8 @@ project_summary() {
   summary_line updated "$sum_updated"
   summary_line unchanged "$sum_unchanged"
   [[ -z "$sum_differs" ]] || summary_line differs "$sum_differs" "run again with --update to copy this repo's version"
-  [[ -z "$sum_skipped" ]] || summary_line skipped "$sum_skipped" "remove the path named in each, then run again"
+  [[ -z "$sum_skipped" ]] || summary_line skipped "$sum_skipped" "remove or fix the path named in each, then run again"
+  [[ -z "$sum_failed" ]] || summary_line failed "$sum_failed" "see the errors above, then run again"
   summary_line left "$sum_left" "not in this repo, kept as they are"
   [[ -z "$sum_kept" ]] || summary_line kept "$sum_kept" "files inside an agent or skill that this repo lacks, kept"
 }

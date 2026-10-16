@@ -456,7 +456,7 @@ class InstallTest(unittest.TestCase):
         self.check_out("skips a skill with a nested type conflict", out,
                        rf"^  SKIP +.*skills/{SKILL} \(SKILL\.md is a symlink or a different type - remove that path")
         self.check("leaves the nested folder alone", (skill_md / "inner.md").is_file())
-        self.check_out("the summary lists the skipped skill", out, r"^  skipped +1 \(remove the path named in each, then run again\)$")
+        self.check_out("the summary lists the skipped skill", out, r"^  skipped +1 \(remove or fix the path named in each, then run again\)$")
         shutil.rmtree(skill_md)
         target = self.tmp / "link-target.md"
         self.write(target, "outside\n")
@@ -503,24 +503,40 @@ class InstallTest(unittest.TestCase):
         self.check_lacks("a .DS_Store is neither left nor kept", out, ".DS_Store")
         self.check("the .DS_Store files stay", (claude / "skills" / SKILL / ".DS_Store").is_file())
 
-    @unittest.skipUnless(NON_ROOT, "root reads every folder")
-    def test_project_update_skips_an_unreadable_folder(self):
-        proj = self.tmp / "proj-unreadable"
-        proj.mkdir()
-        self.run_install("--project", proj)
-        skill_dir = proj / ".claude" / "skills" / SKILL
-        with open(skill_dir / "SKILL.md", "a") as f:
-            f.write("local edit\n")
-        private = skill_dir / "private"
-        self.write(private / "notes.md", "secret notes\n")
-        private.chmod(0o000)
-        self.addCleanup(private.chmod, 0o755)
-        out = self.run_install("--project", proj, "--update")
-        self.check("exits 0", out.rc == 0, out.out)
-        self.check_out("skips a skill it cannot read in full", out, rf"^  SKIP +.*skills/{SKILL} \(could not read all of it")
-        self.check("does not report it as ok", not re.search(rf"^  ok +.*skills/{SKILL}$", out.out, re.M), out.out)
-        private.chmod(0o755)
-        self.check("updates none of its files", "local edit" in (skill_dir / "SKILL.md").read_text())
+    @unittest.skipUnless(NON_ROOT, "root reads and writes everything")
+    def test_project_skips_what_it_cannot_read_or_write(self):
+        for case, rel, mode, problem in (("a folder it cannot read", "private", 0o000, "cannot read"),
+                                         ("a file it cannot read", "secret.md", 0o000, "cannot read"),
+                                         ("a folder it cannot write", "refs", 0o555, "cannot write to")):
+            with self.subTest(case):
+                repo_copy = copy_repo(self.tmp / f"repo-{rel}")
+                self.write(repo_copy / "skills" / SKILL / "refs" / "guide.md", "guide\n")
+                proj = self.tmp / f"proj-{rel}"
+                proj.mkdir()
+                self.run_install("--project", proj, script=repo_copy / "install.sh")
+                skill_dir = proj / ".claude" / "skills" / SKILL
+                with open(skill_dir / "SKILL.md", "a") as f:
+                    f.write("local edit\n")
+                (repo_copy / "skills" / SKILL / "refs" / "new.md").write_text("new\n")
+                path = skill_dir / rel
+                if rel == "private":
+                    self.write(path / "notes.md", "team notes\n")
+                elif rel == "secret.md":
+                    self.write(path, "team secret\n")
+                path.chmod(mode)
+                self.addCleanup(path.chmod, 0o755)
+                expected = rf"^  SKIP +.*skills/{SKILL} \({problem} .*skills/{SKILL}/{re.escape(rel)} - fix its permissions\)$"
+                for args in ((), ("--update",)) if problem == "cannot read" else (("--update",),):
+                    out = self.run_install("--project", proj, *args, script=repo_copy / "install.sh")
+                    self.check(f"{case} {args}: exits 0", out.rc == 0, out.out)
+                    self.check_out(f"{case} {args}: skips the skill and names the path", out, expected)
+                    self.check(f"{case} {args}: does not report it as ok or differing",
+                               not re.search(rf"^  (ok|DIFFERS|updated) +.*skills/{SKILL}( |$)", out.out, re.M), out.out)
+                    self.check_out(f"{case} {args}: the summary counts it as skipped", out, r"^  skipped +1 ")
+                    self.check_out(f"{case} {args}: the rest still runs", out, r"^  left +0 ")
+                path.chmod(0o755)
+                self.check(f"{case}: updates none of its files", "local edit" in (skill_dir / "SKILL.md").read_text())
+                self.check(f"{case}: writes nothing into it", not (skill_dir / "refs" / "new.md").exists())
 
     def test_project_file_modes(self):
         # Under umask 077 plain cp would make every copy 600 or 700; -p keeps the source's 644 and 755.
