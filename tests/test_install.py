@@ -78,7 +78,9 @@ class InstallTest(unittest.TestCase):
         self.tmp = Path(tmp.name)
         self.home = self.tmp / "home"
         # Never let a test fall back to the real ~/.claude or ~/.copilot, or read anything else under the real HOME.
-        self.env = {**os.environ, "HOME": str(self.tmp / "home-root"), "CLAUDE_HOME": str(self.home),
+        # QA_* and BACKUP_STAMP are test hooks of install.sh; one left in a developer's shell must not leak in.
+        inherited = {k: v for k, v in os.environ.items() if not k.startswith("QA_") and k != "BACKUP_STAMP"}
+        self.env = {**inherited, "HOME": str(self.tmp / "home-root"), "CLAUDE_HOME": str(self.home),
                     "COPILOT_HOME": str(self.tmp / "copilot-default")}
         # Per-test stubs, so the "never runs" markers start empty in every test.
         self.stubs = self.tmp / "stubs"

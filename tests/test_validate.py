@@ -830,7 +830,7 @@ class ValidateTest(unittest.TestCase):
 
     def assert_rejected(self, result, expected):
         if isinstance(result, Exception):
-            self.fail(f"mutation did not apply: {result!r}")
+            self.fail(f"case could not run: {result!r}")
         self.assertNotEqual(result.returncode, 0, "validate.sh passed")
         self.assertIn(expected, result.stdout)
 
@@ -874,7 +874,7 @@ class ValidateTest(unittest.TestCase):
         for label, _, result in self.run_cases(SUCCESSES):
             with self.subTest(label):
                 if isinstance(result, Exception):
-                    self.fail(f"mutation did not apply: {result}")
+                    self.fail(f"case could not run: {result!r}")
                 self.assertEqual(result.returncode, 0, "validate.sh rejected it:\n" + result.stdout)
 
     def test_works_without_ruby(self):
