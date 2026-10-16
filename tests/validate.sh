@@ -337,8 +337,11 @@ AGENT_RULES = {
     "templates/safety.md": {
         "quote only what this list allows. For anything else, name the element, property or key and write `<redacted>`": "must quote only allow-listed build-file values",
         "dependency, plugin and parent coordinates and versions, and the Java release": "must allow the build-file details diagnosis needs",
-        "but only if the value looks like a version (digits, dots, a range or a `${...}` reference)": "must allow sensitive-named versions only for version-shaped values",
-        "wherever they appear (`argLine`, `jvmArgs`, `systemPropertyVariables`, `jvm.config`)": "must apply the JVM list wherever the key appears",
+        "but only if the value looks like a version (digits, dots, a range, or a `${...}` reference with nothing else in the value)": "must allow sensitive-named versions only for version-shaped values",
+        "wherever they appear (`argLine`, `jvmArgs`, `systemPropertyVariables`, `jvm.config`, `maven.config`)": "must apply the JVM list wherever the key appears",
+        "JVM and Maven command options (`argLine`, `jvmArgs`, `.mvn/jvm.config`, `.mvn/maven.config`)": "must redact -D pairs in Maven config files",
+        "This includes string literals and variable assignments in build scripts": "must redact string literals in build scripts",
+        "quoted only when they look like identifiers": "must quote names only when they look like identifiers",
         "and TestNG suite files (`testng*.xml` or any XML with a `<suite>` root)": "must cover test suite files",
         "`<parameter>` values in suite files are redacted like any other value": "must redact suite file parameter values",
         "`settings.gradle`, `settings.gradle.kts`, `gradle/libs.versions.toml`": "must cover Gradle settings and version catalogs",
@@ -525,6 +528,7 @@ if example:
                 "Read(**/secrets/**/*.txt)",
                 "Read(~/.ssh/**)", "Read(~/.azure/**)", "Read(~/.config/gh/**)", "Read(**/*.pem)",
                 "Read(**/settings.xml)", "Read(**/gradle.properties)", "Read(~/.m2/settings-security.xml)",
+                "Read(**/settings-security.xml)",
                 "Bash(glab ci get *--with-variables*)"]
     if "/Users/" in json.dumps(example[0]):
         err("settings.example.json contains a machine-specific /Users/ path")
