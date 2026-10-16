@@ -361,7 +361,7 @@ expect_failure "verdicts without routing cases" "must map every verdict to a rou
 expect_failure "flaky verdict without ruling out the product" "must rule out the product before calling a test genuinely flaky" \
   "edit agents/flaky-test-triager.md -e 's|cause identified in the test and product ruled out (case 2)|cause identified (case 2)|'"
 expect_failure "safety rule that hides versions again" "templates/safety.md must allow the build-file details diagnosis needs" \
-  "edit templates/safety.md -e 's|dependency and plugin coordinates and versions|dependency and plugin names|'"
+  "edit templates/safety.md -e 's|dependency, plugin and parent coordinates and versions, and the Java release|dependency names|'"
 expect_failure "safety rule that allows credential blocks" "templates/safety.md must forbid quoting credential blocks from build files" \
   "edit templates/safety.md -e 's|Never quote server, repository, distribution or credential blocks|Quote what you need|'"
 expect_failure "safety rule that reads settings.xml" "templates/safety.md must forbid reading Maven settings and gradle.properties" \
@@ -385,11 +385,15 @@ expect_failure "Maven master password readable" "settings.example.json misses de
 expect_failure "safety rule that quotes argLine freely" "templates/safety.md must redact JVM -D pairs by default" \
   "edit templates/safety.md -e 's|; write every other .-D. pair as .-Dname=<redacted>.||'"
 expect_failure "open-ended JVM settings list" "templates/safety.md must allow only a closed list of JVM settings" \
-  "edit templates/safety.md -e 's|these JVM settings and no others:|standard JVM settings such as|'"
+  "edit templates/safety.md -e 's|[.] Other standard JDK settings|, and other standard JDK settings|'"
 expect_failure "JVM flags quoted wholesale" "templates/safety.md must quote only on/off and numeric JVM flags" \
   "edit templates/safety.md -e 's|.-XX. flags that only switch something on or off or set a number|any flag|'"
 expect_failure "profile activation values quoted" "templates/safety.md must redact profile activation values" \
   "edit templates/safety.md -e 's|; for a .<property>. activation keep its .<name>. and write its .<value>. as .<redacted>.||'"
+expect_failure "any value under a version name" "templates/safety.md must allow sensitive-named versions only for version-shaped values" \
+  "edit templates/safety.md -e 's|, but only if the value looks like a version (digits, dots, a range or a .[$]{...}. reference)||'"
+expect_failure "suite files outside the rule" "templates/safety.md must cover test suite files" \
+  "edit templates/safety.md -e 's| and test suite files (.testng[*].xml.)||'"
 expect_failure "personal entry in the QA repo" "unknown group 'personal'" \
   "edit catalog.tsv -e 's/^pr-reviewer\tagent\tqa/pr-reviewer\tagent\tpersonal/'"
 expect_failure "machine path in settings.example.json" "settings.example.json contains a machine-specific /Users/ path" \

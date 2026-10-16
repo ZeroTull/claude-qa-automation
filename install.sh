@@ -7,7 +7,8 @@
 #   ./install.sh [--copilot] --uninstall     remove what the install added and restore what it replaced
 # It never touches ~/.claude/CLAUDE.md. It changes ~/.claude/settings.json only with --settings, and a team repo's
 # .claude/settings.json only with --project --update, both after a backup and only to add deny rules.
-# Anything an install replaces is moved to <target>/backups/qa-<timestamp>-NNN/ first.
+# Anything a link install replaces is moved to <target>/backups/qa-<timestamp>-NNN/ first. --project --update
+# overwrites the copied agents and skills in place (the team repo's git history is their backup).
 set -euo pipefail
 
 # Resolve the script's real location, so running it through a symlink still finds the repo.
@@ -225,6 +226,9 @@ if os.path.exists(target):
         data = json.loads(raw)
     except OSError as e:
         fail(f"could not read {target}: {e.strerror}")
+    except UnicodeDecodeError as e:
+        # Never echo the bytes: name only where the bad byte is.
+        fail(f"settings.json is not UTF-8 (byte offset {e.start})")
     except ValueError as e:
         fail(f"settings.json is not valid JSON ({e})")
 # Keep the file's own indentation (spaces or a tab), so a merge does not reformat a team's file. A file with no

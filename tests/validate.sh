@@ -336,11 +336,13 @@ else:
 AGENT_RULES = {
     "templates/safety.md": {
         "quote only what this list allows. For anything else, name the element, property or key and write `<redacted>`": "must quote only allow-listed build-file values",
-        "dependency and plugin coordinates and versions": "must allow the build-file details diagnosis needs",
+        "dependency, plugin and parent coordinates and versions, and the Java release": "must allow the build-file details diagnosis needs",
+        "but only if the value looks like a version": "must allow sensitive-named versions only for version-shaped values",
+        "and test suite files (`testng*.xml`)": "must cover test suite files",
         "Never quote server, repository, distribution or credential blocks": "must forbid quoting credential blocks from build files",
         "a URL, connection string or command-line argument that contains a credential": "must forbid quoting credentials inside URLs and arguments",
         "write every other `-D` pair as `-Dname=<redacted>`": "must redact JVM -D pairs by default",
-        "these JVM settings and no others: `user.timezone`, `user.language`, `user.country`, `file.encoding` and `java.awt.headless`": "must allow only a closed list of JVM settings",
+        "`user.timezone`, `user.language`, `user.country`, `file.encoding` and `java.awt.headless`. Other standard JDK settings": "must allow only a closed list of JVM settings",
         "`-XX` flags that only switch something on or off or set a number": "must quote only on/off and numeric JVM flags",
         "for a `<property>` activation keep its `<name>` and write its `<value>` as `<redacted>`": "must redact profile activation values",
         "names, not values, of environment variables and properties": "must allow variable names but not their values",

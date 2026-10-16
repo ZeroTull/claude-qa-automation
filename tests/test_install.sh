@@ -298,20 +298,28 @@ mkdir -p "$proj9/.claude"
 echo '{"permissions": {"deny": []}}' >"$proj9/.claude/settings.json"
 run --project "$proj9" --update
 assert "a one-line file is written with 2 spaces" grep -q '^    "deny": \[' "$proj9/.claude/settings.json"
-if [[ "$(id -u)" != 0 ]]; then
-  proj10="$TMP/proj10"
-  mkdir -p "$proj10/.claude"
-  echo '{"permissions": {"deny": []}}' >"$proj10/.claude/settings.json"
-  mkdir -p "$TMP/ro-home"
-  chmod 500 "$TMP/ro-home"
-  out="$(CLAUDE_HOME="$TMP/ro-home" "$REPO/install.sh" --project "$proj10" --update 2>&1)"
-  chmod 700 "$TMP/ro-home"
-  assert "a failed backup is reported" grep -q "FAILED .*settings.json (could not back it up" <<<"$out"
-  assert "a failed backup leaves the file unchanged" test "$(deny_count "$proj10/.claude/settings.json")" = 0
-  assert "a failed backup still finishes the install" grep -q "Next: open Claude Code" <<<"$out"
-else
-  echo "  skip  a failed backup (needs a non-root user)"
-fi
+# A plain file where the backups folder should be makes every backup fail, for root too.
+proj10="$TMP/proj10"
+mkdir -p "$proj10/.claude" "$TMP/blocked-home"
+echo '{"permissions": {"deny": []}}' >"$proj10/.claude/settings.json"
+: >"$TMP/blocked-home/backups"
+out="$(CLAUDE_HOME="$TMP/blocked-home" "$REPO/install.sh" --project "$proj10" --update 2>&1)"
+assert "a failed backup is reported" grep -q "FAILED .*settings.json (could not back it up" <<<"$out"
+assert "a failed backup leaves the file unchanged" test "$(deny_count "$proj10/.claude/settings.json")" = 0
+assert "a failed backup still finishes the install" grep -q "Next: open Claude Code" <<<"$out"
+echo '{"permissions": {"deny": []}}' >"$TMP/blocked-home/settings.json"
+out="$(CLAUDE_HOME="$TMP/blocked-home" "$REPO/install.sh" --settings 2>&1)"; rc=$?
+assert "--settings reports a failed backup" grep -q "could not back up settings.json" <<<"$out"
+assert "--settings fails when the backup fails" test "$rc" != 0
+assert "--settings leaves the file unchanged when the backup fails" test "$(deny_count "$TMP/blocked-home/settings.json")" = 0
+assert "--settings leaves no temp file when the backup fails" test -z "$(find "$TMP/blocked-home" -name '.settings.*')"
+bad="$TMP/bad-utf8-home"
+mkdir -p "$bad"
+printf '{"a": "\377"}\n' >"$bad/settings.json"
+out="$(CLAUDE_HOME="$bad" "$REPO/install.sh" --settings 2>&1)"
+assert "a non-UTF-8 settings.json gives a one-line reason" grep -q "settings.json is not UTF-8 (byte offset" <<<"$out"
+assert "a non-UTF-8 settings.json is not echoed" out_lacks "0xff"
+assert "a non-UTF-8 settings.json prints no traceback" out_lacks "Traceback"
 if [[ "$(id -u)" != 0 ]]; then
   unread="$TMP/unread-home"
   mkdir -p "$unread"
