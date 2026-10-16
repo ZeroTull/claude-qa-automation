@@ -294,6 +294,12 @@ expect_failure "README trace with an old label" "trace example must use the diag
   "edit README.md -e 's|suspected flaky/environment (product not ruled out)|flaky/environment|'"
 expect_failure "agent file missing" "agents/flaky-test-triager.md must recognise intermittent product defects" \
   "rm agents/flaky-test-triager.md"
+expect_failure "triager that tickets its own PR's regression" "must send a regression from the change under test back to its branch" \
+  "edit agents/flaky-test-triager.md -e 's|If one of those commits is in the change under test, recommend fixing it on that branch|Suggest a ticket|'"
+expect_failure "lead that tickets its own PR's bug" "agents/qa-lead.md must route a defect from the change under test to a branch fix" \
+  "edit agents/qa-lead.md -e 's|offer the fix on that branch|offer bug-ticket|'"
+expect_failure "README plan example filing any defect" "README.md plan example must file bugs only for confirmed product defects" \
+  "edit README.md -e 's|only if it is a confirmed product defect|only if it is a real defect|'"
 expect_failure "personal entry in the QA repo" "unknown group 'personal'" \
   "edit catalog.tsv -e 's/^pr-reviewer\tagent\tqa/pr-reviewer\tagent\tpersonal/'"
 expect_failure "machine path in settings.example.json" "settings.example.json contains a machine-specific /Users/ path" \

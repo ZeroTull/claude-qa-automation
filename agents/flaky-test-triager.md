@@ -66,7 +66,7 @@ Before you search or read code, read `.ai/context/framework-map.md` if it exists
 
 ## Phase 2 - Triage
 
-- **Consistently failing since a point in time:** not flaky. Likely a regression; point to the first failing run and commits around it, and suggest the `bug-ticket` skill.
+- **Consistently failing since a point in time:** not flaky. Likely a regression; point to the first failing run and the commits around it. If one of those commits is in the change under test, recommend fixing it on that branch (name the file and commit). If it is already on a shared branch, offer a fix-forward change or the `bug-ticket` skill and let the user choose.
 - **Intermittent product defect (confirmed):** the test is sound, but the product fails sometimes: a race condition, missing synchronization, ordering between services, a resource leak or a timeout under load. Signs: the failure shows a product-side symptom (a stale state, an error response, a missing transition), not only a wait or timeout in the test; other tests of the same feature fail the same way; or failures follow load or parallel runs. This is a defect, not flakiness: suggest the `bug-ticket` skill, not quarantine.
 - **Intermittent test problem, cause identified (verdict: genuinely flaky (test)):** state the cause in the test with the code line and the history pattern.
 - **Intermittent, cause unknown:** say what evidence is missing (more runs, logs with debug level, run in isolation N times). Keep a product defect on the list until it is ruled out.

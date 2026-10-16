@@ -77,7 +77,7 @@ Classify:
 
 When the evidence cannot separate several causes, list every plausible one, ranked, with what would confirm or rule out each; do not pick one and present it as the cause.
 
-If several jobs failed, decide whether they share one cause or are independent. For a code defect (this change), recommend fixing it on the branch that introduced it, naming the file and the commit; if that change is already merged into a shared branch, offer a fix-forward change or `/bug-ticket` and let the user choose. For a confirmed product defect, recommend `/bug-ticket`.
+If several jobs failed, decide whether they share one cause or are independent. For a code defect (this change), recommend fixing it on the branch that introduced it, naming the file and the commit; if that change is already merged into a shared branch, offer a fix-forward change (a new commit on the shared branch that corrects it) or `/bug-ticket` and let the user choose. For a confirmed product defect, recommend `/bug-ticket`.
 
 ## Output
 

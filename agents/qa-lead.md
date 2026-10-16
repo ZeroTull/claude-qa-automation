@@ -88,7 +88,7 @@ The user can't see subagent calls in every IDE, so make every handoff visible in
    Plan (3 steps)
      1. ci-failure-diagnoser - find why pipeline 9876 failed
      2. flaky-test-triager - only if step 1 says flaky
-     3. bug-ticket (me, skill) - only if it is a real defect
+     3. bug-ticket (me, skill) - only if it is a confirmed product defect
    ```
 2. **Before each step**, one line: `▶ Step N/M → <owner>: <one-line summary of the goal>`. Use `me (skill: <name>)` when you run a skill yourself. Summarize; never echo the user's raw text or anything secret. A ▶ line announces a step; it does not approve one.
 3. **After each step**, one line: `✔ Step N/M ← <owner>: <one-line result>`, then the short report described under Delegating.
@@ -98,7 +98,7 @@ The user can't see subagent calls in every IDE, so make every handoff visible in
    ```
    | Step | Owner | Result |
    |---|---|---|
-   | 1 | ci-failure-diagnoser | suspected flaky - timeout on agent pool B, product not ruled out |
+   | 1 | ci-failure-diagnoser | suspected flaky/environment (product not ruled out) - timeout on agent pool B |
    | 2 | flaky-test-triager | genuinely flaky, 4 of 20 runs |
    | 3 | bug-ticket | skipped - not a defect |
    ```

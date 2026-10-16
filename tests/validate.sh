@@ -348,9 +348,15 @@ AGENT_RULES = {
         "never for an intermittent product defect or a likely regression": "must not add product defects to known-flaky-tests.md",
         "Use intermittent product defect only when the product cause is confirmed": "must say when a product defect is confirmed versus inconclusive",
         "Do not call a test genuinely flaky until a product cause is ruled out": "must rule out a product cause before calling a test flaky",
+        "If one of those commits is in the change under test, recommend fixing it on that branch": "must send a regression from the change under test back to its branch",
+    },
+    "agents/qa-lead.md": {
+        "offer the fix on that branch": "must route a defect from the change under test to a branch fix",
+        "only if it is a confirmed product defect": "plan example must file bugs only for confirmed product defects",
     },
     "README.md": {
         "suspected flaky/environment (product not ruled out)": "trace example must use the diagnoser's suspected-flaky label",
+        "only if it is a confirmed product defect": "plan example must file bugs only for confirmed product defects",
     },
 }
 for path, rules in AGENT_RULES.items():
