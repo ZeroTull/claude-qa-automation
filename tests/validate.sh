@@ -349,6 +349,7 @@ AGENT_RULES = {
     "agents/flaky-test-triager.md": {
         "**Intermittent product defect (confirmed, case 3):**": "must recognise intermittent product defects",
         "(verdict: test defect, stale after an intended change)": "must have a verdict for a stale test",
+        "cause identified in the test and product ruled out (case 2)": "must rule out the product before calling a test genuinely flaky",
         "/ inconclusive [case 5]": "must map every verdict to a routing case",
         "an intermittent product defect (for example a race condition) or a regression": "description must name the product-defect verdict",
         "intermittent product defect (confirmed) [case 3]": "must offer an intermittent product defect verdict",
@@ -402,7 +403,7 @@ DEFECT_ROUTES = {
     "take the first case that fits": "must say which route wins when several fit",
     "its verdict then picks case 1, 2, 3 or 5": "must let a triage verdict reach every other case",
     "it is case 3 once the product defect is confirmed, and case 5 until then": "must not send an unconfirmed defect to case 3",
-    "A consistent failure skips triage and goes to case 1, 2 or 5 directly": "must route consistent failures without triage",
+    "A consistent failure skips triage: take case 1, 2 or 5, or case 3 once the product defect is confirmed": "must route consistent failures without triage",
     "an intermittent failure reaches this case only through case 4": "must not send intermittent failures straight to a test fix",
     "**Test defect, product correct**": "must route test defects where the product is correct",
     "Do not file a bug and do not record the test as known flaky until one is confirmed": "must file nothing for an inconclusive case",

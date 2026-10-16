@@ -53,13 +53,13 @@ Before you search or read code, read `.ai/context/framework-map.md` if it exists
 ## Defect routing
 
 The change under test is the branch or PR whose pipeline or tests you are looking at, until it is merged. Before recommending what to do with a failure, take the first case that fits:
-1. **Dependency or pipeline config:** name the file, version, variable or permission to change. If an intended dependency change only breaks a test's old assertion, it is case 2.
+1. **Dependency or pipeline config:** name the file, version, variable or permission to change. If an intended dependency change only breaks a test's old assertion, it is case 2; if it breaks product code, it is case 3.
 2. **Test defect, product correct** (the test asserts behaviour that an intended change replaced, or fails consistently because of its own code; an intermittent failure reaches this case only through case 4): fix the test on a branch, naming the commit that made it stale if there is one. Do not file a bug. If the change was not intended, it is case 3 once the product defect is confirmed, and case 5 until then.
 3. **Confirmed product defect**, routed by where it came from:
    - **from the change under test:** fix it on that branch, naming the file and the commit;
    - **from a change already merged into a shared branch** (a regression with a known commit): name the commit, then offer a fix-forward change (a new commit on the shared branch that corrects it) or the `bug-ticket` skill, and let the user choose;
    - **pre-existing, with no identifiable commit:** the `bug-ticket` skill.
-4. **Intermittent, with no product cause confirmed:** flaky triage with the `flaky-test-triager` agent; its verdict then picks case 1, 2, 3 or 5. A consistent failure skips triage and goes to case 1, 2 or 5 directly.
+4. **Intermittent, with no product cause confirmed:** flaky triage with the `flaky-test-triager` agent; its verdict then picks case 1, 2, 3 or 5. A consistent failure skips triage: take case 1, 2 or 5, or case 3 once the product defect is confirmed.
 5. **Inconclusive:** list the candidate causes, product first, each with what would confirm or rule it out. Do not file a bug and do not record the test as known flaky until one is confirmed.
 
 Never quarantine a test that catches a real bug.
@@ -83,7 +83,7 @@ Never quarantine a test that catches a real bug.
 - **Consistently failing since a point in time:** not intermittent, so not flaky. Point to the first failing run and the commits around it, then route it with Defect routing: a test made stale by an intended change is case 2 (verdict: test defect, stale after an intended change); a confirmed product regression is case 3 (verdict: regression (confirmed)); until one is confirmed, the verdict is inconclusive (case 5). Never route an unconfirmed regression to case 3.
 - **Environment or pipeline config, product ruled out:** the failures follow an agent pool, runner limit, network or other pipeline dependency (verdict: environment or pipeline config); route it with Defect routing (case 1).
 - **Intermittent product defect (confirmed, case 3):** the test is sound, but the product fails sometimes: a race condition, missing synchronization, ordering between services, a resource leak or a timeout under load. Signs: the failure shows a product-side symptom (a stale state, an error response, a missing transition), not only a wait or timeout in the test; other tests of the same feature fail the same way; or failures follow load or parallel runs. This is a defect, not flakiness, so never quarantine it; route it with Defect routing.
-- **Intermittent test problem, cause identified (verdict: genuinely flaky (test), case 2):** state the cause in the test with the code line and the history pattern.
+- **Genuinely flaky (test): cause identified in the test and product ruled out (case 2):** state the cause in the test with the code line and the history pattern.
 - **Intermittent, cause unknown:** say what evidence is missing (more runs, logs with debug level, run in isolation N times). Keep a product defect on the list until it is ruled out.
 
 Do not call a test genuinely flaky until a product cause is ruled out. Product signs without a confirmed product cause, or a test suspect without the product ruled out, give the verdict inconclusive: list the product defect first and the test cause second, each with what would confirm it. Use intermittent product defect only when the product cause is confirmed.

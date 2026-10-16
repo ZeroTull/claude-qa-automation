@@ -351,13 +351,15 @@ expect_failure "diagnoser sending consistent timeouts to the triager" "must rout
 expect_failure "unconfirmed defect sent to case 3" "templates/defect-routing.md must not send an unconfirmed defect to case 3" \
   "for f in templates/defect-routing.md agents/ci-failure-diagnoser.md agents/flaky-test-triager.md agents/qa-lead.md skills/bug-ticket/SKILL.md skills/test-developer/SKILL.md; do edit \"\$f\" -e 's|it is case 3 once the product defect is confirmed, and case 5 until then|it is case 3|'; done"
 expect_failure "consistent failures sent to triage" "templates/defect-routing.md must route consistent failures without triage" \
-  "for f in templates/defect-routing.md agents/ci-failure-diagnoser.md agents/flaky-test-triager.md agents/qa-lead.md skills/bug-ticket/SKILL.md skills/test-developer/SKILL.md; do edit \"\$f\" -e 's| A consistent failure skips triage and goes to case 1, 2 or 5 directly[.]||'; done"
+  "for f in templates/defect-routing.md agents/ci-failure-diagnoser.md agents/flaky-test-triager.md agents/qa-lead.md skills/bug-ticket/SKILL.md skills/test-developer/SKILL.md; do edit \"\$f\" -e 's| A consistent failure skips triage: take case 1, 2 or 5, or case 3 once the product defect is confirmed[.]||'; done"
 expect_failure "diagnoser sends a test's own consistent failure to case 5" "must route a consistent failure caused by the test to case 2" \
   "edit agents/ci-failure-diagnoser.md -e 's|case 2 when the test.s own code is the cause, otherwise case 5|otherwise case 5|'"
 expect_failure "triager without a stale-test verdict" "must have a verdict for a stale test" \
   "edit agents/flaky-test-triager.md -e 's| (verdict: test defect, stale after an intended change)||'"
 expect_failure "verdicts without routing cases" "must map every verdict to a routing case" \
   "edit agents/flaky-test-triager.md -e 's|/ inconclusive \\[case 5\\]|/ inconclusive|'"
+expect_failure "flaky verdict without ruling out the product" "must rule out the product before calling a test genuinely flaky" \
+  "edit agents/flaky-test-triager.md -e 's|cause identified in the test and product ruled out (case 2)|cause identified (case 2)|'"
 expect_failure "personal entry in the QA repo" "unknown group 'personal'" \
   "edit catalog.tsv -e 's/^pr-reviewer\tagent\tqa/pr-reviewer\tagent\tpersonal/'"
 expect_failure "machine path in settings.example.json" "settings.example.json contains a machine-specific /Users/ path" \
