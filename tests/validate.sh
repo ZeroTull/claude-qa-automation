@@ -600,7 +600,8 @@ if example:
                 "Read(~/.ssh/**)", "Read(~/.azure/**)", "Read(~/.config/gh/**)", "Read(**/*.pem)",
                 "Read(**/settings.xml)", "Read(**/gradle.properties)", "Read(~/.m2/settings-security.xml)",
                 "Read(**/settings-security.xml)", "Bash(git fetch *--*)", "Bash(git fetch *+*)",
-                "Bash(git fetch * -*)", "Bash(git fetch -*)",
+                "Bash(git fetch * -*)", "Bash(git fetch -*)", "Bash(git fetch * * *)",
+                "Bash(git fetch *:refs/heads/*)", "Bash(git fetch *:refs/tags/*)",
                 "Bash(glab ci get *--with-variables*)"]
     if "/Users/" in json.dumps(example[0]):
         err("settings.example.json contains a machine-specific /Users/ path")
@@ -615,6 +616,24 @@ if example:
     wide_remote = [r for r in allow if r.startswith("Bash(git remote") and r != "Bash(git remote -v)"]
     if wide_remote:
         err(f"settings.example.json allows a git remote form that can change remotes: {', '.join(wide_remote)}")
+    # Behaviour check of the fetch rules with glob matching (an approximation of Claude Code's matcher): with the
+    # README's suggested allow rule, the agent's one fetch form must run, and nothing that could write a local ref.
+    from fnmatch import fnmatchcase
+    bash_deny = [r[5:-1] for r in deny if r.startswith("Bash(") and r.endswith(")")]
+    suggested_allow = "git fetch origin *:refs/remotes/origin/*"
+    def fetch_runs(cmd):
+        return fnmatchcase(cmd, suggested_allow) and not any(fnmatchcase(cmd, d) for d in bash_deny)
+    if not fetch_runs("git fetch origin develop:refs/remotes/origin/develop"):
+        err("settings.example.json denies the one git fetch form the agents use")
+    for cmd in ["git fetch origin main:refs/remotes/origin/main main:refs/heads/main",
+                "git fetch origin main:refs/remotes/origin/main b:c",
+                "git fetch origin main:refs/heads/main",
+                "git fetch origin v1:refs/tags/v1",
+                "git fetch origin main:refs/remotes/origin/main --tags",
+                "git fetch origin main:refs/remotes/origin/main -t",
+                "git fetch origin +main:refs/remotes/origin/main"]:
+        if fetch_runs(cmd):
+            err(f"settings.example.json lets this fetch through with the README's allow rule: {cmd}")
     missing = [r for r in required if r not in deny]
     if missing:
         err(f"settings.example.json misses deny rules: {', '.join(missing)}")

@@ -504,6 +504,14 @@ expect_failure "a pin removed without updating the count" "tests/pin-count says 
   "echo 140 > tests/pin-count"
 expect_failure "pin count file missing" "tests/pin-count says nothing" \
   "rm tests/pin-count"
+expect_failure "second refspec not denied" "lets this fetch through with the README's allow rule: git fetch origin main:refs/remotes/origin/main b:c" \
+  "edit settings.example.json -e '/\"Bash(git fetch [*] [*] [*])\"/d'"
+expect_failure "local branch fetch not denied" "misses deny rules: Bash(git fetch *:refs/heads/*)" \
+  "edit settings.example.json -e '/refs.heads/d'"
+expect_failure "tag fetch not denied" "misses deny rules: Bash(git fetch *:refs/tags/*)" \
+  "edit settings.example.json -e '/refs.tags/d'"
+expect_failure "agent fetch form denied" "denies the one git fetch form the agents use" \
+  "edit settings.example.json -e 's|\"Bash(git diff [*]--output[*])\"|\"Bash(git diff *--output*)\", \"Bash(git fetch origin *)\"|'"
 expect_failure "personal entry in the QA repo" "unknown group 'personal'" \
   "edit catalog.tsv -e 's/^pr-reviewer\tagent\tqa/pr-reviewer\tagent\tpersonal/'"
 expect_failure "machine path in settings.example.json" "settings.example.json contains a machine-specific /Users/ path" \
@@ -530,7 +538,7 @@ DROP
 }
 n_pins=$(python3 -c 'import json,sys; print(len(json.load(open(sys.argv[1]))))' "$TMP/pins.json" 2>/dev/null || echo 0)
 # A failed or changed dump must fail here, not pass by checking fewer pins. tests/pin-count is the exact count.
-expected_pins="$(tr -d '[:space:]' <"$REPO/tests/pin-count")"
+expected_pins="$(tr -d '[:space:]' <"$REPO/tests/pin-count" 2>/dev/null)"
 if [[ $dump_rc -ne 0 || "$n_pins" != "$expected_pins" ]]; then
   echo "  FAIL  pin dump failed or lists $n_pins pins (tests/pin-count says $expected_pins)"
   fail=1

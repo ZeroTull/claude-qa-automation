@@ -82,6 +82,9 @@
       "Bash(git fetch *+*)",
       "Bash(git fetch * -*)",
       "Bash(git fetch -*)",
+      "Bash(git fetch * * *)",
+      "Bash(git fetch *:refs/heads/*)",
+      "Bash(git fetch *:refs/tags/*)",
       "Bash(git diff *--output*)"
     ]
   }
