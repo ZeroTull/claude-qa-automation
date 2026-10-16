@@ -218,9 +218,13 @@ copy_one() {
     note sum_skipped "$name (a different type)"
     return
   elif [[ ! -e "$dest" ]]; then
-    cp -Rp "$src" "$dest"
-    echo "  copied    $dest"
-    note sum_added "$name"
+    if cp -Rp "$src" "$dest"; then
+      echo "  copied    $dest"
+      note sum_added "$name"
+    else
+      echo "  FAILED    $dest (could not copy, see the error above)"
+      note sum_failed "$name"
+    fi
     return
   fi
   blocked="$(unreadable_in "$dest")"
@@ -231,7 +235,7 @@ copy_one() {
   fi
   conflict="$(conflict_in "$src" "$dest")"
   if [[ -n "$conflict" ]]; then
-    echo "  SKIP      $dest ($conflict is a symlink or a different type - remove that path to install)"
+    echo "  SKIP      $dest ($conflict is a symlink or a different type - remove it, then run again)"
     note sum_skipped "$name ($conflict is a symlink or a different type)"
     return
   fi
@@ -831,6 +835,12 @@ case "${1:-}" in
     fi
     check_target_dirs "$project/.claude"
     mkdir -p "$project/.claude/agents" "$project/.claude/skills"
+    for dir in "$project/.claude/agents" "$project/.claude/skills"; do
+      if [[ ! -r "$dir" || ! -w "$dir" || ! -x "$dir" ]]; then
+        echo "error: cannot read and write $dir - fix its permissions (nothing was copied)." >&2
+        exit 1
+      fi
+    done
     echo "QA agents and skills -> $project/.claude"
     for f in "$REPO"/agents/*.md; do copy_one "$f" "$project/.claude/agents/$(basename "$f")" "$update"; done
     for d in "$REPO"/skills/*/; do d="${d%/}"; copy_one "$d" "$project/.claude/skills/$(basename "$d")" "$update"; done

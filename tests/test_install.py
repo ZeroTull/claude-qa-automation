@@ -454,7 +454,7 @@ class InstallTest(unittest.TestCase):
         out = self.run_install("--project", proj, "--update")
         self.check("exits 0", out.rc == 0, out.out)
         self.check_out("skips a skill with a nested type conflict", out,
-                       rf"^  SKIP +.*skills/{SKILL} \(SKILL\.md is a symlink or a different type - remove that path")
+                       rf"^  SKIP +.*skills/{SKILL} \(SKILL\.md is a symlink or a different type - remove it, then run again\)$")
         self.check("leaves the nested folder alone", (skill_md / "inner.md").is_file())
         self.check_out("the summary lists the skipped skill", out, r"^  skipped +1 \(remove or fix the path named in each, then run again\)$")
         shutil.rmtree(skill_md)
@@ -537,6 +537,45 @@ class InstallTest(unittest.TestCase):
                 path.chmod(0o755)
                 self.check(f"{case}: updates none of its files", "local edit" in (skill_dir / "SKILL.md").read_text())
                 self.check(f"{case}: writes nothing into it", not (skill_dir / "refs" / "new.md").exists())
+
+    @unittest.skipUnless(NON_ROOT, "root reads and writes everything")
+    def test_project_refuses_a_folder_it_cannot_write(self):
+        for sub, mode in (("agents", 0o555), ("skills", 0o000)):
+            with self.subTest(sub):
+                proj = self.tmp / f"proj-locked-{sub}"
+                locked = proj / ".claude" / sub
+                locked.mkdir(parents=True)
+                locked.chmod(mode)
+                self.addCleanup(locked.chmod, 0o755)
+                for args in ((), ("--update",)):
+                    out = self.run_install("--project", proj, *args)
+                    self.check(f"{sub} {args}: exits 1", out.rc == 1, out.out)
+                    self.check_out(f"{sub} {args}: names the folder", out,
+                                   rf"^error: cannot read and write .*\.claude/{sub} - fix its permissions")
+                    self.check(f"{sub} {args}: copies nothing", not any((proj / ".claude" / "agents").iterdir()))
+
+    def test_project_reports_a_failed_copy(self):
+        # A cp that fails only for one skill, as a full disk or an I/O error would.
+        fake = self.tmp / "fake-cp"
+        self.write(fake / "cp", f'''#!/bin/sh
+for a in "$@"; do case "$a" in */skills/{SKILL}|*/skills/{SKILL}/*) echo "cp: simulated failure" >&2; exit 1;; esac; done
+exec /bin/cp "$@"
+''', 0o755)
+        env = {"PATH": f"{fake}:{os.environ['PATH']}"}
+        proj = self.tmp / "proj-failed"
+        proj.mkdir()
+        out = self.run_install("--project", proj, env=env)
+        self.check("a failed new copy: exits 0", out.rc == 0, out.out)
+        self.check_out("a failed new copy: reports FAILED", out, rf"^  FAILED +.*skills/{SKILL} \(could not copy")
+        self.check_out("a failed new copy: the summary lists it", out, rf"^  failed +1 \(see the errors above")
+        self.check_out("a failed new copy: the other skills are still copied", out, rf"^  copied +.*skills/{SKILLS[1]}$")
+        self.run_install("--project", proj)
+        with open(proj / ".claude" / "skills" / SKILL / "SKILL.md", "a") as f:
+            f.write("local edit\n")
+        out = self.run_install("--project", proj, "--update", env=env)
+        self.check("a failed update: exits 0", out.rc == 0, out.out)
+        self.check_out("a failed update: reports FAILED", out, rf"^  FAILED +.*skills/{SKILL} \(could not copy every file")
+        self.check_out("a failed update: the summary still runs to the end", out, r"^  left +0 ")
 
     def test_project_file_modes(self):
         # Under umask 077 plain cp would make every copy 600 or 700; -p keeps the source's 644 and 755.
