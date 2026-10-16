@@ -9,6 +9,7 @@ REPO="$(cd "${1:-$(dirname "${BASH_SOURCE[0]}")/..}" && pwd)"
 
 # -X utf8: read files as UTF-8 even under LANG=C (the entries contain non-ASCII characters).
 exec python3 -X utf8 - "$REPO" <<'PYTHON'
+import glob
 import hashlib
 import json
 import os
@@ -328,6 +329,102 @@ else:
         # framework-map builds the map, so it reads the old one on its own terms.
         if group == "qa" and name != "framework-map" and project_map and project_map not in read(file):
             err(f"{rel(file)}: does not contain the block from templates/project-map.md verbatim")
+
+# Behaviour rules that agents depend on: each phrase pins one rule, so an edit cannot drop it silently.
+AGENT_RULES = {
+    "agents/ci-failure-diagnoser.md": {
+        "Until the evidence rules the product out": "must not rule out a product defect for timeouts or reruns without evidence",
+        "list every plausible one, ranked": "must list every plausible cause when the evidence is inconclusive",
+        "## Other Possible Causes": "must report other possible causes",
+        "Recommend the next step for each cause with Defect routing": "must route each cause with Defect routing",
+        "If it fails consistently rather than intermittently, it is not a case for the triager": "must route consistent timeouts without the triager",
+        "case 2 when the test's own code is the cause, otherwise case 5": "must route a consistent failure caused by the test to case 2",
+        "product defect (confirmed), suspected flaky/environment": "description must list the product-defect and suspected-flaky classes",
+        "Do not call it \"not a code defect\" without that evidence": "must not call a timeout 'not a code defect' without evidence",
+        "suspected flaky/environment (product not ruled out)": "must label timeouts as suspected flaky with the product not ruled out",
+        "list the candidates, product first": "must list the product cause first",
+        "**Product defect (pre-existing, confirmed):**": "must have a label for confirmed pre-existing product defects",
+        "if the evidence is inconclusive, say so and point to Other Possible Causes": "must not present a guess as the root cause",
+    },
+    "agents/flaky-test-triager.md": {
+        "**Intermittent product defect (confirmed, case 3):**": "must recognise intermittent product defects",
+        "(verdict: test defect, stale after an intended change)": "must have a verdict for a stale test",
+        "cause identified in the test and product ruled out (case 2)": "must rule out the product before calling a test genuinely flaky",
+        "/ inconclusive [case 5]": "must map every verdict to a routing case",
+        "an intermittent product defect (for example a race condition) or a regression": "description must name the product-defect verdict",
+        "intermittent product defect (confirmed) [case 3]": "must offer an intermittent product defect verdict",
+        "never quarantine a test that catches a real bug": "must not quarantine a test that catches a real bug",
+        "the Defect routing step; name the file and commit when a change caused it": "must give the Defect routing action for a defect",
+        "route it with Defect routing.": "must route regressions and product defects with Defect routing",
+        "never for an inconclusive verdict, an intermittent product defect, a regression or an environment cause": "must add only genuinely flaky tests to known-flaky-tests.md",
+        "Never route an unconfirmed regression to case 3": "must not treat an unconfirmed regression as a product defect",
+        "(verdict: environment or pipeline config); route it with Defect routing (case 1)": "must route environment causes to case 1",
+        "for a genuinely flaky test only, quarantine/non-blocking as a stopgap": "must allow quarantine only as a stopgap for genuinely flaky tests",
+        "Use intermittent product defect only when the product cause is confirmed": "must say when a product defect is confirmed versus inconclusive",
+        "Do not call a test genuinely flaky until a product cause is ruled out": "must rule out a product cause before calling a test flaky",
+    },
+    "templates/CLAUDE.md": {
+        "File a bug for a confirmed pre-existing product defect with no identifiable commit": "bug-ticket row must match Defect routing",
+    },
+    "agents/qa-lead.md": {
+        "File a bug for a confirmed pre-existing product defect with no identifiable commit": "bug-ticket row must match Defect routing",
+        "For a defect, offer the step from Defect routing": "must route defects with Defect routing",
+        "for a pre-existing confirmed product defect, or a regression from a merged change if the user chooses it": "plan example must file bugs only for confirmed product defects or shared-branch regressions",
+    },
+    "skills/bug-ticket/SKILL.md": {
+        "An intermittent failure can still be a product defect": "must not dismiss intermittent failures as non-bugs",
+        "File only what Defect routing sends here": "must file only what Defect routing sends to it",
+    },
+    "skills/test-developer/SKILL.md": {
+        "report it as a possible defect and route it with Defect routing": "must route a failing requirement with Defect routing",
+    },
+    "README.md": {
+        "suspected flaky/environment (product not ruled out)": "trace example must use the diagnoser's suspected-flaky label",
+        "for a pre-existing confirmed product defect, or a regression from a merged change if the user chooses it": "plan example must file bugs only for confirmed product defects or shared-branch regressions",
+        "an intermittent product defect (such as a race condition)": "must describe the triager's product-defect verdict",
+    },
+}
+# Where a failure goes is defined once, in templates/defect-routing.md. It must appear verbatim in the
+# entries below, which recommend what to do with a defect, and in any other entry with a "## Defect routing"
+# section, so the routes cannot drift apart. The template's key routes are pinned too, so an edit applied to
+# every copy at once still has to keep them.
+DEFECT_ROUTING_FILES = {"agents/ci-failure-diagnoser.md", "agents/flaky-test-triager.md", "agents/qa-lead.md",
+                        "skills/bug-ticket/SKILL.md", "skills/test-developer/SKILL.md"}
+for path in sorted(glob.glob(f"{repo}/agents/*.md") + glob.glob(f"{repo}/skills/*/SKILL.md")):
+    if "## Defect routing" in read(path):
+        DEFECT_ROUTING_FILES.add(os.path.relpath(path, repo))
+DEFECT_ROUTES = {
+    "The change under test is the branch or PR whose pipeline or tests you are looking at, until it is merged": "must define the change under test",
+    "fix it on that branch, naming the file and the commit": "must fix a defect from the change under test on its branch",
+    "name the commit, then offer a fix-forward change": "must route a regression from a merged change",
+    "or the `bug-ticket` skill, and let the user choose": "must let the user choose how to handle a merged regression",
+    "**pre-existing, with no identifiable commit:** the `bug-ticket` skill": "must send pre-existing product defects to bug-ticket",
+    "**Intermittent, with no product cause confirmed:** flaky triage with the `flaky-test-triager` agent": "must send unconfirmed intermittent failures to the triager",
+    "take the first case that fits": "must say which route wins when several fit",
+    "its verdict then picks case 1, 2, 3 or 5": "must let a triage verdict reach every other case",
+    "it is case 3 once the product defect is confirmed, and case 5 until then": "must not send an unconfirmed defect to case 3",
+    "A consistent failure skips triage: take case 1, 2 or 5, or case 3 once the product defect is confirmed": "must route consistent failures without triage",
+    "an intermittent failure reaches this case only through case 4": "must not send intermittent failures straight to a test fix",
+    "**Test defect, product correct**": "must route test defects where the product is correct",
+    "Do not file a bug and do not record the test as known flaky until one is confirmed": "must file nothing for an inconclusive case",
+    "**Dependency or pipeline config:**": "must route dependency and pipeline config causes",
+    "Never quarantine a test that catches a real bug.": "must forbid quarantining a test that catches a real bug",
+}
+defect_routing = read(f"{repo}/templates/defect-routing.md").strip()
+if not defect_routing:
+    err("templates/defect-routing.md missing or empty")
+else:
+    for phrase, message in DEFECT_ROUTES.items():
+        if phrase not in defect_routing:
+            err(f"templates/defect-routing.md {message}")
+    for path in sorted(DEFECT_ROUTING_FILES):
+        if defect_routing not in read(f"{repo}/{path}"):
+            err(f"{path}: does not contain the block from templates/defect-routing.md verbatim")
+for path, rules in AGENT_RULES.items():
+    text = read(f"{repo}/{path}")
+    for phrase, message in rules.items():
+        if phrase not in text:
+            err(f"{path} {message}")
 
 # The qa-lead orchestrator must route every other agent and every skill, so nothing becomes unreachable.
 lead_text = read(f"{repo}/agents/qa-lead.md")

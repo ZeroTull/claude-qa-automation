@@ -79,7 +79,7 @@ Then, in the work repo, start `claude` and run `/qa-conventions`, then `/framewo
 | `pr-reviewer` | Review a Java PR or MR (Azure DevOps, GitHub or GitLab): correctness, conventions, performance, security, concurrency, tests. Missing tests for changed behavior block approval. Findings with severity, confidence and a fix plan. |
 | `test-maintainer` | Audit a test framework for flakiness, duplication, weak assertions, dead code, slow setup, test-layer balance, contract/performance testing and CI quality gates. Gives a health report and an improvement plan. |
 | `ci-failure-diagnoser` | Find the root cause of a failed pipeline run (Azure Pipelines, GitHub Actions or GitLab CI), with log evidence. |
-| `flaky-test-triager` | Decide whether an intermittent failure is flaky or a real regression, based on run history. |
+| `flaky-test-triager` | Decide whether an intermittent failure is flaky, an intermittent product defect (such as a race condition), or a real regression, based on run history. |
 | `senior-automation-qa-engineer` | Test strategy and framework design: which test layers to invest in, a new automation framework, contract, performance and E2E strategy. |
 
 **Skills** run in your conversation, so they can ask questions and wait for approval at each step. Start one with a slash command, or describe the task.
@@ -104,11 +104,11 @@ It shows each handoff in the chat, so you can follow who does what:
 ```
 Plan (3 steps)
   1. ci-failure-diagnoser - find why pipeline 9876 failed
-  2. flaky-test-triager - only if step 1 says flaky
-  3. bug-ticket (me, skill) - only if it is a real defect
+  2. flaky-test-triager - only if step 1 says suspected flaky
+  3. bug-ticket (me, skill) - for a pre-existing confirmed product defect, or a regression from a merged change if the user chooses it
 
 ▶ Step 1/3 → ci-failure-diagnoser: pipeline 9876, branch main
-✔ Step 1/3 ← ci-failure-diagnoser: flaky/environment - LoginTest timed out on agent pool B
+✔ Step 1/3 ← ci-failure-diagnoser: suspected flaky/environment (product not ruled out) - LoginTest timed out on agent pool B
 ```
 
 A printed plan is not approval: it still stops at every gate. It ends a request of three or more steps with a short table of steps, owners and results. If it can't start a specialist as a subagent, it says so (`⚠ Could not start ...`) and follows that specialist's instructions itself.
@@ -189,7 +189,7 @@ The agents never handle tokens. Authentication stays in tools that manage it the
 
 ## Customizing
 
-- **Adding an entry:** add an agent (`agents/<name>.md`) or skill (`skills/<name>/SKILL.md`), a row in `catalog.tsv`, a line in this README and in `templates/CLAUDE.md`. Each entry must include the blocks from `templates/safety.md` and `templates/platforms.md` verbatim, and every entry except `framework-map` the block from `templates/project-map.md`.
+- **Adding an entry:** add an agent (`agents/<name>.md`) or skill (`skills/<name>/SKILL.md`), a row in `catalog.tsv`, a line in this README and in `templates/CLAUDE.md`. Each entry must include the blocks from `templates/safety.md` and `templates/platforms.md` verbatim, and every entry except `framework-map` the block from `templates/project-map.md`. `ci-failure-diagnoser`, `flaky-test-triager`, `qa-lead`, `bug-ticket` and `test-developer` recommend what to do with a defect, so they also carry `templates/defect-routing.md`; so must any other entry with a `## Defect routing` section. The CI checks that each copy matches and that the template still has its key routes.
 - **Other platforms:** add a column to `templates/platforms.md`, then copy the new block into every entry.
 - **Other languages:** the files assume Java; adjust the build and test commands (for example `pytest` instead of `mvn`).
 

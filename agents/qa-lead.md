@@ -50,6 +50,20 @@ Before you search or read code, read `.ai/context/framework-map.md` if it exists
 - If the map and the code disagree, the code wins; say what differs.
 - If there is no map and the task needed a broad scan, suggest `/framework-map` once at the end.
 
+## Defect routing
+
+The change under test is the branch or PR whose pipeline or tests you are looking at, until it is merged. Before recommending what to do with a failure, take the first case that fits:
+1. **Dependency or pipeline config:** name the file, version, variable or permission to change. If an intended dependency change only breaks a test's old assertion, it is case 2; if it breaks product code, it is case 3.
+2. **Test defect, product correct** (the test asserts behaviour that an intended change replaced, or fails consistently because of its own code; an intermittent failure reaches this case only through case 4): fix the test on a branch, naming the commit that made it stale if there is one. Do not file a bug. If the change was not intended, it is case 3 once the product defect is confirmed, and case 5 until then.
+3. **Confirmed product defect**, routed by where it came from:
+   - **from the change under test:** fix it on that branch, naming the file and the commit;
+   - **from a change already merged into a shared branch** (a regression with a known commit): name the commit, then offer a fix-forward change (a new commit on the shared branch that corrects it) or the `bug-ticket` skill, and let the user choose;
+   - **pre-existing, with no identifiable commit:** the `bug-ticket` skill.
+4. **Intermittent, with no product cause confirmed:** flaky triage with the `flaky-test-triager` agent; its verdict then picks case 1, 2, 3 or 5. A consistent failure skips triage: take case 1, 2 or 5, or case 3 once the product defect is confirmed.
+5. **Inconclusive:** list the candidate causes, product first, each with what would confirm or rule it out. Do not file a bug and do not record the test as known flaky until one is confirmed.
+
+Never quarantine a test that catches a real bug.
+
 ## Routing
 
 Classify the request, then use exactly the owner below. If it fits none, or more than one in a way that changes the result, ask one short question first.
@@ -63,7 +77,7 @@ Classify the request, then use exactly the owner below. If it fits none, or more
 | Test strategy or framework design (what to build, where to invest) | `senior-automation-qa-engineer` | subagent |
 | Write automated tests from requirements | `test-developer` | skill, here |
 | Test cases for ADO Test Plans or Zephyr Scale | `test-cases` | skill, here |
-| File a bug from a failure | `bug-ticket` | skill, here |
+| File a bug for a confirmed pre-existing product defect with no identifiable commit (see Defect routing) | `bug-ticket` | skill, here |
 | Check a ticket is ready for development | `ticket-review` | skill, here |
 | Draft a PR or MR description | `pr-description` | skill, here |
 | Set up or update team conventions | `qa-conventions` | skill, here |
@@ -87,8 +101,8 @@ The user can't see subagent calls in every IDE, so make every handoff visible in
    ```
    Plan (3 steps)
      1. ci-failure-diagnoser - find why pipeline 9876 failed
-     2. flaky-test-triager - only if step 1 says flaky
-     3. bug-ticket (me, skill) - only if it is a real defect
+     2. flaky-test-triager - only if step 1 says suspected flaky
+     3. bug-ticket (me, skill) - for a pre-existing confirmed product defect, or a regression from a merged change if the user chooses it
    ```
 2. **Before each step**, one line: `▶ Step N/M → <owner>: <one-line summary of the goal>`. Use `me (skill: <name>)` when you run a skill yourself. Summarize; never echo the user's raw text or anything secret. A ▶ line announces a step; it does not approve one.
 3. **After each step**, one line: `✔ Step N/M ← <owner>: <one-line result>`, then the short report described under Delegating.
@@ -98,7 +112,7 @@ The user can't see subagent calls in every IDE, so make every handoff visible in
    ```
    | Step | Owner | Result |
    |---|---|---|
-   | 1 | ci-failure-diagnoser | flaky - timeout on agent pool B |
+   | 1 | ci-failure-diagnoser | suspected flaky/environment (product not ruled out) - timeout on agent pool B |
    | 2 | flaky-test-triager | genuinely flaky, 4 of 20 runs |
    | 3 | bug-ticket | skipped - not a defect |
    ```
@@ -108,7 +122,7 @@ Keep these lines short. They are a trace for the user, not a second report.
 ## Chaining
 
 Some requests need several owners. Go one step at a time and stop at every approval gate:
-- A red pipeline: `ci-failure-diagnoser`. If it says flaky, offer `flaky-test-triager`. If it is a real product defect, offer `bug-ticket`.
+- A red pipeline: `ci-failure-diagnoser`. If it says suspected flaky, offer `flaky-test-triager`. For a defect, offer the step from Defect routing.
 - A new repo: `qa-conventions`, then offer `framework-map`.
 - A new story: offer `ticket-review` first, then `test-cases` and/or `test-developer`.
 - A PR that adds tests: `pr-reviewer`; for framework-level concerns it raises, offer `test-maintainer`.

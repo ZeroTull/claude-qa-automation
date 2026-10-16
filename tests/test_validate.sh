@@ -260,6 +260,106 @@ expect_failure "host-name key note dropped" "must say not to repeat host-name ke
   "edit skills/framework-map/SKILL.md -e 's|The grep can still show a key that is a host name|Keys are safe|'"
 expect_failure "agents read another map file" "templates/project-map.md must name" \
   "edit templates/project-map.md -e 's|framework-map\.md|map.md|'"
+expect_failure "diagnoser that rules out the product" "must not rule out a product defect for timeouts or reruns without evidence" \
+  "edit agents/ci-failure-diagnoser.md -e 's|Until the evidence rules the product out|Always|'"
+expect_failure "diagnoser that picks one cause" "must list every plausible cause when the evidence is inconclusive" \
+  "edit agents/ci-failure-diagnoser.md -e 's|list every plausible one, ranked|pick the likeliest|'"
+expect_failure "diagnoser without other causes" "must report other possible causes" \
+  "edit agents/ci-failure-diagnoser.md -e 's|^## Other Possible Causes|## Notes|'"
+expect_failure "triager without product defects" "must recognise intermittent product defects" \
+  "edit agents/flaky-test-triager.md -e 's|^- [*][*]Intermittent product defect (confirmed, case 3):[*][*]|- Other:|'"
+expect_failure "triager that calls flaky too early" "must rule out a product cause before calling a test flaky" \
+  "edit agents/flaky-test-triager.md -e 's|^Do not call a test genuinely flaky until a product cause is ruled out|Call it flaky|'"
+expect_failure "diagnoser that dismisses a timeout" "must not call a timeout 'not a code defect' without evidence" \
+  "edit agents/ci-failure-diagnoser.md -e 's|Do not call it \"not a code defect\" without that evidence|Treat it as flaky|'"
+expect_failure "diagnoser without the suspected label" "must label timeouts as suspected flaky with the product not ruled out" \
+  "edit agents/ci-failure-diagnoser.md -e 's|suspected flaky/environment (product not ruled out)|flaky-environment|'"
+expect_failure "diagnoser without a product defect label" "must have a label for confirmed pre-existing product defects" \
+  "edit agents/ci-failure-diagnoser.md -e 's|^- [*][*]Product defect (pre-existing, confirmed):[*][*]|- Other:|'"
+expect_failure "diagnoser that guesses a root cause" "must not present a guess as the root cause" \
+  "edit agents/ci-failure-diagnoser.md -e 's|; if the evidence is inconclusive, say so and point to Other Possible Causes||'"
+expect_failure "triager without the product defect verdict" "must offer an intermittent product defect verdict" \
+  "edit agents/flaky-test-triager.md -e 's|intermittent product defect (confirmed) \\[case 3\\]|other|'"
+expect_failure "triager that quarantines real bugs" "must not quarantine a test that catches a real bug" \
+  "edit agents/flaky-test-triager.md -e 's|never quarantine a test that catches a real bug|quarantine it|'"
+expect_failure "triager that lists product defects as known flaky" "must add only genuinely flaky tests to known-flaky-tests.md" \
+  "edit agents/flaky-test-triager.md -e 's|never for an inconclusive verdict, an intermittent product defect, a regression or an environment cause|always|'"
+expect_failure "triager without a confirmed/inconclusive rule" "must say when a product defect is confirmed versus inconclusive" \
+  "edit agents/flaky-test-triager.md -e 's|Use intermittent product defect only when the product cause is confirmed|Decide|'"
+expect_failure "agent rules on an emptied file" "agents/flaky-test-triager.md must recognise intermittent product defects" \
+  "awk 'NR==1 || f<2 {print} /^---\$/{f++}' agents/flaky-test-triager.md > x.tmp && mv x.tmp agents/flaky-test-triager.md"
+expect_failure "README trace with an old label" "trace example must use the diagnoser's suspected-flaky label" \
+  "edit README.md -e 's|suspected flaky/environment (product not ruled out)|flaky/environment|'"
+expect_failure "agent file missing" "agents/flaky-test-triager.md must recognise intermittent product defects" \
+  "rm agents/flaky-test-triager.md"
+expect_failure "README plan example filing any defect" "README.md plan example must file bugs only for confirmed product defects or shared-branch regressions" \
+  "edit README.md -e 's|for a pre-existing confirmed product defect, or a regression from a merged change if the user chooses it|only if it is a real defect|'"
+expect_failure "bug-ticket that dismisses intermittent failures" "must not dismiss intermittent failures as non-bugs" \
+  "edit skills/bug-ticket/SKILL.md -e 's|An intermittent failure can still be a product defect|A flaky test is not a bug|'"
+expect_failure "README without the product-defect verdict" "must describe the triager's product-defect verdict" \
+  "edit README.md -e 's|an intermittent product defect (such as a race condition)|a regression|'"
+expect_failure "diagnoser description with the old classes" "description must list the product-defect and suspected-flaky classes" \
+  "edit agents/ci-failure-diagnoser.md -e 's|product defect (confirmed), suspected flaky/environment|flaky/environment|'"
+expect_failure "triager description without product defects" "description must name the product-defect verdict" \
+  "edit agents/flaky-test-triager.md -e 's|an intermittent product defect (for example a race condition) or a regression|or a regression|'"
+expect_failure "diagnoser listing the product cause last" "must list the product cause first" \
+  "edit agents/ci-failure-diagnoser.md -e 's|list the candidates, product first|list the candidates|'"
+expect_failure "defect routing missing from an agent" "agents/qa-lead.md: does not contain the block from templates/defect-routing.md" \
+  "edit agents/qa-lead.md -e 's|^5[.] [*][*]Inconclusive:[*][*]|5. Other:|'"
+expect_failure "defect routing changed in one file only" "skills/bug-ticket/SKILL.md: does not contain the block from templates/defect-routing.md" \
+  "edit skills/bug-ticket/SKILL.md -e 's|or the .bug-ticket. skill, and let the user choose|or file it|'"
+expect_failure "defect-routing.md missing" "templates/defect-routing.md missing or empty" \
+  "rm templates/defect-routing.md"
+expect_failure "inconclusive that may still be filed" "agents/flaky-test-triager.md: does not contain the block from templates/defect-routing.md" \
+  "edit agents/flaky-test-triager.md -e 's|Do not file a bug and do not record the test as known flaky until one is confirmed.||'"
+expect_failure "diagnoser that routes on its own" "must route each cause with Defect routing" \
+  "edit agents/ci-failure-diagnoser.md -e 's|Recommend the next step for each cause with Defect routing|Recommend a ticket|'"
+expect_failure "triager output without the routing action" "must give the Defect routing action for a defect" \
+  "edit agents/flaky-test-triager.md -e 's|the Defect routing step; name the file and commit when a change caused it|a ticket|'"
+expect_failure "lead that routes defects on its own" "must route defects with Defect routing" \
+  "edit agents/qa-lead.md -e 's|For a defect, offer the step from Defect routing|For a defect, offer bug-ticket|'"
+expect_failure "bug-ticket that files anything" "must file only what Defect routing sends to it" \
+  "edit skills/bug-ticket/SKILL.md -e 's|File only what Defect routing sends here|File anything|'"
+expect_failure "test-developer that files failing requirements directly" "must route a failing requirement with Defect routing" \
+  "edit skills/test-developer/SKILL.md -e 's|report it as a possible defect and route it with Defect routing|file it|'"
+expect_failure "triager that only says regression" "must route regressions and product defects with Defect routing" \
+  "edit agents/flaky-test-triager.md -e 's|route it with Defect routing[.]|file it.|g'"
+expect_failure "route changed in the template and every copy" "templates/defect-routing.md must let the user choose how to handle a merged regression" \
+  "for f in templates/defect-routing.md agents/ci-failure-diagnoser.md agents/flaky-test-triager.md agents/qa-lead.md skills/bug-ticket/SKILL.md skills/test-developer/SKILL.md; do edit \"\$f\" -e 's|or the .bug-ticket. skill, and let the user choose|or the bug-ticket skill|'; done"
+expect_failure "quarantine rule dropped everywhere" "templates/defect-routing.md must forbid quarantining a test that catches a real bug" \
+  "for f in templates/defect-routing.md agents/ci-failure-diagnoser.md agents/flaky-test-triager.md agents/qa-lead.md skills/bug-ticket/SKILL.md skills/test-developer/SKILL.md; do edit \"\$f\" -e '/^Never quarantine a test that catches a real bug[.]\$/d'; done"
+expect_failure "another entry with a stale routing section" "skills/pr-description/SKILL.md: does not contain the block from templates/defect-routing.md" \
+  "printf '\\n## Defect routing\\n\\nFile everything.\\n' >> skills/pr-description/SKILL.md"
+expect_failure "routes without an order" "templates/defect-routing.md must say which route wins when several fit" \
+  "for f in templates/defect-routing.md agents/ci-failure-diagnoser.md agents/flaky-test-triager.md agents/qa-lead.md skills/bug-ticket/SKILL.md skills/test-developer/SKILL.md; do edit \"\$f\" -e 's|take the first case that fits|pick a case|'; done"
+expect_failure "no route for a stale test" "templates/defect-routing.md must route test defects where the product is correct" \
+  "for f in templates/defect-routing.md agents/ci-failure-diagnoser.md agents/flaky-test-triager.md agents/qa-lead.md skills/bug-ticket/SKILL.md skills/test-developer/SKILL.md; do edit \"\$f\" -e 's|[*][*]Test defect, product correct[*][*]|Other|'; done"
+expect_failure "CLAUDE template bug row too broad" "templates/CLAUDE.md bug-ticket row must match Defect routing" \
+  "edit templates/CLAUDE.md -e 's|File a bug for a confirmed pre-existing product defect with no identifiable commit|File a bug from a failure|'"
+expect_failure "triage verdicts that cannot reach config" "templates/defect-routing.md must let a triage verdict reach every other case" \
+  "for f in templates/defect-routing.md agents/ci-failure-diagnoser.md agents/flaky-test-triager.md agents/qa-lead.md skills/bug-ticket/SKILL.md skills/test-developer/SKILL.md; do edit \"\$f\" -e 's|case 1, 2, 3 or 5|case 2, 3 or 5|'; done"
+expect_failure "intermittent failures sent straight to a test fix" "templates/defect-routing.md must not send intermittent failures straight to a test fix" \
+  "for f in templates/defect-routing.md agents/ci-failure-diagnoser.md agents/flaky-test-triager.md agents/qa-lead.md skills/bug-ticket/SKILL.md skills/test-developer/SKILL.md; do edit \"\$f\" -e 's|; an intermittent failure reaches this case only through case 4||'; done"
+expect_failure "triager confirming regressions by guess" "must not treat an unconfirmed regression as a product defect" \
+  "edit agents/flaky-test-triager.md -e 's| Never route an unconfirmed regression to case 3[.]||'"
+expect_failure "triager without an environment verdict" "must route environment causes to case 1" \
+  "edit agents/flaky-test-triager.md -e 's|(verdict: environment or pipeline config); route it with Defect routing (case 1)|(verdict: inconclusive)|'"
+expect_failure "triager that quarantines freely" "must allow quarantine only as a stopgap for genuinely flaky tests" \
+  "edit agents/flaky-test-triager.md -e 's|for a genuinely flaky test only, quarantine/non-blocking as a stopgap|quarantine|'"
+expect_failure "diagnoser sending consistent timeouts to the triager" "must route consistent timeouts without the triager" \
+  "edit agents/ci-failure-diagnoser.md -e 's| If it fails consistently rather than intermittently, it is not a case for the triager: use case 1 when a config cause is identified, case 2 when the test.s own code is the cause, otherwise case 5[.]||'"
+expect_failure "unconfirmed defect sent to case 3" "templates/defect-routing.md must not send an unconfirmed defect to case 3" \
+  "for f in templates/defect-routing.md agents/ci-failure-diagnoser.md agents/flaky-test-triager.md agents/qa-lead.md skills/bug-ticket/SKILL.md skills/test-developer/SKILL.md; do edit \"\$f\" -e 's|it is case 3 once the product defect is confirmed, and case 5 until then|it is case 3|'; done"
+expect_failure "consistent failures sent to triage" "templates/defect-routing.md must route consistent failures without triage" \
+  "for f in templates/defect-routing.md agents/ci-failure-diagnoser.md agents/flaky-test-triager.md agents/qa-lead.md skills/bug-ticket/SKILL.md skills/test-developer/SKILL.md; do edit \"\$f\" -e 's| A consistent failure skips triage: take case 1, 2 or 5, or case 3 once the product defect is confirmed[.]||'; done"
+expect_failure "diagnoser sends a test's own consistent failure to case 5" "must route a consistent failure caused by the test to case 2" \
+  "edit agents/ci-failure-diagnoser.md -e 's|case 2 when the test.s own code is the cause, otherwise case 5|otherwise case 5|'"
+expect_failure "triager without a stale-test verdict" "must have a verdict for a stale test" \
+  "edit agents/flaky-test-triager.md -e 's| (verdict: test defect, stale after an intended change)||'"
+expect_failure "verdicts without routing cases" "must map every verdict to a routing case" \
+  "edit agents/flaky-test-triager.md -e 's|/ inconclusive \\[case 5\\]|/ inconclusive|'"
+expect_failure "flaky verdict without ruling out the product" "must rule out the product before calling a test genuinely flaky" \
+  "edit agents/flaky-test-triager.md -e 's|cause identified in the test and product ruled out (case 2)|cause identified (case 2)|'"
 expect_failure "personal entry in the QA repo" "unknown group 'personal'" \
   "edit catalog.tsv -e 's/^pr-reviewer\tagent\tqa/pr-reviewer\tagent\tpersonal/'"
 expect_failure "machine path in settings.example.json" "settings.example.json contains a machine-specific /Users/ path" \

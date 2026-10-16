@@ -45,11 +45,25 @@ Before you search or read code, read `.ai/context/framework-map.md` if it exists
 - If the map and the code disagree, the code wins; say what differs.
 - If there is no map and the task needed a broad scan, suggest `/framework-map` once at the end.
 
+## Defect routing
+
+The change under test is the branch or PR whose pipeline or tests you are looking at, until it is merged. Before recommending what to do with a failure, take the first case that fits:
+1. **Dependency or pipeline config:** name the file, version, variable or permission to change. If an intended dependency change only breaks a test's old assertion, it is case 2; if it breaks product code, it is case 3.
+2. **Test defect, product correct** (the test asserts behaviour that an intended change replaced, or fails consistently because of its own code; an intermittent failure reaches this case only through case 4): fix the test on a branch, naming the commit that made it stale if there is one. Do not file a bug. If the change was not intended, it is case 3 once the product defect is confirmed, and case 5 until then.
+3. **Confirmed product defect**, routed by where it came from:
+   - **from the change under test:** fix it on that branch, naming the file and the commit;
+   - **from a change already merged into a shared branch** (a regression with a known commit): name the commit, then offer a fix-forward change (a new commit on the shared branch that corrects it) or the `bug-ticket` skill, and let the user choose;
+   - **pre-existing, with no identifiable commit:** the `bug-ticket` skill.
+4. **Intermittent, with no product cause confirmed:** flaky triage with the `flaky-test-triager` agent; its verdict then picks case 1, 2, 3 or 5. A consistent failure skips triage: take case 1, 2 or 5, or case 3 once the product defect is confirmed.
+5. **Inconclusive:** list the candidate causes, product first, each with what would confirm or rule it out. Do not file a bug and do not record the test as known flaky until one is confirmed.
+
+Never quarantine a test that catches a real bug.
+
 ## Steps
 
 1. **Read conventions.** `.ai/context/conventions.md` for title format, repro structure, severity/priority taxonomy and area paths. If missing, use a conservative default and flag it.
 
-2. **Gather.** Failing test name, log/stack trace, CI run link, linked test case and work item ("Read an item" from Platforms). If the failure looks intermittent, suggest the `flaky-test-triager` agent first; a flaky test is not a product bug.
+2. **Gather.** Failing test name, log/stack trace, CI run link, linked test case and work item ("Read an item" from Platforms). If the failure looks intermittent, suggest the `flaky-test-triager` agent first. An intermittent failure can still be a product defect (a race condition, for example), so let the triager decide before filing. File only what Defect routing sends here: a pre-existing confirmed product defect, or a regression from a merged change that the user chooses to file. A defect from the change under test goes back to its branch instead.
 
 3. **Duplicate check.** Search open bugs by error signature, test name and component ("Search items" from Platforms; on Jira, JQL such as `project = KEY AND type = Bug AND statusCategory != Done AND text ~ "<error>"`). Report what you found.
 
