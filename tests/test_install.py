@@ -518,7 +518,7 @@ class InstallTest(unittest.TestCase):
         out = self.run_install("--project", proj, "--update")
         self.check("exits 0", out.rc == 0, out.out)
         self.check_out("skips a skill it cannot read in full", out, rf"^  SKIP +.*skills/{SKILL} \(could not read all of it")
-        self.check_lacks("does not report it as ok", out, f"skills/{SKILL}\n")
+        self.check("does not report it as ok", not re.search(rf"^  ok +.*skills/{SKILL}$", out.out, re.M), out.out)
         private.chmod(0o755)
         self.check("updates none of its files", "local edit" in (skill_dir / "SKILL.md").read_text())
 
