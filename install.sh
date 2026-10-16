@@ -2,7 +2,7 @@
 # Installs the QA agents and skills for Claude Code or GitHub Copilot.
 #   ./install.sh                             Claude Code (and VS Code Copilot): link into ~/.claude
 #   ./install.sh --copilot                   GitHub Copilot without Claude Code (VS Code, IntelliJ): install into ~/.copilot
-#   ./install.sh --settings                  add this repo's secret deny rules to ~/.claude/settings.json (Claude Code)
+#   ./install.sh --settings                  add this repo's deny rules to ~/.claude/settings.json (Claude Code)
 #   ./install.sh --project <path> [--update] copy the agents and skills into <path>/.claude for a team
 #   ./install.sh [--copilot] --uninstall     remove what the install added and restore what it replaced
 # It never touches ~/.claude/CLAUDE.md. ~/.claude/settings.json changes only with --settings, which adds missing deny
@@ -627,14 +627,14 @@ case "${1:-}" in
       trap 'rm -f "$errfile"' EXIT
       if ! missing="$(settings_tool check 2>"$errfile")"; then
         echo
-        echo "Could not check $CLAUDE_HOME/settings.json for the secret deny rules: $(tail -n 1 "$errfile")"
+        echo "Could not check $CLAUDE_HOME/settings.json for the deny rules: $(tail -n 1 "$errfile")"
         missing=""
       fi
       rm -f "$errfile"
     fi
     if [[ -n "$missing" ]]; then
       echo
-      echo "$CLAUDE_HOME/settings.json lacks $(wc -l <<<"$missing" | tr -d ' ') secret deny rule(s). Run ./install.sh --settings to add them."
+      echo "$CLAUDE_HOME/settings.json lacks $(wc -l <<<"$missing" | tr -d ' ') deny rule(s). Run ./install.sh --settings to add them."
     fi
     check_dependencies
     echo

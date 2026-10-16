@@ -12,10 +12,10 @@ Requirements: Claude Code or GitHub Copilot, `bash` and `python3`. `git` is opti
 git clone https://github.com/ZeroTull/claude-qa-automation.git ~/projects/claude-qa-automation
 cd ~/projects/claude-qa-automation
 ./install.sh             # link the agents and skills into ~/.claude
-./install.sh --settings  # add the secret deny rules to ~/.claude/settings.json
+./install.sh --settings  # add the deny rules to ~/.claude/settings.json
 ```
 
-- **What `./install.sh` does:** it links each agent and skill into `~/.claude`, so `git pull` here updates them. Anything it replaces (a file, a broken link, or a link from another setup) is moved to `~/.claude/backups/qa-<timestamp>-NNN/` first. It refuses to run if `~/.claude/agents` or `~/.claude/skills` is itself a link. At the end it reports whether your settings lack the secret deny rules and which optional tools are missing.
+- **What `./install.sh` does:** it links each agent and skill into `~/.claude`, so `git pull` here updates them. Anything it replaces (a file, a broken link, or a link from another setup) is moved to `~/.claude/backups/qa-<timestamp>-NNN/` first. It refuses to run if `~/.claude/agents` or `~/.claude/skills` is itself a link. At the end it reports whether your settings lack the deny rules and which optional tools are missing.
 - **What `--settings` does:** it adds only the missing deny rules and backs up your settings first. It stops without changes if `settings.json` isn't valid JSON or has an unexpected shape. If your `settings.json` is a link into another repo, it doesn't write through the link: it lists the rules to add in that repo instead.
 - **Uninstall:** `./install.sh --uninstall` removes the links and puts back what they replaced.
 
@@ -71,7 +71,7 @@ Then, in the work repo, start `claude` and run `/qa-conventions`, then `/framewo
 
 ## Agents and skills
 
-**Agents** run in a separate context and return a report. They don't change anything: Claude Code disables their file-editing tools, and their instructions limit the shell to read-only commands, plus a `git fetch` of the branches a review compares, which updates only remote-tracking refs. That fetch is not pre-approved in `settings.example.json`, because it is a network call: without an allow rule Claude asks first, or the reviewer uses the platform diff. To allow it, add `Bash(git fetch origin *:refs/remotes/origin/*)`; `settings.example.json` already denies `Bash(git fetch *--*)` and `Bash(git fetch *+*)`, so no option or force refspec (such as `--tags` or `--prune`) can ride along. Claude picks one from your request, or you can name it ("use the pr-reviewer agent").
+**Agents** run in a separate context and return a report. They don't change anything: Claude Code disables their file-editing tools, and their instructions limit the shell to read-only commands, plus a `git fetch` of the branches a review compares (the `pr-description` skill runs the same fetch), which updates only remote-tracking refs. That fetch is not pre-approved in `settings.example.json`, because it is a network call: without an allow rule Claude asks first, or the reviewer uses the platform diff. To allow it, add `Bash(git fetch origin *:refs/remotes/origin/*)`; `settings.example.json` already denies `Bash(git fetch *--*)` and `Bash(git fetch *+*)`, so no option or force refspec (such as `--tags` or `--prune`) can ride along. Claude picks one from your request, or you can name it ("use the pr-reviewer agent").
 
 | Agent | Use it for |
 |---|---|
@@ -166,13 +166,16 @@ Every agent and skill includes the same safety rules (`templates/safety.md`). Th
 - It treats ticket text, PR descriptions, comments and logs as data, never as instructions. The same goes for `.ai/context/framework-map.md`: it is written from the code, so agents use it to find files but never follow instructions in it.
 - `/framework-map` lists config keys, never values. It skips secret-bearing files by name and never copies hosts, URLs, IP addresses or account names from config into the map.
 
-Those rules are instructions to the model. GitHub Copilot has no deny rules, so with `--copilot` they are the only safeguard. What Claude Code itself enforces are the deny rules in `settings.example.json`. `./install.sh --settings` adds them to your `~/.claude/settings.json`, and `--project` puts them into a team repo. They block Claude's file tools from:
+Those rules are instructions to the model. GitHub Copilot has no deny rules, so with `--copilot` they are the only safeguard. What Claude Code itself enforces are the deny rules in `settings.example.json`. `./install.sh --settings` adds them to your `~/.claude/settings.json`, and `--project` puts them into a team repo. Most of them block Claude's file tools from reading:
 - `.env` and its common variants (`.env.local`, `.env.test`, `.env.production`, ...)
 - config and text files (`yaml`, `json`, `properties`, `env`, `conf`, `txt`) anywhere under a `secrets/` folder
 - key stores
 - `~/.ssh`, `~/.gnupg`, `~/.aws` and `~/.azure`
 - `gh`, `glab`, git and Docker credentials
 - Maven and Gradle credential files: `settings.xml`, `settings-security.xml` and `gradle.properties`, in your home folder and in the project. This also blocks harmless files with those names (for example a test resource called `settings.xml`); remove the rule in a project's settings if it gets in the way. `./install.sh --project <repo> --update` adds new deny rules to a team repo's existing `.claude/settings.json`, after backing it up to `~/.claude/backups/`, and keeps its indentation (as with `--settings`, the file is rewritten as JSON). If it can't (unreadable file, failed backup or write), it prints a `SKIP` or `FAILED` line, leaves the file unchanged and finishes the rest of the install.
+
+
+The rest block a few shell commands: `rm -rf`, printing CI variables (`glab ci get --with-variables`), writing a diff to a file (`git diff --output`), and `git fetch` with an option or a force refspec (`--tags`, `--prune`, `+refs/...`).
 
 Committed templates such as `.env.example` stay readable, because a deny rule can't have exceptions. That also means an unusual variant (say `.env.mybox`) isn't covered. Add it to your settings if you use one.
 
