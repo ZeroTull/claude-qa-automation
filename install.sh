@@ -131,13 +131,13 @@ copy_one() {
   elif [[ -e "$dest" && "$(kind "$src")" != "$(kind "$dest")" ]]; then
     echo "  SKIP      $dest (exists as a different type - remove it to install)"
   elif [[ ! -e "$dest" ]]; then
-    cp -R "$src" "$dest"
+    cp -Rp "$src" "$dest"
     echo "  copied    $dest"
   elif diff -rq "$src" "$dest" >/dev/null 2>&1; then
     echo "  ok        $dest"
   elif [[ "$update" == yes ]]; then
     rm -rf "$dest"
-    cp -R "$src" "$dest"
+    cp -Rp "$src" "$dest"
     echo "  updated   $dest (local edits and added files replaced)"
   else
     echo "  DIFFERS   $dest (--update replaces it, including local edits)"
@@ -195,7 +195,7 @@ copy_if_absent() {
   elif [[ -e "$dest" ]]; then
     echo "  SKIP      $dest (exists - $hint)"
   else
-    cp "$src" "$dest"
+    cp -p "$src" "$dest"
     echo "  copied    $dest"
   fi
 }
@@ -329,12 +329,16 @@ merge_settings() {
     return 1
   fi
   mkdir -p "$CLAUDE_HOME"
+  if [[ -e "$target" ]] && python3 -c 'import os,stat,sys; sys.exit(0 if os.stat(sys.argv[1]).st_mode & 0o022 else 1)' "$target"; then
+    echo "  WARNING   settings.json is writable by other users; consider: chmod go-w $target"
+  fi
   if [[ -e "$target" ]]; then
     if ! init_backup_dir; then
       echo "error: no free backup folder; settings.json was left unchanged" >&2
       return 1
     fi
-    if ! { mkdir -p "$BACKUP_DIR" && cp "$target" "$BACKUP_DIR/settings.json"; }; then
+    # -p keeps the original's permissions, so a private (0600) settings.json is not backed up world-readable.
+    if ! { mkdir -p "$BACKUP_DIR" && cp -p "$target" "$BACKUP_DIR/settings.json"; }; then
       echo "error: could not back up settings.json to $BACKUP_DIR, see the error above; the file is unchanged" >&2
       return 1
     fi

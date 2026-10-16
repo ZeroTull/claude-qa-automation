@@ -102,6 +102,21 @@ assert "backs up the old settings" grep -q '"theme": "dark"' "$(latest_backup_di
 assert "keeps the file mode" test "$(python3 -c 'import os,stat,sys; print(oct(stat.S_IMODE(os.stat(sys.argv[1]).st_mode)))' "$CLAUDE_HOME/settings.json")" = "$(python3 -c 'import os,stat,sys; print(oct(stat.S_IMODE(os.stat(sys.argv[1]).st_mode)))' "$(latest_backup_dir)/settings.json")"
 run --settings
 assert "second run reports ok" grep -q "already has every deny rule" <<<"$out"
+private="$TMP/private-home"
+mkdir -p "$private"
+echo '{"permissions": {"deny": []}}' >"$private/settings.json"
+chmod 600 "$private/settings.json"
+out="$(CLAUDE_HOME="$private" "$REPO/install.sh" --settings 2>&1)"
+pbak="$(find "$private/backups" -name settings.json | head -n 1)"
+assert "a private settings.json is backed up" test -n "$pbak"
+assert "its backup stays private (0600)" test "$(file_mode "$pbak")" = 600
+assert "a private settings.json gets no warning" out_lacks "writable by other users"
+open_home="$TMP/open-home"
+mkdir -p "$open_home"
+echo '{"permissions": {"deny": []}}' >"$open_home/settings.json"
+chmod 666 "$open_home/settings.json"
+out="$(CLAUDE_HOME="$open_home" "$REPO/install.sh" --settings 2>&1)"
+assert "warns when settings.json is writable by others" grep -q "WARNING   settings.json is writable by other users" <<<"$out"
 run
 assert "plain install no longer reports missing rules" out_lacks "lacks"
 
@@ -235,6 +250,7 @@ run --project "$proj"
 assert "exits 0" test "$rc" = 0
 assert "copies every agent and skill" test "$(find "$proj/.claude/agents" "$proj/.claude/skills" -mindepth 1 -maxdepth 1 | wc -l | tr -d ' ')" = "$((n_agents + n_skills))"
 assert "copies, does not link" test ! -L "$proj/.claude/agents/$agent"
+assert "copies keep the source file mode" test "$(file_mode "$proj/.claude/agents/$agent")" = "$(file_mode "$REPO/agents/$agent")"
 assert "creates settings.json from the example" cmp -s "$proj/.claude/settings.json" "$REPO/settings.example.json"
 assert "keeps existing CLAUDE.md" test "$(cat "$proj/CLAUDE.md")" = "# existing"
 assert "copies the framework-map skill" test -f "$proj/.claude/skills/framework-map/SKILL.md"
