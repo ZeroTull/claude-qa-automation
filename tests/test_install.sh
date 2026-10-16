@@ -116,6 +116,7 @@ echo "--settings on a fresh machine"
 out="$(CLAUDE_HOME="$TMP/fresh" "$REPO/install.sh" --settings 2>&1)"; rc=$?
 assert "exits 0" test "$rc" = 0
 assert "creates settings.json with the deny rules" test "$(deny_count "$TMP/fresh/settings.json")" = "$n_deny"
+assert "--settings adds no allow rules" python3 -c 'import json,sys; sys.exit(1 if json.load(open(sys.argv[1])).get("permissions",{}).get("allow") else 0)' "$TMP/fresh/settings.json"
 assert "creates it readable (0644)" test "$(python3 -c 'import os,stat,sys; print(oct(stat.S_IMODE(os.stat(sys.argv[1]).st_mode)))' "$TMP/fresh/settings.json")" = 0o644
 
 echo "--settings with broken input changes nothing"

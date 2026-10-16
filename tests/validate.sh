@@ -2,14 +2,21 @@
 # Checks that every agent, skill and command is cataloged, loadable by Claude Code, documented,
 # and that our own entries carry the safety rules. Also checks both settings files.
 # Usage: tests/validate.sh [repo-dir]   (defaults to this repo)
+#        tests/validate.sh --dump-pins [repo-dir]   print every pinned phrase as JSON (used by tests/test_validate.sh)
 # Needs only python3 (standard library). Runs as one process so the whole check stays fast.
 set -uo pipefail
 
+MODE=check
+if [[ "${1:-}" == --dump-pins ]]; then
+  MODE=dump-pins
+  shift
+fi
 REPO="$(cd "${1:-$(dirname "${BASH_SOURCE[0]}")/..}" && pwd)"
 
 # -X utf8: read files as UTF-8 even under LANG=C (the entries contain non-ASCII characters).
-exec python3 -X utf8 - "$REPO" <<'PYTHON'
+exec python3 -X utf8 - "$REPO" "$MODE" <<'PYTHON'
 import glob
+from fnmatch import fnmatchcase
 import hashlib
 import json
 import os
@@ -17,6 +24,7 @@ import re
 import sys
 
 repo = sys.argv[1]
+mode = sys.argv[2]
 # Catalog groups this repo may contain. claude-dev allows personal and third-party instead.
 ALLOWED_GROUPS = ("qa", "third-party")
 errors = []
@@ -505,12 +513,13 @@ else:
     for path in sorted(DEFECT_ROUTING_FILES):
         if defect_routing not in read(f"{repo}/{path}"):
             err(f"{path}: does not contain the block from templates/defect-routing.md verbatim")
-# QA_DUMP_PINS=1 prints every pinned phrase as JSON and exits, so tests/test_validate.sh can delete each one in a
-# copy of the repo and check that this script then fails with the pin's message.
+# --dump-pins prints every pinned phrase as JSON and exits, so tests/test_validate.sh can delete each one in a copy of
+# the repo and check that this script then fails with the pin's message. It is an argument, not an environment
+# variable, so nothing in the environment can turn a normal run into one that checks nothing.
 pins = [[p, ph, f"{p} {m}"] for p, rules in AGENT_RULES.items() for ph, m in rules.items()]
 pins += [["skills/framework-map/SKILL.md", ph, f"skills/framework-map/SKILL.md {m}"] for ph, m in MAPPER_RULES.items()]
 pins += [["templates/defect-routing.md", ph, f"templates/defect-routing.md {m}"] for ph, m in DEFECT_ROUTES.items()]
-if os.environ.get("QA_DUMP_PINS"):
+if mode == "dump-pins":
     print(json.dumps(pins))
     sys.exit(0)
 # tests/pin-count holds the exact number of pins, so a pin removed from this script fails instead of going untested.
@@ -620,7 +629,6 @@ if example:
         err(f"settings.example.json allows a git remote form that can change remotes: {', '.join(wide_remote)}")
     # The agents' one fetch form must not be denied (glob matching, an approximation of Claude Code's matcher). No
     # allow rule is recommended for it, because globs cannot model shell syntax; the deny rules are only a backstop.
-    from fnmatch import fnmatchcase
     bash_deny = [r[5:-1] for r in deny if r.startswith("Bash(") and r.endswith(")")]
     if any(fnmatchcase("git fetch origin develop:refs/remotes/origin/develop", d) for d in bash_deny):
         err("settings.example.json denies the one git fetch form the agents use")

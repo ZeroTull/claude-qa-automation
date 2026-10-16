@@ -20,7 +20,7 @@ expect_failure() {
   copy="$TMP/$(echo "$label" | tr -c 'a-z0-9' '_')"
   copy_repo "$copy"
   (cd "$copy" && eval "$mutation")
-  if out="$(env -u QA_DUMP_PINS "$REPO/tests/validate.sh" "$copy")"; then
+  if out="$("$REPO/tests/validate.sh" "$copy")"; then
     echo "  FAIL  $label: validate.sh passed"
     fail=1
   elif ! grep -qF -- "$expected" <<<"$out"; then
@@ -33,7 +33,28 @@ expect_failure() {
 }
 
 echo "baseline"
-if env -u QA_DUMP_PINS "$REPO/tests/validate.sh" "$REPO" >/dev/null; then echo "  pass  repo is valid"; else echo "  FAIL  repo is invalid"; fail=1; fi
+if "$REPO/tests/validate.sh" "$REPO" >/dev/null; then echo "  pass  repo is valid"; else echo "  FAIL  repo is invalid"; fail=1; fi
+# No environment variable may turn a check run into a dump: with the old variable set, the run still checks.
+if out="$(QA_DUMP_PINS=1 "$REPO/tests/validate.sh" "$REPO")" && grep -q "all checks passed" <<<"$out"; then
+  echo "  pass  an environment variable does not skip the checks"
+else
+  echo "  FAIL  an environment variable changed the check run"; fail=1
+fi
+envcopy="$TMP/env-var-copy"
+copy_repo "$envcopy"
+python3 - "$envcopy/settings.example.json" <<'ENVCOPY'
+import json, sys
+d = json.load(open(sys.argv[1]))
+d["permissions"]["allow"].remove("Bash(git remote -v)")
+open(sys.argv[1], "w").write(json.dumps(d, indent=2) + "\n")
+ENVCOPY
+if out="$(QA_DUMP_PINS=1 "$REPO/tests/validate.sh" "$envcopy")"; then
+  echo "  FAIL  a broken repo passes when an environment variable is set"; fail=1
+elif grep -qF "settings.example.json must allow Bash(git remote -v)" <<<"$out"; then
+  echo "  pass  a broken repo still fails with an environment variable set"
+else
+  echo "  FAIL  unexpected output with an environment variable set: $out"; fail=1
+fi
 
 # Portable in-place edit (BSD and GNU sed differ on -i). Subshells in expect_failure inherit it.
 edit() { local f="$1"; shift; sed "$@" "$f" >"$f.tmp" && mv "$f.tmp" "$f"; }
@@ -531,7 +552,7 @@ echo "every pinned phrase"
 # Each phrase pinned in validate.sh is deleted, one at a time, in a copy of the repo; validate.sh must then fail with
 # that pin's message. New pins are covered automatically.
 dump_rc=0
-QA_DUMP_PINS=1 "$REPO/tests/validate.sh" "$REPO" >"$TMP/pins.json" || dump_rc=$?
+"$REPO/tests/validate.sh" --dump-pins "$REPO" >"$TMP/pins.json" || dump_rc=$?
 # Deletes pin number $1 (from $TMP/pins.json) from its file in the current directory. Called from eval'd mutations.
 # shellcheck disable=SC2317,SC2329
 drop_pin() {
