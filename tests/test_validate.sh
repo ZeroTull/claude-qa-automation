@@ -581,14 +581,24 @@ for p in ['agents/test-maintainer.md', 'tests/snapshots/test-maintainer.md']:
     s += chr(10) + chr(10).join(rows) + chr(10)
     open(p, 'w').write(s)
 MOVE"
-expect_failure "second mapping outside the Score section" "a share range outside the Score section" \
+expect_failure "second mapping outside the Score section" "a percentage outside the Score section" \
   "for f in agents/test-maintainer.md tests/snapshots/test-maintainer.md; do printf '\\n|25%% to under 40%%|4|Poor|\\n' >> \"\$f\"; done"
-expect_failure "prose mapping outside the Score section" "a share range outside the Score section" \
+expect_failure "prose mapping outside the Score section" "a percentage outside the Score section" \
   "for f in agents/test-maintainer.md tests/snapshots/test-maintainer.md; do printf '\\nShares from 2%% to under 5%% score 6 when the audit is a re-run.\\n' >> \"\$f\"; done"
-expect_failure "spaced mapping outside the Score section" "a share range outside the Score section" \
+expect_failure "spaced mapping outside the Score section" "a percentage outside the Score section" \
   "for f in agents/test-maintainer.md tests/snapshots/test-maintainer.md; do printf '\\nA re-run maps 2 %% to under 5 %% to 6.\\n' >> \"\$f\"; done"
-expect_failure "prefix-exempt mapping outside the Score section" "a share range outside the Score section" \
+expect_failure "prefix-exempt mapping outside the Score section" "a percentage outside the Score section" \
   "for f in agents/test-maintainer.md tests/snapshots/test-maintainer.md; do printf '\\nScore: 5 gates: 2%% to under 5%% is 7, Good.\\n' >> \"\$f\"; done"
+expect_failure "under X% form outside the Score section" "a percentage outside the Score section" \
+  "for f in agents/test-maintainer.md tests/snapshots/test-maintainer.md; do printf '\\nShares under 5%% score 9 on a re-run.\\n' >> \"\$f\"; done"
+expect_failure "above X% form outside the Score section" "a percentage outside the Score section" \
+  "for f in agents/test-maintainer.md tests/snapshots/test-maintainer.md; do printf '\\nShares above 2%% score 6 on a re-run.\\n' >> \"\$f\"; done"
+expect_failure "X% or more form outside the Score section" "a percentage outside the Score section" \
+  "for f in agents/test-maintainer.md tests/snapshots/test-maintainer.md; do printf '\\nShares of 5%% or more score 6 on a re-run.\\n' >> \"\$f\"; done"
+expect_failure "en dash form outside the Score section" "a percentage outside the Score section" \
+  "for f in agents/test-maintainer.md tests/snapshots/test-maintainer.md; do printf '\\nShares 2%%–5%% score 6 on a re-run.\\n' >> \"\$f\"; done"
+expect_failure "percent word form outside the Score section" "a percentage outside the Score section" \
+  "for f in agents/test-maintainer.md tests/snapshots/test-maintainer.md; do printf '\\nShares under five percent score 9 on a re-run.\\n' >> \"\$f\"; done"
 expect_failure "senior snapshot emptied" "tests/snapshots/senior-automation-qa-engineer.md missing or empty" \
   ": > tests/snapshots/senior-automation-qa-engineer.md"
 expect_failure "senior snapshot missing" "tests/snapshots/senior-automation-qa-engineer.md missing or empty" \

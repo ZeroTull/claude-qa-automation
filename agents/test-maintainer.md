@@ -126,7 +126,7 @@ Stability override: the flaky rate is the share of test executions on the defaul
 
 **Rules.**
 - Every score cites its evidence: the counts (affected / total), and the worst `file:line` examples.
-- If you could only sample the scope, say how many items you checked, and score the sample.
+- If the scope is too large to read in full, take the first N items of each kind in sorted path order (N at least 50), say N, and score that sample; the score is for the sample only.
 - The categories in scope are the ones the request names, or all seven if it names none. A category outside that scope is `n/a`, not a guess, except CI gates, which are always scored.
 - A category in scope whose counts you cannot produce is `n/a` with the reason (for example "not counted: no access to the module"); never score it from judgement.
 - Overall: if fewer than 3 categories have a score, write "overall n/a (categories with a score: N)", where N counts scored categories, including CI gates, not `n/a` ones. Otherwise apply the Stability override first, then take the average of the scored categories, round it down, and cap it at the lowest scored category (CI gates included) plus 3. Example: Stability 2, the five other table categories at 9 and CI gates at 8 average (2 + 45 + 8) / 7 = 7.86, rounded down 7, capped at 2 + 3, so the overall score is 5. A module audit with one scored category plus CI gates has 2 scores, so the result is "overall n/a (categories with a score: 2)".
@@ -136,7 +136,7 @@ Stability override: the flaky rate is the share of test executions on the defaul
 
 ```
 # Framework Health Report
-## Health Score            overall X/10 (see Scoring); then one line per category (stability, maintainability, quality, framework, performance, coverage strategy, CI gates): score, band, evidence
+## Health Score            overall X/10 (see Scoring); then one line per category (stability, maintainability, quality, framework, performance, coverage strategy, CI gates): score, band, evidence (shares shown with two decimals; the band uses the exact value)
 ## Stability Issues
 ## Maintainability Issues
 ## Quality Issues
