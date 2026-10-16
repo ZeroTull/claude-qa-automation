@@ -505,6 +505,29 @@ expect_failure "third-party skill that differs from the lock" "skills/vendored d
 expect_failure "third-party entry without a lock file" "third-party.lock missing" \
   "cp -R skills/bug-ticket skills/vendored && edit skills/vendored/SKILL.md -e 's/^name: bug-ticket/name: vendored/' && printf 'vendored\tskill\tthird-party\thttps://example.com\n' >> catalog.tsv && printf '%s\n' '\`vendored\`' >> README.md"
 
+echo "every pinned phrase"
+# Each phrase pinned in validate.sh is deleted, one at a time, in a copy of the repo; validate.sh must then fail with
+# that pin's message. New pins are covered automatically.
+QA_DUMP_PINS=1 "$REPO/tests/validate.sh" "$REPO" >"$TMP/pins.json"
+# Deletes pin number $1 (from $TMP/pins.json) from its file in the current directory. Called from eval'd mutations.
+# shellcheck disable=SC2317,SC2329
+drop_pin() {
+  python3 - "$TMP/pins.json" "$1" <<'DROP'
+import json, sys
+path, phrase, _ = json.load(open(sys.argv[1]))[int(sys.argv[2])]
+text = open(path, encoding="utf-8").read()
+open(path, "w", encoding="utf-8").write(text.replace(phrase, ""))
+DROP
+}
+n_pins=$(python3 -c 'import json,sys; print(len(json.load(open(sys.argv[1]))))' "$TMP/pins.json")
+assert_pins=0
+for ((i = 0; i < n_pins; i++)); do
+  expected=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))[int(sys.argv[2])][2])' "$TMP/pins.json" "$i")
+  expect_failure "pin $i: $expected" "$expected" "drop_pin $i"
+  assert_pins=$((assert_pins + 1))
+done
+echo "  checked $assert_pins pinned phrases"
+
 echo "accepts"
 for indicator in ">" ">-" ">+" "|" "|-" "|+" "> # folded"; do
   expect_success "block scalar $indicator" "set_fm \"$NAME

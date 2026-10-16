@@ -409,6 +409,17 @@ AGENT_RULES = {
         "`targetRefName` without `refs/heads/`": "must name the Azure DevOps target branch command",
         "use that remote instead of `origin` below": "must handle PRs from forks",
         "`gh pr view --json url,isCrossRepository`": "must find a fork's base repository from the PR URL",
+        "To tell, compare the PR's base repository with the URLs in `git remote -v`": "must compare the base repository with git remote -v",
+        "and `isCrossRepository` is true for a fork": "must name the fork flag",
+        "`git fetch <remote> <base>:refs/remotes/<remote>/<base>`": "must fetch the base with an explicit refspec",
+        "`git diff $(git merge-base HEAD <remote>/<base>)...HEAD`": "must diff against <remote>/<base>",
+        "`git diff origin/<target>...origin/<source>`": "must diff a PR's target and source",
+        "`az repos pr list --source-branch <branch> --status active --query \"[0].targetRefName\" -o tsv`": "must name the Azure DevOps target lookup",
+        "(`gh pr diff N`, `glab mr diff N --raw`; for Azure DevOps": "must name the platform diff commands",
+        "say the diff may be out of date, or use": "must say when the diff may be stale",
+        "If the lookup prints nothing, or reports": "must treat empty lookup output as no PR",
+        "and never run `git pull`, `checkout`, `switch`, `reset`, `merge`, `rebase` or `stash`": "must forbid git commands that change state",
+        "title, source and base branch": "must show source and base branch in the overview",
         "for Azure DevOps the diff comes from the MCP or the local fetch below": "must not expect a diff from az repos pr show",
         "fetch each branch with its own command, in the form the Rules allow": "must fetch PR branches in the allowed form",
         "`gh pr view --json baseRefName -q .baseRefName`": "must name the GitHub target branch command",
@@ -432,6 +443,13 @@ AGENT_RULES = {
         "GitHub `gh pr view --json baseRefName -q .baseRefName`": "must name the GitHub target lookup",
         "`az repos pr list --source-branch <branch> --status active --query \"[0].targetRefName\" -o tsv`": "must name the Azure DevOps target lookup",
         "GitHub `gh pr view --json url,isCrossRepository`": "must say how to find a fork's base repository",
+        "GitLab the `web_url` from `glab mr view -F json`": "must say how GitLab finds a fork's base repository",
+        "Azure DevOps the repository in the PR's details": "must say how Azure DevOps finds a fork's base repository",
+        "then use that remote.": "must use the fork's base remote",
+        "(compare the PR's base repository with `git remote -v`": "must compare the base repository with git remote -v",
+        "`git diff $(git merge-base HEAD <remote>/<target>)...HEAD`": "must diff against <remote>/<target>",
+        "`git log --oneline <remote>/<target>..HEAD`": "must list commits against <remote>/<target>",
+        "a lookup that prints nothing or reports": "must treat empty lookup output as no PR",
     },
     "skills/bug-ticket/SKILL.md": {
         "An intermittent failure can still be a product defect": "must not dismiss intermittent failures as non-bugs",
@@ -485,6 +503,13 @@ else:
     for path in sorted(DEFECT_ROUTING_FILES):
         if defect_routing not in read(f"{repo}/{path}"):
             err(f"{path}: does not contain the block from templates/defect-routing.md verbatim")
+# QA_DUMP_PINS=1 prints every pinned phrase as JSON and exits, so tests/test_validate.sh can delete each one in a
+# copy of the repo and check that this script then fails with the pin's message.
+if os.environ.get("QA_DUMP_PINS"):
+    pins = [[p, ph, f"{p} {m}"] for p, rules in AGENT_RULES.items() for ph, m in rules.items()]
+    pins += [["skills/framework-map/SKILL.md", ph, f"skills/framework-map/SKILL.md {m}"] for ph, m in MAPPER_RULES.items()]
+    print(json.dumps(pins))
+    sys.exit(0)
 for path, rules in AGENT_RULES.items():
     text = read(f"{repo}/{path}")
     for phrase, message in rules.items():
