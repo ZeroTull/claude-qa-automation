@@ -293,7 +293,7 @@ expect_failure "README trace with an old label" "trace example must use the diag
 expect_failure "agent file missing" "agents/flaky-test-triager.md must recognise intermittent product defects" \
   "rm agents/flaky-test-triager.md"
 expect_failure "README plan example filing any defect" "README.md plan example must file bugs only for confirmed product defects or shared-branch regressions" \
-  "edit README.md -e 's|for a pre-existing confirmed product defect, or a regression on a shared branch if the user chooses it|only if it is a real defect|'"
+  "edit README.md -e 's|for a pre-existing confirmed product defect, or a regression from a merged change if the user chooses it|only if it is a real defect|'"
 expect_failure "bug-ticket that dismisses intermittent failures" "must not dismiss intermittent failures as non-bugs" \
   "edit skills/bug-ticket/SKILL.md -e 's|An intermittent failure can still be a product defect|A flaky test is not a bug|'"
 expect_failure "README without the product-defect verdict" "must describe the triager's product-defect verdict" \
@@ -305,7 +305,7 @@ expect_failure "triager description without product defects" "description must n
 expect_failure "diagnoser listing the product cause last" "must list the product cause first" \
   "edit agents/ci-failure-diagnoser.md -e 's|list the candidates, product first|list the candidates|'"
 expect_failure "defect routing missing from an agent" "agents/qa-lead.md: does not contain the block from templates/defect-routing.md" \
-  "edit agents/qa-lead.md -e 's|^- [*][*]Pre-existing, confirmed product defect:[*][*]|- Other:|'"
+  "edit agents/qa-lead.md -e 's|^- [*][*]Pre-existing confirmed product defect[*][*]|- Other|'"
 expect_failure "defect routing changed in one file only" "skills/bug-ticket/SKILL.md: does not contain the block from templates/defect-routing.md" \
   "edit skills/bug-ticket/SKILL.md -e 's|or the .bug-ticket. skill, and let the user choose|or file it|'"
 expect_failure "defect-routing.md missing" "templates/defect-routing.md missing or empty" \
@@ -315,7 +315,7 @@ expect_failure "inconclusive that may still be filed" "agents/flaky-test-triager
 expect_failure "diagnoser that routes on its own" "must route each cause with Defect routing" \
   "edit agents/ci-failure-diagnoser.md -e 's|Recommend the next step for each cause with Defect routing|Recommend a ticket|'"
 expect_failure "triager output without the routing action" "must give the Defect routing action for a defect" \
-  "edit agents/flaky-test-triager.md -e 's|the Defect routing step, with the file and commit|a ticket|'"
+  "edit agents/flaky-test-triager.md -e 's|the Defect routing step; name the file and commit when a change caused it|a ticket|'"
 expect_failure "lead that routes defects on its own" "must route defects with Defect routing" \
   "edit agents/qa-lead.md -e 's|For a defect, offer the step from Defect routing|For a defect, offer bug-ticket|'"
 expect_failure "bug-ticket that files anything" "must file only what Defect routing sends to it" \
@@ -324,6 +324,12 @@ expect_failure "test-developer that files failing requirements directly" "must r
   "edit skills/test-developer/SKILL.md -e 's|report it as a possible defect and route it with Defect routing|file it|'"
 expect_failure "triager that only says regression" "must route regressions and product defects with Defect routing" \
   "edit agents/flaky-test-triager.md -e 's|route it with Defect routing[.]|file it.|g'"
+expect_failure "route changed in the template and every copy" "templates/defect-routing.md must let the user choose how to handle a merged regression" \
+  "for f in templates/defect-routing.md agents/ci-failure-diagnoser.md agents/flaky-test-triager.md agents/qa-lead.md skills/bug-ticket/SKILL.md skills/test-developer/SKILL.md; do edit \"\$f\" -e 's|or the .bug-ticket. skill, and let the user choose|or the bug-ticket skill|'; done"
+expect_failure "quarantine rule dropped everywhere" "templates/defect-routing.md must forbid quarantining a test that catches a real bug" \
+  "for f in templates/defect-routing.md agents/ci-failure-diagnoser.md agents/flaky-test-triager.md agents/qa-lead.md skills/bug-ticket/SKILL.md skills/test-developer/SKILL.md; do edit \"\$f\" -e '/^Never quarantine a test that catches a real bug[.]\$/d'; done"
+expect_failure "another entry with a stale routing section" "skills/pr-description/SKILL.md: does not contain the block from templates/defect-routing.md" \
+  "printf '\\n## Defect routing\\n\\nFile everything.\\n' >> skills/pr-description/SKILL.md"
 expect_failure "personal entry in the QA repo" "unknown group 'personal'" \
   "edit catalog.tsv -e 's/^pr-reviewer\tagent\tqa/pr-reviewer\tagent\tpersonal/'"
 expect_failure "machine path in settings.example.json" "settings.example.json contains a machine-specific /Users/ path" \

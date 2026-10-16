@@ -105,7 +105,7 @@ It shows each handoff in the chat, so you can follow who does what:
 Plan (3 steps)
   1. ci-failure-diagnoser - find why pipeline 9876 failed
   2. flaky-test-triager - only if step 1 says suspected flaky
-  3. bug-ticket (me, skill) - for a pre-existing confirmed product defect, or a regression on a shared branch if the user chooses it
+  3. bug-ticket (me, skill) - for a pre-existing confirmed product defect, or a regression from a merged change if the user chooses it
 
 ▶ Step 1/3 → ci-failure-diagnoser: pipeline 9876, branch main
 ✔ Step 1/3 ← ci-failure-diagnoser: suspected flaky/environment (product not ruled out) - LoginTest timed out on agent pool B
@@ -189,7 +189,7 @@ The agents never handle tokens. Authentication stays in tools that manage it the
 
 ## Customizing
 
-- **Adding an entry:** add an agent (`agents/<name>.md`) or skill (`skills/<name>/SKILL.md`), a row in `catalog.tsv`, a line in this README and in `templates/CLAUDE.md`. Each entry must include the blocks from `templates/safety.md` and `templates/platforms.md` verbatim, and every entry except `framework-map` the block from `templates/project-map.md`. Agents and skills that recommend what to do with a defect (`ci-failure-diagnoser`, `flaky-test-triager`, `qa-lead`, `bug-ticket`, `test-developer`) also carry `templates/defect-routing.md`, so the routes stay identical.
+- **Adding an entry:** add an agent (`agents/<name>.md`) or skill (`skills/<name>/SKILL.md`), a row in `catalog.tsv`, a line in this README and in `templates/CLAUDE.md`. Each entry must include the blocks from `templates/safety.md` and `templates/platforms.md` verbatim, and every entry except `framework-map` the block from `templates/project-map.md`. `ci-failure-diagnoser`, `flaky-test-triager`, `qa-lead`, `bug-ticket` and `test-developer` recommend what to do with a defect, so they also carry `templates/defect-routing.md`; so must any other entry with a `## Defect routing` section. The CI checks that each copy matches and that the template still has its key routes.
 - **Other platforms:** add a column to `templates/platforms.md`, then copy the new block into every entry.
 - **Other languages:** the files assume Java; adjust the build and test commands (for example `pytest` instead of `mvn`).
 

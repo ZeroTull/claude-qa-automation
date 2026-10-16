@@ -9,6 +9,7 @@ REPO="$(cd "${1:-$(dirname "${BASH_SOURCE[0]}")/..}" && pwd)"
 
 # -X utf8: read files as UTF-8 even under LANG=C (the entries contain non-ASCII characters).
 exec python3 -X utf8 - "$REPO" <<'PYTHON'
+import glob
 import hashlib
 import json
 import os
@@ -348,7 +349,7 @@ AGENT_RULES = {
         "an intermittent product defect (for example a race condition) or a regression": "description must name the product-defect verdict",
         "## Verdict        genuinely flaky (test) / intermittent product defect (confirmed) /": "must offer an intermittent product defect verdict",
         "never quarantine a test that catches a real bug": "must not quarantine a test that catches a real bug",
-        "the Defect routing step, with the file and commit": "must give the Defect routing action for a defect",
+        "the Defect routing step; name the file and commit when a change caused it": "must give the Defect routing action for a defect",
         "route it with Defect routing.": "must route regressions and product defects with Defect routing",
         "never for an inconclusive verdict, an intermittent product defect or a likely regression": "must add only genuinely flaky tests to known-flaky-tests.md",
         "Use intermittent product defect only when the product cause is confirmed": "must say when a product defect is confirmed versus inconclusive",
@@ -356,7 +357,7 @@ AGENT_RULES = {
     },
     "agents/qa-lead.md": {
         "For a defect, offer the step from Defect routing": "must route defects with Defect routing",
-        "for a pre-existing confirmed product defect, or a regression on a shared branch if the user chooses it": "plan example must file bugs only for confirmed product defects or shared-branch regressions",
+        "for a pre-existing confirmed product defect, or a regression from a merged change if the user chooses it": "plan example must file bugs only for confirmed product defects or shared-branch regressions",
     },
     "skills/bug-ticket/SKILL.md": {
         "An intermittent failure can still be a product defect": "must not dismiss intermittent failures as non-bugs",
@@ -367,19 +368,38 @@ AGENT_RULES = {
     },
     "README.md": {
         "suspected flaky/environment (product not ruled out)": "trace example must use the diagnoser's suspected-flaky label",
-        "for a pre-existing confirmed product defect, or a regression on a shared branch if the user chooses it": "plan example must file bugs only for confirmed product defects or shared-branch regressions",
+        "for a pre-existing confirmed product defect, or a regression from a merged change if the user chooses it": "plan example must file bugs only for confirmed product defects or shared-branch regressions",
         "an intermittent product defect (such as a race condition)": "must describe the triager's product-defect verdict",
     },
 }
-# Where a failure goes is defined once, in templates/defect-routing.md, and must appear verbatim in every
-# agent and skill that recommends what to do with a defect, so the routes cannot drift apart.
-DEFECT_ROUTING_FILES = ["agents/ci-failure-diagnoser.md", "agents/flaky-test-triager.md", "agents/qa-lead.md",
-                        "skills/bug-ticket/SKILL.md", "skills/test-developer/SKILL.md"]
+# Where a failure goes is defined once, in templates/defect-routing.md. It must appear verbatim in the
+# entries below, which recommend what to do with a defect, and in any other entry with a "## Defect routing"
+# section, so the routes cannot drift apart. The template's key routes are pinned too, so an edit applied to
+# every copy at once still has to keep them.
+DEFECT_ROUTING_FILES = {"agents/ci-failure-diagnoser.md", "agents/flaky-test-triager.md", "agents/qa-lead.md",
+                        "skills/bug-ticket/SKILL.md", "skills/test-developer/SKILL.md"}
+for path in sorted(glob.glob(f"{repo}/agents/*.md") + glob.glob(f"{repo}/skills/*/SKILL.md")):
+    if "## Defect routing" in read(path):
+        DEFECT_ROUTING_FILES.add(os.path.relpath(path, repo))
+DEFECT_ROUTES = {
+    "The change under test is the branch or PR whose pipeline or tests you are looking at, until it is merged": "must define the change under test",
+    "fix it on that branch, naming the file and the commit": "must fix a defect from the change under test on its branch",
+    "name the commit, then offer a fix-forward change": "must route a regression from a merged change",
+    "or the `bug-ticket` skill, and let the user choose": "must let the user choose how to handle a merged regression",
+    "**Pre-existing confirmed product defect** with no identifiable commit: the `bug-ticket` skill": "must send pre-existing product defects to bug-ticket",
+    "flaky triage with the `flaky-test-triager` agent": "must send suspected flaky failures to the triager",
+    "Do not file a bug and do not record the test as known flaky until one is confirmed": "must file nothing for an inconclusive case",
+    "**Dependency or pipeline config:**": "must route dependency and pipeline config causes",
+    "Never quarantine a test that catches a real bug.": "must forbid quarantining a test that catches a real bug",
+}
 defect_routing = read(f"{repo}/templates/defect-routing.md").strip()
 if not defect_routing:
     err("templates/defect-routing.md missing or empty")
 else:
-    for path in DEFECT_ROUTING_FILES:
+    for phrase, message in DEFECT_ROUTES.items():
+        if phrase not in defect_routing:
+            err(f"templates/defect-routing.md {message}")
+    for path in sorted(DEFECT_ROUTING_FILES):
         if defect_routing not in read(f"{repo}/{path}"):
             err(f"{path}: does not contain the block from templates/defect-routing.md verbatim")
 for path, rules in AGENT_RULES.items():
