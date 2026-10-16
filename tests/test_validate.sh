@@ -360,6 +360,70 @@ expect_failure "verdicts without routing cases" "must map every verdict to a rou
   "edit agents/flaky-test-triager.md -e 's|/ inconclusive \\[case 5\\]|/ inconclusive|'"
 expect_failure "flaky verdict without ruling out the product" "must rule out the product before calling a test genuinely flaky" \
   "edit agents/flaky-test-triager.md -e 's|cause identified in the test and product ruled out (case 2)|cause identified (case 2)|'"
+expect_failure "safety rule that allows credential blocks" "templates/safety.md must forbid quoting credential blocks from build files" \
+  "edit templates/safety.md -e 's|Never quote server, repository, distribution or credential blocks|Quote what you need|'"
+expect_failure "safety rule that reads settings.xml" "templates/safety.md must forbid reading Maven settings and gradle.properties" \
+  "edit templates/safety.md -e 's|Maven .settings.xml. or .settings-security.xml., .gradle.properties. or other|or other|'"
+expect_failure "project settings.xml readable" "settings.example.json misses deny rules: Read(**/settings.xml)" \
+  "edit settings.example.json -e '/\"Read(\\*\\*\\/settings.xml)\",/d'"
+expect_failure "safety rule that quotes anything not forbidden" "templates/safety.md must quote only allow-listed build-file values" \
+  "edit templates/safety.md -e 's|quote only what this list allows[.] For anything else, name the element, property or key and write .<redacted>.|quote freely|'"
+expect_failure "safety rule that quotes credentials in URLs" "templates/safety.md must forbid quoting credentials inside URLs and arguments" \
+  "edit templates/safety.md -e 's|, or a URL, connection string or command-line argument that contains a credential|.|'"
+expect_failure "safety rule that quotes variable values" "templates/safety.md must allow variable names but not their values" \
+  "edit templates/safety.md -e 's|names, not values, of environment variables and properties|environment variables and properties|'"
+expect_failure "mapper that reads Maven settings" "must skip Maven settings and gradle.properties by name" \
+  "edit skills/framework-map/SKILL.md -e 's|.settings.xml., .settings-security.xml., .gradle.properties., ..npmrc. and ..netrc.|.npmrc|'"
+expect_failure "mapper that reads build files freely" "must read build files only as Safety allows" \
+  "edit skills/framework-map/SKILL.md -e 's|From build files use only what Safety allows|From build files use anything|'"
+expect_failure "diagnoser that guesses versions" "must not guess versions it may not read" \
+  "edit agents/ci-failure-diagnoser.md -e 's|take the resolved version from the build log|guess the version|'"
+expect_failure "Maven master password readable" "settings.example.json misses deny rules: Read(~/.m2/settings-security.xml)" \
+  "edit settings.example.json -e '/settings-security[.]xml/d'"
+expect_failure "safety rule that quotes argLine freely" "templates/safety.md must redact JVM -D pairs by default" \
+  "edit templates/safety.md -e 's|; write every other .-D. pair as .-Dname=<redacted>.||'"
+expect_failure "open-ended JVM settings list" "templates/safety.md must allow only a closed list of JVM settings" \
+  "edit templates/safety.md -e 's|[.] Other standard JDK settings|, and other standard JDK settings|'"
+expect_failure "JVM flags quoted wholesale" "templates/safety.md must quote only on/off and numeric JVM flags" \
+  "edit templates/safety.md -e 's|.-XX. flags that only switch something on or off or set a number|any flag|'"
+expect_failure "profile activation values quoted" "templates/safety.md must redact profile activation values" \
+  "edit templates/safety.md -e 's|; for a .<property>. activation keep its .<name>. and write its .<value>. as .<redacted>.||'"
+expect_failure "suite files outside the rule" "templates/safety.md must cover test suite files" \
+  "edit templates/safety.md -e 's| and TestNG suite files (.testng[*].xml. or any XML with a .<suite>. root)||'"
+expect_failure "JVM list only inside argLine" "templates/safety.md must apply the JVM list wherever the key appears" \
+  "edit templates/safety.md -e 's|, wherever they appear (.argLine., .jvmArgs., .systemPropertyVariables., .jvm.config., .maven.config.)||'"
+expect_failure "README calls the JVM list open" "README.md must describe the closed JVM list" \
+  "edit README.md -e 's|the five JVM settings the rule names|standard JVM settings|'"
+expect_failure "suite file parameters quoted" "templates/safety.md must redact suite file parameter values" \
+  "edit templates/safety.md -e 's|; .<parameter>. values in suite files are redacted like any other value, for example .<parameter name=\"password\" value=\"<redacted>\"/>.||'"
+expect_failure "Gradle settings outside the rule" "templates/safety.md must cover Gradle settings and version catalogs" \
+  "edit templates/safety.md -e 's|.settings.gradle., .settings.gradle.kts., .gradle/libs.versions.toml., ||'"
+expect_failure "maven.config -D pairs quoted" "templates/safety.md must redact -D pairs in Maven config files" \
+  "edit templates/safety.md -e 's|JVM and Maven command options (.argLine., .jvmArgs., .[.]mvn/jvm.config., .[.]mvn/maven.config.)|JVM options (argLine)|'"
+expect_failure "build script literals quoted" "templates/safety.md must redact string literals in build scripts" \
+  "edit templates/safety.md -e 's| This includes string literals and variable assignments in build scripts (.val token = \"<redacted>\".)[.]||'"
+expect_failure "free-text names quoted" "templates/safety.md must quote names only when they look like identifiers" \
+  "edit templates/safety.md -e 's|quoted only when they look like identifiers|quoted|'"
+expect_failure "project settings-security.xml readable" "settings.example.json misses deny rules: Read(**/settings-security.xml)" \
+  "edit settings.example.json -e '/[*][*]\\/settings-security[.]xml/d'"
+expect_failure "README with a partial allow-list" "README.md must point to the full build-file allow-list" \
+  "edit README.md -e 's|quotes only what the allow-list in .templates/safety.md. permits|quotes only|'"
+expect_failure "README promising a byte-identical merge" "README.md must say the settings merge rewrites the file" \
+  "edit README.md -e 's| The file is rewritten as JSON, so its values stay the same but number spelling, escapes and line endings can change[.]||'"
+expect_failure "safety rule that hides versions again" "templates/safety.md must allow the build-file details diagnosis needs" \
+  "edit templates/safety.md -e 's|dependency, plugin and parent coordinates, and the Java release|dependency names|'"
+expect_failure "version element quoted without a shape check" "templates/safety.md must shape-check every version value" \
+  "edit templates/safety.md -e 's|version values (a .<version>. element, a .version =. setting, or a property whose name ends in .version.|version properties (|'"
+expect_failure "undefined version range" "templates/safety.md must define a version range" \
+  "edit templates/safety.md -e 's|a range that contains .\\[., .(., .,. or .[*]. and only digits, dots, commas, spaces|a range of digits, dots, commas, spaces|'"
+expect_failure "odd version values quoted" "templates/safety.md must redact version values that do not look like versions" \
+  "edit templates/safety.md -e 's| Write any other version value as .<redacted>.[.]||'"
+expect_failure "open-ended version qualifiers" "templates/safety.md must allow only a closed list of version qualifiers" \
+  "edit templates/safety.md -e 's|optionally followed by exactly one of|optionally followed by a qualifier such as|'"
+expect_failure "digits-only versions quoted" "templates/safety.md must redact digits-only versions" \
+  "edit templates/safety.md -e 's| a value of digits only is not a version and is .<redacted>.[;]||'"
+expect_failure "credential-looking names undefined" "templates/safety.md must say what a credential-looking name is" \
+  "edit templates/safety.md -e 's| (a known token prefix such as .ghp_., .github_pat_., .glpat-., .AKIA. or .xox., or a long run of mixed letters and digits)||'"
 expect_failure "personal entry in the QA repo" "unknown group 'personal'" \
   "edit catalog.tsv -e 's/^pr-reviewer\tagent\tqa/pr-reviewer\tagent\tpersonal/'"
 expect_failure "machine path in settings.example.json" "settings.example.json contains a machine-specific /Users/ path" \

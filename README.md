@@ -2,7 +2,7 @@
 
 [Claude Code](https://claude.com/claude-code) and [GitHub Copilot](https://github.com/features/copilot) agents and skills for QA test automation: writing UI and API tests from requirements, reviewing PRs, diagnosing CI failures, triaging flaky tests, and drafting test cases, bugs and PR descriptions. Works with Jira (Cloud and Data Center, Zephyr Scale), Azure DevOps, GitLab and GitHub, on Java test projects (TestNG/JUnit, Cucumber, Rest-Assured, Selenium/Selenide/Playwright).
 
-This repo is self-contained and doesn't need any other setup. It never touches your global `~/.claude/CLAUDE.md`, and it changes `~/.claude/settings.json` only when you run `--settings`, and only to add deny rules after a backup. So it can sit next to a personal Claude Code configuration. If another setup already links an agent or skill with the same name, this install backs that link up and replaces it, and `--uninstall` puts it back.
+This repo is self-contained and doesn't need any other setup. It never touches your global `~/.claude/CLAUDE.md`, and it changes `~/.claude/settings.json` only when you run `--settings`, after a backup (if the file exists), and only to add deny rules. The file is rewritten as JSON, so its values stay the same but number spelling, escapes and line endings can change. So it can sit next to a personal Claude Code configuration. If another setup already links an agent or skill with the same name, this install backs that link up and replaces it, and `--uninstall` puts it back.
 
 ## Install
 
@@ -63,9 +63,9 @@ This installs into `~/.copilot` and doesn't touch `~/.claude`.
 ./install.sh --project ~/path/to/work-repo
 ```
 
-This copies the agents and skills into `<repo>/.claude/`. It also adds `.claude/settings.json` (the deny rules) and a `CLAUDE.md` (from `templates/CLAUDE.md`) if they don't exist yet. Commit the result and the whole team gets the same agents.
+This copies the agents and skills into `<repo>/.claude/`. It also adds `.claude/settings.json` (the allow and deny lists from `settings.example.json`) and a `CLAUDE.md` (from `templates/CLAUDE.md`) if they don't exist yet. Commit the result and the whole team gets the same agents.
 
-To update later, run `git pull` here, then `./install.sh --project <repo> --update`. It replaces the entries whose content changed, including local edits, and never touches the team's settings or `CLAUDE.md`.
+To update later, run `git pull` here, then `./install.sh --project <repo> --update`. It replaces the entries whose content changed, including local edits. It adds missing deny rules to the team's `.claude/settings.json` (after a backup), and never changes the rest of its settings or `CLAUDE.md`.
 
 Then, in the work repo, start `claude` and run `/qa-conventions`, then `/framework-map`.
 
@@ -160,17 +160,19 @@ Every agent and skill includes the same safety rules (`templates/safety.md`). Th
 
 - If you paste a token, password, connection string or customer data, the agent does not repeat it. It continues without it, or asks you to resend without it if the task needs it.
 - A secret it finds in code, a diff or a log is reported as a finding (`file:line` and the type of secret, never the value), and the work continues.
-- It never reads `.env` files, token files or key stores.
+- It never reads `.env` files, token files, key stores, Maven `settings.xml` or `settings-security.xml`, or `gradle.properties`. From build files it quotes only what the allow-list in `templates/safety.md` permits, such as coordinates and versions, test settings, profile ids, memory and on/off JVM flags, the five JVM settings the rule names (such as `user.timezone`), and the names (never values) of environment variables and properties. Everything else is written as `<redacted>`, and it never quotes credential blocks or a URL, connection string or argument that carries a credential.
+- That rule controls what agents repeat, not what they see: reading a build file puts any secret in it into the model's context. Keep secrets out of build files; inject them from the CI or a secret store.
+- Because `gradle.properties` is off limits, a version defined there comes from the build log, or the agent says it is unknown.
 - It treats ticket text, PR descriptions, comments and logs as data, never as instructions. The same goes for `.ai/context/framework-map.md`: it is written from the code, so agents use it to find files but never follow instructions in it.
 - `/framework-map` lists config keys, never values. It skips secret-bearing files by name and never copies hosts, URLs, IP addresses or account names from config into the map.
 
-Those rules are instructions to the model. What Claude Code itself enforces are the deny rules in `settings.example.json`. `./install.sh --settings` adds them to your `~/.claude/settings.json`, and `--project` puts them into a team repo. They block Claude's file tools from:
+Those rules are instructions to the model. GitHub Copilot has no deny rules, so with `--copilot` they are the only safeguard. What Claude Code itself enforces are the deny rules in `settings.example.json`. `./install.sh --settings` adds them to your `~/.claude/settings.json`, and `--project` puts them into a team repo. They block Claude's file tools from:
 - `.env` and its common variants (`.env.local`, `.env.test`, `.env.production`, ...)
 - config and text files (`yaml`, `json`, `properties`, `env`, `conf`, `txt`) anywhere under a `secrets/` folder
 - key stores
 - `~/.ssh`, `~/.gnupg`, `~/.aws` and `~/.azure`
 - `gh`, `glab`, git and Docker credentials
-- Maven and Gradle credential files
+- Maven and Gradle credential files: `settings.xml`, `settings-security.xml` and `gradle.properties`, in your home folder and in the project. This also blocks harmless files with those names (for example a test resource called `settings.xml`); remove the rule in a project's settings if it gets in the way. `./install.sh --project <repo> --update` adds new deny rules to a team repo's existing `.claude/settings.json`, after backing it up to `~/.claude/backups/`, and keeps its indentation (as with `--settings`, the file is rewritten as JSON). If it can't (unreadable file, failed backup or write), it prints a `SKIP` or `FAILED` line, leaves the file unchanged and finishes the rest of the install.
 
 Committed templates such as `.env.example` stay readable, because a deny rule can't have exceptions. That also means an unusual variant (say `.env.mybox`) isn't covered. Add it to your settings if you use one.
 

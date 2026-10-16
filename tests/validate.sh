@@ -223,6 +223,8 @@ MAPPER_RULES = {
     "Quoted or dotted YAML keys may be missed": "must note that quoted or dotted YAML keys may be missed",
     "The grep can still show a key that is a host name": "must say not to repeat host-name keys",
     "Never copy URLs, hosts, IP addresses or account names": "must not copy URLs, hosts or account names",
+    "`settings.xml`, `settings-security.xml`, `gradle.properties`, `.npmrc` and `.netrc`": "must skip Maven settings and gradle.properties by name",
+    "From build files use only what Safety allows": "must read build files only as Safety allows",
 }
 # Run the skill's YAML key pattern on a sample: it must list keys and never a host:port list item.
 yaml_grep = re.search(r"`grep -oE '([^']+)' <file>` for YAML", mapper)
@@ -332,11 +334,37 @@ else:
 
 # Behaviour rules that agents depend on: each phrase pins one rule, so an edit cannot drop it silently.
 AGENT_RULES = {
+    "templates/safety.md": {
+        "quote only what this list allows. For anything else, name the element, property or key and write `<redacted>`": "must quote only allow-listed build-file values",
+        "wherever they appear (`argLine`, `jvmArgs`, `systemPropertyVariables`, `jvm.config`, `maven.config`)": "must apply the JVM list wherever the key appears",
+        "JVM and Maven command options (`argLine`, `jvmArgs`, `.mvn/jvm.config`, `.mvn/maven.config`)": "must redact -D pairs in Maven config files",
+        "This includes string literals and variable assignments in build scripts": "must redact string literals in build scripts",
+        "quoted only when they look like identifiers": "must quote names only when they look like identifiers",
+        "and TestNG suite files (`testng*.xml` or any XML with a `<suite>` root)": "must cover test suite files",
+        "`<parameter>` values in suite files are redacted like any other value": "must redact suite file parameter values",
+        "`settings.gradle`, `settings.gradle.kts`, `gradle/libs.versions.toml`": "must cover Gradle settings and version catalogs",
+        "Never quote server, repository, distribution or credential blocks": "must forbid quoting credential blocks from build files",
+        "dependency, plugin and parent coordinates, and the Java release": "must allow the build-file details diagnosis needs",
+        "version values (a `<version>` element, a `version =` setting, or a property whose name ends in `version`": "must shape-check every version value",
+        "a range that contains `[`, `(`, `,` or `*` and only digits, dots, commas, spaces": "must define a version range",
+        "a value of digits only is not a version and is `<redacted>`": "must redact digits-only versions",
+        "a known token prefix such as `ghp_`, `github_pat_`, `glpat-`, `AKIA` or `xox`": "must say what a credential-looking name is",
+        "Write any other version value as `<redacted>`": "must redact version values that do not look like versions",
+        "optionally followed by exactly one of `-SNAPSHOT`, `.RELEASE`, `.Final`": "must allow only a closed list of version qualifiers",
+        "a URL, connection string or command-line argument that contains a credential": "must forbid quoting credentials inside URLs and arguments",
+        "write every other `-D` pair as `-Dname=<redacted>`": "must redact JVM -D pairs by default",
+        "`user.timezone`, `user.language`, `user.country`, `file.encoding` and `java.awt.headless`. Other standard JDK settings": "must allow only a closed list of JVM settings",
+        "`-XX` flags that only switch something on or off or set a number": "must quote only on/off and numeric JVM flags",
+        "for a `<property>` activation keep its `<name>` and write its `<value>` as `<redacted>`": "must redact profile activation values",
+        "names, not values, of environment variables and properties": "must allow variable names but not their values",
+        "Maven `settings.xml` or `settings-security.xml`, `gradle.properties`": "must forbid reading Maven settings and gradle.properties",
+    },
     "agents/ci-failure-diagnoser.md": {
         "Until the evidence rules the product out": "must not rule out a product defect for timeouts or reruns without evidence",
         "list every plausible one, ranked": "must list every plausible cause when the evidence is inconclusive",
         "## Other Possible Causes": "must report other possible causes",
         "Recommend the next step for each cause with Defect routing": "must route each cause with Defect routing",
+        "take the resolved version from the build log": "must not guess versions it may not read",
         "If it fails consistently rather than intermittently, it is not a case for the triager": "must route consistent timeouts without the triager",
         "case 2 when the test's own code is the cause, otherwise case 5": "must route a consistent failure caused by the test to case 2",
         "product defect (confirmed), suspected flaky/environment": "description must list the product-defect and suspected-flaky classes",
@@ -379,6 +407,9 @@ AGENT_RULES = {
         "report it as a possible defect and route it with Defect routing": "must route a failing requirement with Defect routing",
     },
     "README.md": {
+        "the five JVM settings the rule names": "must describe the closed JVM list",
+        "quotes only what the allow-list in `templates/safety.md` permits": "must point to the full build-file allow-list",
+        "The file is rewritten as JSON, so its values stay the same": "must say the settings merge rewrites the file",
         "suspected flaky/environment (product not ruled out)": "trace example must use the diagnoser's suspected-flaky label",
         "for a pre-existing confirmed product defect, or a regression from a merged change if the user chooses it": "plan example must file bugs only for confirmed product defects or shared-branch regressions",
         "an intermittent product defect (such as a race condition)": "must describe the triager's product-defect verdict",
@@ -503,6 +534,8 @@ if example:
                 "Read(**/secrets/**/*.properties)", "Read(**/secrets/**/*.env)", "Read(**/secrets/**/*.conf)",
                 "Read(**/secrets/**/*.txt)",
                 "Read(~/.ssh/**)", "Read(~/.azure/**)", "Read(~/.config/gh/**)", "Read(**/*.pem)",
+                "Read(**/settings.xml)", "Read(**/gradle.properties)", "Read(~/.m2/settings-security.xml)",
+                "Read(**/settings-security.xml)",
                 "Bash(glab ci get *--with-variables*)"]
     if "/Users/" in json.dumps(example[0]):
         err("settings.example.json contains a machine-specific /Users/ path")

@@ -23,11 +23,17 @@ run() {
 
 # True if the last install output does not contain $1. Called through assert.
 # shellcheck disable=SC2317,SC2329
-out_lacks() { ! grep -q -- "$1" <<<"$out"; }
+# Fixed-string and byte-wise (LC_ALL=C), so a pattern such as '\377' or a raw byte is matched literally. Only grep's
+# "no match" (exit 1) counts as lacking; a grep error (exit 2) fails the assertion.
+out_lacks() { local rc=0; LC_ALL=C grep -qF -- "$1" <<<"$out" || rc=$?; [[ $rc -eq 1 ]]; }
 
 # True if file $2 does not contain $1. Called through assert.
 # shellcheck disable=SC2317,SC2329
-out_lacks_file() { ! grep -qF -- "$1" "$2"; }
+# Like out_lacks: a missing or unreadable file fails the assertion instead of passing it.
+out_lacks_file() { local rc=0; LC_ALL=C grep -qF -- "$1" "$2" || rc=$?; [[ $rc -eq 1 ]]; }
+
+# Octal permission bits of a file. GNU stat first: on Linux, "stat -f" is filesystem status and succeeds.
+file_mode() { stat -c %a "$1" 2>/dev/null || stat -f %Lp "$1"; }
 
 count_links() { find "$1" -type l | wc -l | tr -d ' '; }
 latest_backup_dir() { find "$CLAUDE_HOME/backups" -mindepth 1 -maxdepth 1 -type d | sort | tail -n 1; }
@@ -104,7 +110,7 @@ mkdir -p "$TMP/badjson"
 printf '{not json' >"$TMP/badjson/settings.json"
 out="$(CLAUDE_HOME="$TMP/badjson" "$REPO/install.sh" 2>&1)"; rc=$?
 assert "exits 0" test "$rc" = 0
-assert "shows the reason" grep -q "Could not check .*: settings.json is not valid JSON" <<<"$out"
+assert "shows the reason" grep -q "Could not check .*: .*settings.json is not valid JSON" <<<"$out"
 
 echo "--settings on a fresh machine"
 out="$(CLAUDE_HOME="$TMP/fresh" "$REPO/install.sh" --settings 2>&1)"; rc=$?
@@ -232,9 +238,195 @@ assert "creates settings.json from the example" cmp -s "$proj/.claude/settings.j
 assert "keeps existing CLAUDE.md" test "$(cat "$proj/CLAUDE.md")" = "# existing"
 assert "copies the framework-map skill" test -f "$proj/.claude/skills/framework-map/SKILL.md"
 assert "next steps name /framework-map" grep -q "/qa-conventions, then /framework-map" <<<"$out"
+run --project "$proj"
+assert "reports a complete project settings.json" grep -q "ok .*settings.json has every deny rule" <<<"$out"
 echo "custom" >"$proj/.claude/settings.json"
 run --project "$proj"
 assert "keeps an existing settings.json" test "$(cat "$proj/.claude/settings.json")" = "custom"
+assert "says an unreadable settings.json could not be checked" grep -q "could not check its deny rules" <<<"$out"
+proj3="$TMP/proj3"
+mkdir -p "$proj3/.claude"
+printf '{"model": "x", "permissions": {"allow": ["Bash(ls)"], "deny": ["Read(**/.env)"]}}\n' >"$proj3/.claude/settings.json"
+chmod 600 "$proj3/.claude/settings.json"
+run --project "$proj3"
+assert "lists the project's missing deny rules" grep -q "MISSING .*settings.json lacks $((n_deny - 1)) deny rule" <<<"$out"
+assert "names a missing rule" grep -qF "Read(**/settings.xml)" <<<"$out"
+assert "does not change it without --update" test "$(deny_count "$proj3/.claude/settings.json")" = 1
+run --project "$proj3" --update
+assert "--update adds the missing deny rules" test "$(deny_count "$proj3/.claude/settings.json")" = "$n_deny"
+assert "--update keeps the other settings" python3 -c 'import json,sys; d=json.load(open(sys.argv[1])); sys.exit(0 if d["model"]=="x" and d["permissions"]["allow"]==["Bash(ls)"] else 1)' "$proj3/.claude/settings.json"
+assert "--update keeps the file mode" test "$(file_mode "$proj3/.claude/settings.json")" = 600
+assert "--update backs the project settings up" grep -q "backup: .*/project-settings.json" <<<"$out"
+bak="$(sed -n 's|.*backup: \(.*project-settings.json\)).*|\1|p' <<<"$out")"
+assert "the backup has the original rules" test "$(deny_count "$bak")" = 1
+assert "no temp file is left behind" test -z "$(find "$proj3/.claude" -name '.settings.*')"
+proj4="$TMP/proj4"
+mkdir -p "$proj4/.claude"
+printf '{\n    "permissions": {\n        "deny": []\n    }\n}\n' >"$proj4/.claude/settings.json"
+run --project "$proj4" --update
+assert "--update keeps a 4-space indent" grep -q '^        "deny": \[' "$proj4/.claude/settings.json"
+proj5="$TMP/proj5"
+mkdir -p "$proj5/.claude"
+echo '[]' >"$proj5/.claude/settings.json"
+run --project "$proj5" --update
+assert "a wrong-shaped project settings.json is left alone" test "$(cat "$proj5/.claude/settings.json")" = "[]"
+assert "says why it was not checked" grep -q "could not check its deny rules: .*settings.json has an unexpected shape" <<<"$out"
+proj6="$TMP/proj6"
+mkdir -p "$proj6/.claude/agents" "$proj6/.claude/skills"
+echo '{"permissions": {"deny": []}}' >"$proj6/.claude/settings.json"
+# The agents and skills folders stay writable; only .claude itself refuses the temp file the merge needs.
+# Root ignores mode bits, so this case only runs as a normal user.
+if [[ "$(id -u)" != 0 ]]; then
+  chmod 500 "$proj6/.claude"
+  run --project "$proj6" --update
+  chmod 700 "$proj6/.claude"
+  assert "a failed write is reported" grep -q "FAILED .*settings.json (could not add the deny rules; the file is unchanged)" <<<"$out"
+  assert "a failed write gives a one-line reason, not a traceback" out_lacks "Traceback"
+  assert "a failed write leaves the file unchanged" test "$(deny_count "$proj6/.claude/settings.json")" = 0
+  assert "a failed write still finishes the install" grep -q "Next: open Claude Code" <<<"$out"
+else
+  echo "  skip  a failed write (needs a non-root user)"
+fi
+out="$(QA_FAIL_SETTINGS_WRITE=1 "$REPO/install.sh" --project "$proj6" --update 2>&1)"
+assert "a failure after the temp file exists is reported" grep -q "could not write .*simulated write failure" <<<"$out"
+assert "it says the deny rules were not added" grep -q "FAILED .*settings.json (could not add the deny rules; the file is unchanged)" <<<"$out"
+assert "it removes the temp file" test -z "$(find "$proj6/.claude" -name '.settings.*')"
+assert "it leaves the file unchanged" test "$(deny_count "$proj6/.claude/settings.json")" = 0
+proj8="$TMP/proj8"
+mkdir -p "$proj8/.claude"
+printf '{\n\t"permissions": {\n\t\t"deny": []\n\t}\n}\n' >"$proj8/.claude/settings.json"
+run --project "$proj8" --update
+assert "--update keeps a tab indent" grep -q "$(printf '^\t\t"deny": \\[')" "$proj8/.claude/settings.json"
+proj9="$TMP/proj9"
+mkdir -p "$proj9/.claude"
+echo '{"permissions": {"deny": []}}' >"$proj9/.claude/settings.json"
+run --project "$proj9" --update
+assert "a one-line file is written with 2 spaces" grep -q '^    "deny": \[' "$proj9/.claude/settings.json"
+# A plain file where the backups folder should be makes every backup fail, for root too.
+proj10="$TMP/proj10"
+mkdir -p "$proj10/.claude" "$TMP/blocked-home"
+echo '{"permissions": {"deny": []}}' >"$proj10/.claude/settings.json"
+: >"$TMP/blocked-home/backups"
+out="$(CLAUDE_HOME="$TMP/blocked-home" "$REPO/install.sh" --project "$proj10" --update 2>&1)"
+assert "a failed backup is reported" grep -q "FAILED .*settings.json (could not back it up" <<<"$out"
+assert "a failed backup leaves the file unchanged" test "$(deny_count "$proj10/.claude/settings.json")" = 0
+assert "a failed backup still finishes the install" grep -q "Next: open Claude Code" <<<"$out"
+echo '{"permissions": {"deny": []}}' >"$TMP/blocked-home/settings.json"
+out="$(CLAUDE_HOME="$TMP/blocked-home" "$REPO/install.sh" --settings 2>&1)"; rc=$?
+assert "--settings reports a failed backup" grep -q "could not back up settings.json" <<<"$out"
+assert "--settings fails when the backup fails" test "$rc" != 0
+assert "--settings leaves the file unchanged when the backup fails" test "$(deny_count "$TMP/blocked-home/settings.json")" = 0
+assert "--settings leaves no temp file when the backup fails" test -z "$(find "$TMP/blocked-home" -name '.settings.*')"
+mf="$TMP/merge-fail-home"
+mkdir -p "$mf"
+echo '{"permissions": {"deny": []}}' >"$mf/settings.json"
+out="$(CLAUDE_HOME="$mf" QA_FAIL_SETTINGS_WRITE=1 "$REPO/install.sh" --settings 2>&1)"; rc=$?
+assert "--settings fails when the merge fails" test "$rc" = 1
+assert "--settings says the file was left unchanged" grep -q "could not add the deny rules; settings.json was left unchanged" <<<"$out"
+assert "--settings leaves the file unchanged when the merge fails" test "$(deny_count "$mf/settings.json")" = 0
+assert "--settings leaves no temp file when the merge fails" test -z "$(find "$mf" -name '.settings.*')"
+full="$TMP/full-backups-home"
+fullp="$TMP/proj-full-backups"
+mkdir -p "$fullp/.claude"
+echo '{"permissions": {"deny": []}}' >"$fullp/.claude/settings.json"
+for i in $(seq 0 999); do mkdir -p "$full/backups/qa-20990101-000000-$(printf '%03d' "$i")"; done
+out="$(CLAUDE_HOME="$full" BACKUP_STAMP=20990101-000000 "$REPO/install.sh" --project "$fullp" --update 2>&1)"; rc=$?
+assert "1000 backups in one second fails only the settings step" grep -q "FAILED .*settings.json (no free backup folder" <<<"$out"
+assert "it names no empty backup path" out_lacks "back it up to ,"
+assert "the agents are still copied" grep -q "copied .*agents/" <<<"$out"
+assert "it still finishes the install" grep -q "Next: open Claude Code" <<<"$out"
+assert "it leaves the file unchanged" test "$(deny_count "$fullp/.claude/settings.json")" = 0
+echo '{"permissions": {"deny": []}}' >"$full/settings.json"
+out="$(CLAUDE_HOME="$full" BACKUP_STAMP=20990101-000000 "$REPO/install.sh" --settings 2>&1)"; rc=$?
+assert "--settings with no free backup folder fails" test "$rc" = 1
+assert "--settings says the file was left unchanged" grep -q "no free backup folder; settings.json was left unchanged" <<<"$out"
+assert "--settings leaves it unchanged" test "$(deny_count "$full/settings.json")" = 0
+bad="$TMP/bad-utf8-home"
+mkdir -p "$bad"
+printf '{"a": "\377"}\n' >"$bad/settings.json"
+out="$(CLAUDE_HOME="$bad" "$REPO/install.sh" --settings 2>&1)"
+assert "a non-UTF-8 settings.json gives a one-line reason" grep -q "settings.json is not UTF-8 (byte offset" <<<"$out"
+assert "a non-UTF-8 settings.json is not echoed" out_lacks "0xff"
+assert "a non-UTF-8 settings.json is not echoed as an escape" out_lacks '\377'
+assert "a non-UTF-8 settings.json is not echoed raw" out_lacks "$(printf '\377')"
+saved_out="$out"
+out="leaked \\377 here"
+assert "out_lacks detects a leaked escape" test "$(out_lacks '\377' && echo missed || echo found)" = found
+out="leaked $(printf '\377') here"
+assert "out_lacks detects a leaked raw byte" test "$(out_lacks "$(printf '\377')" && echo missed || echo found)" = found
+assert "out_lacks_file fails on a missing file" test "$(out_lacks_file x "$TMP/no-such-file" 2>/dev/null && echo passed || echo failed)" = failed
+out="$saved_out"
+badp="$TMP/proj-bad-utf8"
+mkdir -p "$badp/.claude"
+printf '{"a": "\377"}\n' >"$badp/.claude/settings.json"
+cp "$badp/.claude/settings.json" "$TMP/bad-utf8-copy.json"
+run --project "$badp" --update
+assert "--project skips a non-UTF-8 settings.json with a reason" grep -q "could not check its deny rules: .*settings.json is not UTF-8 (byte offset" <<<"$out"
+assert "--project does not echo the bytes" out_lacks "0xff"
+assert "--project leaves the non-UTF-8 file unchanged" cmp -s "$badp/.claude/settings.json" "$TMP/bad-utf8-copy.json"
+assert "a non-UTF-8 settings.json prints no traceback" out_lacks "Traceback"
+if [[ "$(id -u)" != 0 ]]; then
+  unread="$TMP/unread-home"
+  mkdir -p "$unread"
+  echo '{"permissions": {"deny": []}}' >"$unread/settings.json"
+  chmod 000 "$unread/settings.json"
+  out="$(CLAUDE_HOME="$unread" "$REPO/install.sh" --settings 2>&1)"
+  chmod 600 "$unread/settings.json"
+  assert "an unreadable settings.json gives a one-line reason" grep -q "could not read .*settings.json" <<<"$out"
+  assert "an unreadable settings.json prints no traceback" out_lacks "Traceback"
+  assert "an unreadable settings.json is left unchanged" test "$(deny_count "$unread/settings.json")" = 0
+else
+  echo "  skip  an unreadable settings.json (needs a non-root user)"
+fi
+enc="$TMP/proj-enc"
+mkdir -p "$enc/.claude"
+printf '{"permissions": {"deny": ["\\ud800"]}}\n' >"$enc/.claude/settings.json"
+run --project "$enc" --update
+assert "an unwritable value gives a one-line reason" grep -q "could not write .*settings.json" <<<"$out"
+assert "an unwritable value prints no traceback" out_lacks "Traceback"
+assert "an unwritable value leaves no temp file" test -z "$(find "$enc/.claude" -name '.settings.*')"
+assert "an unwritable value does not echo it" out_lacks "ud800"
+big="$TMP/proj-big"
+mkdir -p "$big/.claude"
+printf '{"model": 1e400, "permissions": {"deny": []}}\n' >"$big/.claude/settings.json"
+cp "$big/.claude/settings.json" "$TMP/big-copy.json"
+run --project "$big" --update
+assert "a number JSON cannot write back is reported" grep -q "could not write .*settings.json: a value cannot be written back as JSON" <<<"$out"
+assert "it is not turned into Infinity" cmp -s "$big/.claude/settings.json" "$TMP/big-copy.json"
+assert "it prints no traceback" out_lacks "Traceback"
+assert "it leaves no temp file" test -z "$(find "$big/.claude" -name '.settings.*')"
+empty="$TMP/proj-empty"
+mkdir -p "$empty/.claude"
+: >"$empty/.claude/settings.json"
+run --project "$empty" --update
+assert "an empty settings.json gets the deny rules" test "$(deny_count "$empty/.claude/settings.json")" = "$n_deny"
+dup="$TMP/proj-dup"
+mkdir -p "$dup/.claude"
+printf '{"permissions": {"deny": ["Read(**/.env)"]}, "permissions": {"deny": []}}\n' >"$dup/.claude/settings.json"
+cp "$dup/.claude/settings.json" "$TMP/dup-copy.json"
+run --project "$dup" --update
+assert "duplicate keys are reported" grep -q 'has the same key twice in one object' <<<"$out"
+assert "duplicate keys are not named" out_lacks '"permissions" twice'
+assert "duplicate keys leave the file unchanged" cmp -s "$dup/.claude/settings.json" "$TMP/dup-copy.json"
+mkdir -p "$TMP/no-mktemp"
+printf '#!/bin/sh\nexit 1\n' >"$TMP/no-mktemp/mktemp"
+chmod +x "$TMP/no-mktemp/mktemp"
+mk="$TMP/proj-mk"
+mkdir -p "$mk/.claude"
+echo '{"permissions": {"deny": []}}' >"$mk/.claude/settings.json"
+out="$(PATH="$TMP/no-mktemp:$PATH" "$REPO/install.sh" --project "$mk" --update 2>&1)"; rc=$?
+assert "without mktemp the project install still finishes" test "$rc" = 0
+assert "without mktemp the project settings are skipped with a reason" grep -q "could not create a temp file to check its deny rules" <<<"$out"
+assert "without mktemp the file is unchanged" test "$(deny_count "$mk/.claude/settings.json")" = 0
+out="$(CLAUDE_HOME="$TMP/mk-home" PATH="$TMP/no-mktemp:$PATH" "$REPO/install.sh" 2>&1)"; rc=$?
+assert "without mktemp the default install still finishes" test "$rc" = 0
+assert "without mktemp the settings check is skipped with a reason" grep -q "Skipped the settings check: could not create a temp file" <<<"$out"
+proj7="$TMP/proj7"
+mkdir -p "$proj7/.claude"
+echo '{"permissions": {"deny": []}}' >"$proj7/.claude/settings.json"
+out="$(PATH="$TMP/stubpath:$PATH" QA_PY_STUB="$TMP/stubpath/python3" QA_OS=Darwin QA_XCODE_SELECT="$stubs/xcode-none" "$REPO/install.sh" --project "$proj7" --update 2>&1)"
+assert "without python3 the project settings are skipped" grep -q "SKIP .*settings.json (exists; checking its deny rules needs python3" <<<"$out"
+assert "without python3 the file is unchanged" test "$(cat "$proj7/.claude/settings.json")" = '{"permissions": {"deny": []}}'
 proj2="$TMP/proj2"
 mkdir -p "$proj2/.claude"
 ln -s "$TMP/proj2-target.json" "$proj2/.claude/settings.json"
@@ -246,6 +438,7 @@ run --project "$proj"
 assert "reports a changed agent" grep -q "DIFFERS .*agents/$agent" <<<"$out"
 run --project "$proj" --update
 assert "--update replaces it" cmp -s "$proj/.claude/agents/$agent" "$REPO/agents/$agent"
+assert "--update leaves an unreadable settings.json alone" test "$(cat "$proj/.claude/settings.json")" = "custom"
 assert "--update keeps CLAUDE.md" test "$(cat "$proj/CLAUDE.md")" = "# existing"
 
 echo "--copilot"
@@ -423,6 +616,10 @@ echo "arguments"
 run --help
 assert "--help exits 0" test "$rc" = 0
 assert "--help prints usage" grep -q -- "--settings" <<<"$out"
+assert "--help prints the whole header" grep -q "the team repo's git history is their backup" <<<"$out"
+assert "--help does not print the shell options line" out_lacks "set -euo pipefail"
+run --bogus
+assert "a bad argument prints the whole usage" grep -q "the team repo's git history is their backup" <<<"$out"
 run --project "$TMP/nope"
 assert "missing project dir exits 1" test "$rc" = 1
 run --settings extra
