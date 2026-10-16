@@ -92,10 +92,10 @@ Scores come from counts, so the same suite gets the same score every time.
 | Category | Items | Countable signals |
 |---|---|---|
 | Stability | test files | `Thread.sleep` or a fixed wait, shared mutable static state, unseeded randomness, a real external call with no isolation (a network, database or file-system call that is not to a container, mock or stub the test starts) |
-| Maintainability | test files | a test method over 50 lines, inheritance deeper than 3 levels, a hardcoded URL or environment value |
+| Maintainability | test files | a test method over 50 lines (counting every line from its signature to its closing brace), inheritance deeper than 3 levels of the project's own classes (framework and JDK classes do not count), a hardcoded URL, host or credential-free environment value outside configuration (`localhost` included) |
 | Quality | test files | a test that cannot fail (no assertion, an assertion that is always true such as `assertTrue(true)` or comparing a value with itself, or a failure swallowed in a catch), a test whose only assertions are `verify` calls on mocks |
 | Framework | shared utility and helper classes | a utility with no usages, a helper duplicated in another class |
-| Performance | test classes | a login, browser start or full data setup in every test method |
+| Performance | test classes | a login, browser start or full data setup that runs per test method (in the method or a per-method hook such as `@BeforeEach`), not once per class or suite; the class is affected if at least one test method has it |
 | Coverage strategy | API tests | an API test that checks only the status code |
 
 All other Analysis signals go into the report as evidence and do not change the share, because they are not about one item or need judgement: over-mocking, implementation-detail testing, environment coupling, order dependence, race conditions, weak assertions, outdated patterns, slow fixtures, redundant data setup, scattered configuration, missing reusable components, serial suites, E2E tests for logic a lower layer could cover, missing contract tests, unmocked downstream services, poor naming, inconsistent patterns and missing negative coverage.
