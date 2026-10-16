@@ -53,13 +53,13 @@ Before you search or read code, read `.ai/context/framework-map.md` if it exists
 ## Defect routing
 
 The change under test is the branch or PR whose pipeline or tests you are looking at, until it is merged. Before recommending what to do with a failure, take the first case that fits:
-1. **Dependency or pipeline config:** name the file, version, variable or permission to change.
-2. **Test defect, product correct** (the test asserts behaviour that an intended change replaced, or fails consistently because of its own code; an intermittent failure reaches this case only through case 4): fix the test on a branch, naming the commit that made it stale if there is one. Do not file a bug. If the change was not intended, it is case 3.
+1. **Dependency or pipeline config:** name the file, version, variable or permission to change. If an intended dependency change only breaks a test's old assertion, it is case 2.
+2. **Test defect, product correct** (the test asserts behaviour that an intended change replaced, or fails consistently because of its own code; an intermittent failure reaches this case only through case 4): fix the test on a branch, naming the commit that made it stale if there is one. Do not file a bug. If the change was not intended, it is case 3 once the product defect is confirmed, and case 5 until then.
 3. **Confirmed product defect**, routed by where it came from:
    - **from the change under test:** fix it on that branch, naming the file and the commit;
    - **from a change already merged into a shared branch** (a regression with a known commit): name the commit, then offer a fix-forward change (a new commit on the shared branch that corrects it) or the `bug-ticket` skill, and let the user choose;
    - **pre-existing, with no identifiable commit:** the `bug-ticket` skill.
-4. **Intermittent, with no product cause confirmed:** flaky triage with the `flaky-test-triager` agent; its verdict then picks case 1, 2, 3 or 5.
+4. **Intermittent, with no product cause confirmed:** flaky triage with the `flaky-test-triager` agent; its verdict then picks case 1, 2, 3 or 5. A consistent failure skips triage and goes to case 1, 2 or 5 directly.
 5. **Inconclusive:** list the candidate causes, product first, each with what would confirm or rule it out. Do not file a bug and do not record the test as known flaky until one is confirmed.
 
 Never quarantine a test that catches a real bug.
@@ -85,7 +85,7 @@ Classify:
 
 - **Code defect (this change):** the change broke the build or a test (correlate with `git log` / the PR diff).
 - **Product defect (pre-existing, confirmed):** the evidence shows the product itself fails, independent of this change, for example a race condition confirmed by a product-side symptom in the log.
-- **Suspected flaky/environment (product not ruled out):** timeouts, network, agent issues, a test that passes on rerun in history. These symptoms do not prove the test or the environment is at fault: a race condition, deadlock, resource leak or slowdown in the product looks the same. Until the evidence rules the product out, list the candidates, product first (product race or performance regression, environment or infrastructure, test timing), with the evidence for and against each, and recommend that the main session runs the `flaky-test-triager` agent. Do not call it "not a code defect" without that evidence. If it fails consistently rather than intermittently, it is not a case for the triager: use case 1 when a config cause is identified, otherwise case 5.
+- **Suspected flaky/environment (product not ruled out):** timeouts, network, agent issues, a test that passes on rerun in history. These symptoms do not prove the test or the environment is at fault: a race condition, deadlock, resource leak or slowdown in the product looks the same. Until the evidence rules the product out, list the candidates, product first (product race or performance regression, environment or infrastructure, test timing), with the evidence for and against each, and recommend that the main session runs the `flaky-test-triager` agent. Do not call it "not a code defect" without that evidence. If it fails consistently rather than intermittently, it is not a case for the triager: use case 1 when a config cause is identified, case 2 when the test's own code is the cause, otherwise case 5.
 - **Dependency:** version resolution, registry outage, breaking upgrade.
 - **Pipeline config:** YAML, variables, permissions, agent pool, missing secret reference (report that a secret is missing, never its value).
 

@@ -267,7 +267,7 @@ expect_failure "diagnoser that picks one cause" "must list every plausible cause
 expect_failure "diagnoser without other causes" "must report other possible causes" \
   "edit agents/ci-failure-diagnoser.md -e 's|^## Other Possible Causes|## Notes|'"
 expect_failure "triager without product defects" "must recognise intermittent product defects" \
-  "edit agents/flaky-test-triager.md -e 's|^- [*][*]Intermittent product defect (confirmed):[*][*]|- Other:|'"
+  "edit agents/flaky-test-triager.md -e 's|^- [*][*]Intermittent product defect (confirmed, case 3):[*][*]|- Other:|'"
 expect_failure "triager that calls flaky too early" "must rule out a product cause before calling a test flaky" \
   "edit agents/flaky-test-triager.md -e 's|^Do not call a test genuinely flaky until a product cause is ruled out|Call it flaky|'"
 expect_failure "diagnoser that dismisses a timeout" "must not call a timeout 'not a code defect' without evidence" \
@@ -279,7 +279,7 @@ expect_failure "diagnoser without a product defect label" "must have a label for
 expect_failure "diagnoser that guesses a root cause" "must not present a guess as the root cause" \
   "edit agents/ci-failure-diagnoser.md -e 's|; if the evidence is inconclusive, say so and point to Other Possible Causes||'"
 expect_failure "triager without the product defect verdict" "must offer an intermittent product defect verdict" \
-  "edit agents/flaky-test-triager.md -e 's|genuinely flaky (test) / intermittent product defect (confirmed) /|genuinely flaky (test) /|'"
+  "edit agents/flaky-test-triager.md -e 's|intermittent product defect (confirmed) \\[case 3\\]|other|'"
 expect_failure "triager that quarantines real bugs" "must not quarantine a test that catches a real bug" \
   "edit agents/flaky-test-triager.md -e 's|never quarantine a test that catches a real bug|quarantine it|'"
 expect_failure "triager that lists product defects as known flaky" "must add only genuinely flaky tests to known-flaky-tests.md" \
@@ -347,7 +347,17 @@ expect_failure "triager without an environment verdict" "must route environment 
 expect_failure "triager that quarantines freely" "must allow quarantine only as a stopgap for genuinely flaky tests" \
   "edit agents/flaky-test-triager.md -e 's|for a genuinely flaky test only, quarantine/non-blocking as a stopgap|quarantine|'"
 expect_failure "diagnoser sending consistent timeouts to the triager" "must route consistent timeouts without the triager" \
-  "edit agents/ci-failure-diagnoser.md -e 's| If it fails consistently rather than intermittently, it is not a case for the triager: use case 1 when a config cause is identified, otherwise case 5[.]||'"
+  "edit agents/ci-failure-diagnoser.md -e 's| If it fails consistently rather than intermittently, it is not a case for the triager: use case 1 when a config cause is identified, case 2 when the test.s own code is the cause, otherwise case 5[.]||'"
+expect_failure "unconfirmed defect sent to case 3" "templates/defect-routing.md must not send an unconfirmed defect to case 3" \
+  "for f in templates/defect-routing.md agents/ci-failure-diagnoser.md agents/flaky-test-triager.md agents/qa-lead.md skills/bug-ticket/SKILL.md skills/test-developer/SKILL.md; do edit \"\$f\" -e 's|it is case 3 once the product defect is confirmed, and case 5 until then|it is case 3|'; done"
+expect_failure "consistent failures sent to triage" "templates/defect-routing.md must route consistent failures without triage" \
+  "for f in templates/defect-routing.md agents/ci-failure-diagnoser.md agents/flaky-test-triager.md agents/qa-lead.md skills/bug-ticket/SKILL.md skills/test-developer/SKILL.md; do edit \"\$f\" -e 's| A consistent failure skips triage and goes to case 1, 2 or 5 directly[.]||'; done"
+expect_failure "diagnoser sends a test's own consistent failure to case 5" "must route a consistent failure caused by the test to case 2" \
+  "edit agents/ci-failure-diagnoser.md -e 's|case 2 when the test.s own code is the cause, otherwise case 5|otherwise case 5|'"
+expect_failure "triager without a stale-test verdict" "must have a verdict for a stale test" \
+  "edit agents/flaky-test-triager.md -e 's| (verdict: test defect, stale after an intended change)||'"
+expect_failure "verdicts without routing cases" "must map every verdict to a routing case" \
+  "edit agents/flaky-test-triager.md -e 's|/ inconclusive \\[case 5\\]|/ inconclusive|'"
 expect_failure "personal entry in the QA repo" "unknown group 'personal'" \
   "edit catalog.tsv -e 's/^pr-reviewer\tagent\tqa/pr-reviewer\tagent\tpersonal/'"
 expect_failure "machine path in settings.example.json" "settings.example.json contains a machine-specific /Users/ path" \
