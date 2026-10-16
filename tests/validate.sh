@@ -346,7 +346,9 @@ AGENT_RULES = {
         "**Intermittent product defect (confirmed):**": "must recognise intermittent product defects",
         "an intermittent product defect (for example a race condition) or a regression": "description must name the product-defect verdict",
         "  - regression: fix on the branch that introduced it": "must give an action for a regression",
-        "## Verdict        genuinely flaky (test) / intermittent product defect /": "must offer an intermittent product defect verdict",
+        "If the change under test introduced it, recommend fixing it on that branch": "must send a product defect from the change under test back to its branch",
+        "  - product defect from the change under test: fix on that branch": "must give a branch-fix action for a product defect from the change under test",
+        "## Verdict        genuinely flaky (test) / intermittent product defect (confirmed) /": "must offer an intermittent product defect verdict",
         "do not quarantine a test that catches a real bug": "must not quarantine a test that catches a real bug",
         "never for an intermittent product defect or a likely regression": "must not add product defects to known-flaky-tests.md",
         "Use intermittent product defect only when the product cause is confirmed": "must say when a product defect is confirmed versus inconclusive",
@@ -355,7 +357,7 @@ AGENT_RULES = {
     },
     "agents/qa-lead.md": {
         "offer the fix on the branch that introduced it": "must route a defect from the change under test to a branch fix",
-        "only if the user chooses it: a confirmed product defect, or a regression on a shared branch": "plan example must file bugs only for confirmed product defects or shared-branch regressions",
+        "for a confirmed product defect, or a regression on a shared branch if the user chooses it": "plan example must file bugs only for confirmed product defects or shared-branch regressions",
         "if that change is already merged into a shared branch, offer a fix-forward change or `bug-ticket`": "must cover a defect whose change is already merged",
     },
     "skills/bug-ticket/SKILL.md": {
@@ -363,7 +365,7 @@ AGENT_RULES = {
     },
     "README.md": {
         "suspected flaky/environment (product not ruled out)": "trace example must use the diagnoser's suspected-flaky label",
-        "only if the user chooses it: a confirmed product defect, or a regression on a shared branch": "plan example must file bugs only for confirmed product defects or shared-branch regressions",
+        "for a confirmed product defect, or a regression on a shared branch if the user chooses it": "plan example must file bugs only for confirmed product defects or shared-branch regressions",
         "an intermittent product defect (such as a race condition)": "must describe the triager's product-defect verdict",
     },
 }

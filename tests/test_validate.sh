@@ -279,7 +279,7 @@ expect_failure "diagnoser without a product defect label" "must have a label for
 expect_failure "diagnoser that guesses a root cause" "must not present a guess as the root cause" \
   "edit agents/ci-failure-diagnoser.md -e 's|; if the evidence is inconclusive, say so and point to Other Possible Causes||'"
 expect_failure "triager without the product defect verdict" "must offer an intermittent product defect verdict" \
-  "edit agents/flaky-test-triager.md -e 's|genuinely flaky (test) / intermittent product defect /|genuinely flaky (test) /|'"
+  "edit agents/flaky-test-triager.md -e 's|genuinely flaky (test) / intermittent product defect (confirmed) /|genuinely flaky (test) /|'"
 expect_failure "triager that quarantines real bugs" "must not quarantine a test that catches a real bug" \
   "edit agents/flaky-test-triager.md -e 's|do not quarantine a test that catches a real bug|quarantine it|'"
 expect_failure "triager that lists product defects as known flaky" "must not add product defects to known-flaky-tests.md" \
@@ -299,7 +299,7 @@ expect_failure "triager that tickets its own PR's regression" "must send a regre
 expect_failure "lead that tickets its own PR's bug" "agents/qa-lead.md must route a defect from the change under test to a branch fix" \
   "edit agents/qa-lead.md -e 's|offer the fix on the branch that introduced it|offer bug-ticket|'"
 expect_failure "README plan example filing any defect" "README.md plan example must file bugs only for confirmed product defects or shared-branch regressions" \
-  "edit README.md -e 's|only if the user chooses it: a confirmed product defect, or a regression on a shared branch|only if it is a real defect|'"
+  "edit README.md -e 's|for a confirmed product defect, or a regression on a shared branch if the user chooses it|only if it is a real defect|'"
 expect_failure "lead without the merged-change route" "must cover a defect whose change is already merged" \
   "edit agents/qa-lead.md -e 's|if that change is already merged into a shared branch|if not|'"
 expect_failure "bug-ticket that dismisses intermittent failures" "must not dismiss intermittent failures as non-bugs" \
@@ -312,6 +312,10 @@ expect_failure "triager description without product defects" "description must n
   "edit agents/flaky-test-triager.md -e 's|an intermittent product defect (for example a race condition) or a regression|or a regression|'"
 expect_failure "triager without a regression action" "must give an action for a regression" \
   "edit agents/flaky-test-triager.md -e 's|^  - regression: fix on the branch that introduced it|  - other|'"
+expect_failure "triager that tickets its own PR's race" "must send a product defect from the change under test back to its branch" \
+  "edit agents/flaky-test-triager.md -e 's|If the change under test introduced it, recommend fixing it on that branch|File it|'"
+expect_failure "triager output without the branch-fix action" "must give a branch-fix action for a product defect from the change under test" \
+  "edit agents/flaky-test-triager.md -e 's|^  - product defect from the change under test: fix on that branch|  - other|'"
 expect_failure "personal entry in the QA repo" "unknown group 'personal'" \
   "edit catalog.tsv -e 's/^pr-reviewer\tagent\tqa/pr-reviewer\tagent\tpersonal/'"
 expect_failure "machine path in settings.example.json" "settings.example.json contains a machine-specific /Users/ path" \
