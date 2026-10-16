@@ -403,9 +403,62 @@ AGENT_RULES = {
         "File a bug for a confirmed pre-existing product defect with no identifiable commit": "bug-ticket row must match Defect routing",
     },
     "agents/qa-lead.md": {
+        "For `senior-automation-qa-engineer`, relay the recommendation, the numbered phases and its Next Step question": "must relay the strategy report",
         "File a bug for a confirmed pre-existing product defect with no identifiable commit": "bug-ticket row must match Defect routing",
         "For a defect, offer the step from Defect routing": "must route defects with Defect routing",
         "for a pre-existing confirmed product defect, or a regression from a merged change if the user chooses it": "plan example must file bugs only for confirmed product defects or shared-branch regressions",
+    },
+    "agents/senior-automation-qa-engineer.md": {
+        "For what is wrong with an existing suite use test-maintainer": "description must route suite audits to test-maintainer",
+        "leave code changes to the main conversation after the user approves them": "must leave code changes to the main conversation",
+        "## What you draw on": "must keep the reference section",
+        "## Method": "must follow a method",
+        "State every other fact as an assumption, together with how the answer would change without it, except facts only the user can settle": "must mark assumptions",
+        "Do not dress up one option as several": "must not dress up one option as several",
+        "say what you would not do": "must say what not to do",
+        "Order the work in phases small enough to deliver and measure": "must keep phases deliverable and measurable",
+        "The list is a starting point, not a limit": "must keep the tool list open",
+        "the most important one goes into the one Next Step question; any others go under Open Questions": "must route open user questions to Next Step",
+        "You cannot wait for answers during the task": "must not wait for answers",
+        "other facts that would change the recommendation, for the user to confirm later": "must say what Open Questions holds",
+        "point to `test-maintainer`; use the suite facts here only as input": "must leave suite audits to test-maintainer",
+        "ranked by likelihood and impact, each with its evidence": "must rank risks with evidence",
+        "Give 2-3 realistic options, one of which keeps the current approach": "must compare options",
+        "(with no suite yet: the smallest viable start": "must handle a framework with no suite yet",
+        "Choose one option, say why it beats the others": "must recommend one option",
+        "For each phase: goal, work, who does it": "must give a phased plan",
+        "size (S: up to a day, M: up to a sprint, L: more than a sprint)": "must define phase sizes",
+        "and who it goes to (`test-maintainer` to audit an existing Java suite and propose changes": "must say where each phase goes",
+        "its definition with the denominator, the data source, a baseline (or how to get it), a numeric target and a time window": "must define measurable success criteria",
+        "## Context ": "must report context",
+        "## Risks ": "must report risks",
+        "## Options ": "must report options",
+        "## Recommendation ": "must report a recommendation",
+        "## Phased Plan ": "must report a phased plan",
+        "## Success Criteria ": "must report success criteria",
+        "## Open Questions ": "must report open questions",
+        "## Next Step ": "must end with a next step",
+        "the default if they agree (nothing starts without an answer)": "must say nothing starts without an answer",
+        "you never start a phase yourself": "must not start work itself",
+        "**Unit and integration tests:**": "must keep unit and integration guidance",
+        "**Diagnosis:**": "must keep diagnosis guidance",
+        "mutation testing to see whether tests catch real changes": "must keep mutation testing",
+        "property-based tests for complex logic": "must keep property-based testing",
+        "rollback triggers from quality signals": "must keep rollback triggers",
+        "Mobile (Appium) only when the product has an app": "must scope mobile testing",
+        "visual regression where the UI matters": "must keep visual regression",
+        "over the last 30 days (needs reruns enabled or a rerun history)": "must define the flaky rate window and source",
+        "of the N critical flows named in the Risks section": "must tie coverage to the listed risks",
+        "black-box or white-box per context": "must choose black-box or white-box per context",
+        "real dependencies where practical (Testcontainers)": "must prefer real dependencies where practical",
+        "tests that fail for the right reason": "must keep failing-for-the-right-reason",
+        "clear ownership of each layer": "must keep layer ownership",
+        "coverage weighed against maintenance cost": "must weigh coverage against maintenance",
+        "deterministic and independent of order and of each other": "must keep test independence",
+        "**BDD:** Cucumber with Gherkin": "must keep BDD with Gherkin",
+        "pagination and filtering": "must keep pagination and filtering",
+        "correlating a slowdown with the code or infrastructure change behind it": "must correlate performance regressions",
+        "**Tools:**": "must keep a tool list",
     },
     "agents/pr-reviewer.md": {
         "never assume `main`": "must take the base branch from the PR, not assume main",
@@ -469,6 +522,8 @@ AGENT_RULES = {
     },
     "README.md": {
         "the five JVM settings the rule names": "must describe the closed JVM list",
+        "which agent, skill or the main session takes the first phase (its Phased Plan says who takes each phase)": "must describe the strategy Next Step",
+        "a phased plan and measurable success criteria": "must describe the strategy report",
         "we don't recommend a wildcard allow rule for it": "must not recommend a git fetch allow rule",
         "quotes only what the allow-list in `templates/safety.md` permits": "must point to the full build-file allow-list",
         "The file is rewritten as JSON, so its values stay the same": "must say the settings merge rewrites the file",
@@ -526,6 +581,28 @@ if mode == "dump-pins":
 pin_count = read(f"{repo}/tests/pin-count").strip()
 if pin_count != str(len(pins)):
     err(f"tests/pin-count says {pin_count or 'nothing'}, but this script defines {len(pins)} pins; update both together")
+# Snapshots: some entries must equal a file under tests/snapshots/ byte for byte, so every rule in them is covered,
+# not only the pinned phrases. When the entry (or a shared block in it) changes on purpose, update the snapshot too.
+SNAPSHOTS = [("agents/senior-automation-qa-engineer.md", "tests/snapshots/senior-automation-qa-engineer.md")]
+def read_bytes(path):
+    try:
+        with open(path, "rb") as f:
+            return f.read()
+    except OSError:
+        return b""
+
+for path, snap in SNAPSHOTS:
+    # Bytes, not text: text mode would turn CRLF into LF and hide a line-ending change.
+    text = read_bytes(f"{repo}/{path}")
+    want = read_bytes(f"{repo}/{snap}")
+    if not text:
+        err(f"{path} missing or empty")
+    elif not want:
+        err(f"{snap} missing or empty")
+    elif text != want:
+        a, b = text.split(b"\n"), want.split(b"\n")
+        line = next((n for n, (x, y) in enumerate(zip(a, b), 1) if x != y), min(len(a), len(b)) + 1)
+        err(f"{path} differs from {snap} (first difference at line {line}); update both when the change is intended")
 for path, rules in AGENT_RULES.items():
     text = read(f"{repo}/{path}")
     for phrase, message in rules.items():

@@ -539,6 +539,22 @@ expect_failure "tag fetch not denied" "misses deny rules: Bash(git fetch *:refs/
   "edit settings.example.json -e '/refs.tags/d'"
 expect_failure "agent fetch form denied" "denies the one git fetch form the agents use" \
   "edit settings.example.json -e 's|\"Bash(git diff [*]--output[*])\"|\"Bash(git diff *--output*)\", \"Bash(git fetch origin *)\"|'"
+expect_failure "senior method line deleted" "agents/senior-automation-qa-engineer.md differs from tests/snapshots/senior-automation-qa-engineer.md" \
+  "edit agents/senior-automation-qa-engineer.md -e '/what it depends on, its exit criterion/d'"
+expect_failure "senior frontmatter loosened" "differs from tests/snapshots/senior-automation-qa-engineer.md" \
+  "edit agents/senior-automation-qa-engineer.md -e 's|^disallowedTools: Write, Edit, NotebookEdit\$|disallowedTools: Write|'"
+expect_failure "senior read-only rule removed" "differs from tests/snapshots/senior-automation-qa-engineer.md" \
+  "edit agents/senior-automation-qa-engineer.md -e 's|Do not use Bash to change files, git state or remote systems either|Use Bash freely|'"
+expect_failure "senior reference bullet deleted" "differs from tests/snapshots/senior-automation-qa-engineer.md" \
+  "edit agents/senior-automation-qa-engineer.md -e '/unmaintained tests are worse than none/d'"
+expect_failure "senior Method heading duplicated" "differs from tests/snapshots/senior-automation-qa-engineer.md" \
+  "printf '\\n## Method\\n\\nAnything goes.\\n' >> agents/senior-automation-qa-engineer.md"
+expect_failure "senior agent converted to CRLF" "agents/senior-automation-qa-engineer.md differs from tests/snapshots/senior-automation-qa-engineer.md (first difference at line 1)" \
+  "python3 -c 'import sys; p=sys.argv[1]; d=open(p,\"rb\").read(); open(p,\"wb\").write(d.replace(b\"\\n\", b\"\\r\\n\"))' agents/senior-automation-qa-engineer.md"
+expect_failure "senior snapshot emptied" "tests/snapshots/senior-automation-qa-engineer.md missing or empty" \
+  ": > tests/snapshots/senior-automation-qa-engineer.md"
+expect_failure "senior snapshot missing" "tests/snapshots/senior-automation-qa-engineer.md missing or empty" \
+  "rm tests/snapshots/senior-automation-qa-engineer.md"
 expect_failure "personal entry in the QA repo" "unknown group 'personal'" \
   "edit catalog.tsv -e 's/^pr-reviewer\tagent\tqa/pr-reviewer\tagent\tpersonal/'"
 expect_failure "machine path in settings.example.json" "settings.example.json contains a machine-specific /Users/ path" \

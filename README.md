@@ -80,7 +80,7 @@ Then, in the work repo, start `claude` and run `/qa-conventions`, then `/framewo
 | `test-maintainer` | Audit a test framework for flakiness, duplication, weak assertions, dead code, slow setup, test-layer balance, contract/performance testing and CI quality gates. Gives a health report and an improvement plan. |
 | `ci-failure-diagnoser` | Find the root cause of a failed pipeline run (Azure Pipelines, GitHub Actions or GitLab CI), with log evidence. |
 | `flaky-test-triager` | Decide whether an intermittent failure is flaky, an intermittent product defect (such as a race condition), or a real regression, based on run history. |
-| `senior-automation-qa-engineer` | Test strategy and framework design: which test layers to invest in, a new automation framework, contract, performance and E2E strategy. |
+| `senior-automation-qa-engineer` | Test strategy and framework design: which test layers to invest in, a new automation framework, contract, performance and E2E strategy. Answers with context, ranked risks, 2-3 options with trade-offs, a recommendation, a phased plan and measurable success criteria. |
 
 **Skills** run in your conversation, so they can ask questions and wait for approval at each step. Start one with a slash command, or describe the task.
 
@@ -119,7 +119,7 @@ A printed plan is not approval: it still stops at every gate. It ends a request 
 ### How approvals work
 
 - **Skills** stop at each gate ("Proceed with these 4 tests?") and continue when you answer.
-- **Agents** can't pause mid-task, so they finish with a report and a question such as "Which findings should be implemented?". The `pr-reviewer` and `test-maintainer` reports end with "Apply Rules" for the main conversation. Answer in the same chat ("apply 1, 3 and 5"), and Claude applies only those items, following those rules, then runs the impacted tests.
+- **Agents** can't pause mid-task, so they finish with a report and a question such as "Which findings should be implemented?". `senior-automation-qa-engineer` ends with a Next Step: one question, the default if you agree, and which agent, skill or the main session takes the first phase (its Phased Plan says who takes each phase). The `pr-reviewer` and `test-maintainer` reports end with "Apply Rules" for the main conversation. Answer in the same chat ("apply 1, 3 and 5"), and Claude applies only those items, following those rules, then runs the impacted tests.
 
 Nothing is written, run, posted to a tracker or pushed until you say so.
 
@@ -194,6 +194,7 @@ The agents never handle tokens. Authentication stays in tools that manage it the
 ## Customizing
 
 - **Adding an entry:** add an agent (`agents/<name>.md`) or skill (`skills/<name>/SKILL.md`), a row in `catalog.tsv`, a line in this README and in `templates/CLAUDE.md`. Each entry must include the blocks from `templates/safety.md` and `templates/platforms.md` verbatim, and every entry except `framework-map` the block from `templates/project-map.md`. `ci-failure-diagnoser`, `flaky-test-triager`, `qa-lead`, `bug-ticket` and `test-developer` recommend what to do with a defect, so they also carry `templates/defect-routing.md`; so must any other entry with a `## Defect routing` section. The CI checks that each copy matches and that the template still has its key routes.
+- **Pins and snapshots:** `tests/validate.sh` pins key phrases (each is mutation-tested, and `tests/pin-count` holds their exact number) and checks whole entries against `tests/snapshots/` (the strategy agent, byte for byte, including the shared blocks in it). When you change a pinned phrase or a snapshotted section on purpose, update the pin, the count or the snapshot in the same change.
 - **Other platforms:** add a column to `templates/platforms.md`, then copy the new block into every entry.
 - **Other languages:** the files assume Java; adjust the build and test commands (for example `pytest` instead of `mvn`).
 

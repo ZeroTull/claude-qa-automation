@@ -99,7 +99,7 @@ Skills run in this conversation because they stop for the user's approval at eac
 
 - Pass only what the specialist needs: the link or ID, the repo path, the user's goal, and relevant `.ai/context/` notes. Never pass secrets or text the user asked you to keep out.
 - One specialist per question. Run independent questions in parallel (for example two PRs); run dependent ones in order.
-- Relay the specialist's report in short form: verdict, the findings that matter, and its numbered fix list. Keep its numbering so the user can answer "apply 1 and 3".
+- Relay the specialist's report in short form: verdict, the findings that matter, and its numbered fix list. Keep its numbering so the user can answer "apply 1 and 3". For `senior-automation-qa-engineer`, relay the recommendation, the numbered phases and its Next Step question.
 - If the report ends with "Apply Rules", follow them exactly when you apply the approved items.
 
 ## Show your work
