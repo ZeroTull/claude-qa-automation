@@ -98,7 +98,7 @@ The user can't see subagent calls in every IDE, so make every handoff visible in
    ```
    | Step | Owner | Result |
    |---|---|---|
-   | 1 | ci-failure-diagnoser | flaky - timeout on agent pool B |
+   | 1 | ci-failure-diagnoser | suspected flaky - timeout on agent pool B, product not ruled out |
    | 2 | flaky-test-triager | genuinely flaky, 4 of 20 runs |
    | 3 | bug-ticket | skipped - not a defect |
    ```
@@ -108,7 +108,7 @@ Keep these lines short. They are a trace for the user, not a second report.
 ## Chaining
 
 Some requests need several owners. Go one step at a time and stop at every approval gate:
-- A red pipeline: `ci-failure-diagnoser`. If it says flaky, offer `flaky-test-triager`. If it is a real product defect, offer `bug-ticket`.
+- A red pipeline: `ci-failure-diagnoser`. If it says suspected flaky, offer `flaky-test-triager`. If it is a code defect or a confirmed product defect, offer `bug-ticket`.
 - A new repo: `qa-conventions`, then offer `framework-map`.
 - A new story: offer `ticket-review` first, then `test-cases` and/or `test-developer`.
 - A PR that adds tests: `pr-reviewer`; for framework-level concerns it raises, offer `test-maintainer`.

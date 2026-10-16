@@ -267,9 +267,27 @@ expect_failure "diagnoser that picks one cause" "must list every plausible cause
 expect_failure "diagnoser without other causes" "must report other possible causes" \
   "edit agents/ci-failure-diagnoser.md -e 's|^## Other Possible Causes|## Notes|'"
 expect_failure "triager without product defects" "must recognise intermittent product defects" \
-  "edit agents/flaky-test-triager.md -e 's|^- [*][*]Intermittent product defect:[*][*]|- Other:|'"
+  "edit agents/flaky-test-triager.md -e 's|^- [*][*]Intermittent product defect (confirmed):[*][*]|- Other:|'"
 expect_failure "triager that calls flaky too early" "must rule out a product cause before calling a test flaky" \
   "edit agents/flaky-test-triager.md -e 's|^Do not call a test genuinely flaky until a product cause is ruled out|Call it flaky|'"
+expect_failure "diagnoser that dismisses a timeout" "must not call a timeout 'not a code defect' without evidence" \
+  "edit agents/ci-failure-diagnoser.md -e 's|Do not call it \"not a code defect\" without that evidence|Treat it as flaky|'"
+expect_failure "diagnoser without the suspected label" "must label timeouts as suspected flaky with the product not ruled out" \
+  "edit agents/ci-failure-diagnoser.md -e 's|suspected flaky-environment (product not ruled out)|flaky-environment|'"
+expect_failure "diagnoser without a product defect label" "must have a label for confirmed pre-existing product defects" \
+  "edit agents/ci-failure-diagnoser.md -e 's|^- [*][*]Product defect (pre-existing, confirmed):[*][*]|- Other:|'"
+expect_failure "diagnoser that guesses a root cause" "must not present a guess as the root cause" \
+  "edit agents/ci-failure-diagnoser.md -e 's|; if the evidence is inconclusive, say so and point to Other Possible Causes||'"
+expect_failure "triager without the product defect verdict" "must offer an intermittent product defect verdict" \
+  "edit agents/flaky-test-triager.md -e 's|genuinely flaky (test) / intermittent product defect /|genuinely flaky (test) /|'"
+expect_failure "triager that quarantines real bugs" "must not quarantine a test that catches a real bug" \
+  "edit agents/flaky-test-triager.md -e 's|do not quarantine a test that catches a real bug|quarantine it|'"
+expect_failure "triager that lists product defects as known flaky" "must not add product defects to known-flaky-tests.md" \
+  "edit agents/flaky-test-triager.md -e 's|never for an intermittent product defect or a likely regression|always|'"
+expect_failure "triager without a confirmed/inconclusive rule" "must say when a product defect is confirmed versus inconclusive" \
+  "edit agents/flaky-test-triager.md -e 's|Use intermittent product defect only when the product cause is confirmed|Decide|'"
+expect_failure "agent rules on an emptied file" "agents/flaky-test-triager.md must recognise intermittent product defects" \
+  "awk 'NR==1 || f<2 {print} /^---\$/{f++}' agents/flaky-test-triager.md > x.tmp && mv x.tmp agents/flaky-test-triager.md"
 expect_failure "personal entry in the QA repo" "unknown group 'personal'" \
   "edit catalog.tsv -e 's/^pr-reviewer\tagent\tqa/pr-reviewer\tagent\tpersonal/'"
 expect_failure "machine path in settings.example.json" "settings.example.json contains a machine-specific /Users/ path" \

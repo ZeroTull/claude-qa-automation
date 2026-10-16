@@ -108,7 +108,7 @@ Plan (3 steps)
   3. bug-ticket (me, skill) - only if it is a real defect
 
 ▶ Step 1/3 → ci-failure-diagnoser: pipeline 9876, branch main
-✔ Step 1/3 ← ci-failure-diagnoser: flaky/environment - LoginTest timed out on agent pool B
+✔ Step 1/3 ← ci-failure-diagnoser: suspected flaky/environment (product not ruled out) - LoginTest timed out on agent pool B
 ```
 
 A printed plan is not approval: it still stops at every gate. It ends a request of three or more steps with a short table of steps, owners and results. If it can't start a specialist as a subagent, it says so (`⚠ Could not start ...`) and follows that specialist's instructions itself.

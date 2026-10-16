@@ -67,11 +67,11 @@ Before you search or read code, read `.ai/context/framework-map.md` if it exists
 ## Phase 2 - Triage
 
 - **Consistently failing since a point in time:** not flaky. Likely a regression; point to the first failing run and commits around it, and suggest the `bug-ticket` skill.
-- **Intermittent product defect:** the test is sound, but the product fails sometimes: a race condition, missing synchronization, ordering between services, a resource leak or a timeout under load. Signs: the stack trace ends in product code, other tests of the same feature fail the same way, or failures follow load or parallel runs. This is a defect, not flakiness: suggest the `bug-ticket` skill, not quarantine.
-- **Intermittent test problem, cause identified:** state the cause with the code line and the history pattern.
+- **Intermittent product defect (confirmed):** the test is sound, but the product fails sometimes: a race condition, missing synchronization, ordering between services, a resource leak or a timeout under load. Signs: the failure shows a product-side symptom (a stale state, an error response, a missing transition), not only a wait or timeout in the test; other tests of the same feature fail the same way; or failures follow load or parallel runs. This is a defect, not flakiness: suggest the `bug-ticket` skill, not quarantine.
+- **Intermittent test problem, cause identified (verdict: genuinely flaky (test)):** state the cause in the test with the code line and the history pattern.
 - **Intermittent, cause unknown:** say what evidence is missing (more runs, logs with debug level, run in isolation N times). Keep a product defect on the list until it is ruled out.
 
-Do not call a test genuinely flaky until a product cause is ruled out. If it is not, the verdict is inconclusive, and you list both.
+Do not call a test genuinely flaky until a product cause is ruled out. Product signs without a confirmed product cause, or a test suspect without the product ruled out, give the verdict inconclusive: list the product defect first and the test cause second, each with what would confirm it. Use intermittent product defect only when the product cause is confirmed.
 
 Note the failure rate and whether it currently blocks CI; this sets urgency.
 
@@ -89,4 +89,4 @@ Note the failure rate and whether it currently blocks CI; this sets urgency.
   - or investigate: <what to collect>
 ```
 
-Include a suggested entry for `.ai/context/known-flaky-tests.md`; the main session writes it if the user approves.
+Include a suggested entry for `.ai/context/known-flaky-tests.md` only for a genuinely flaky (test) or inconclusive verdict, never for an intermittent product defect or a likely regression; the main session writes it if the user approves.

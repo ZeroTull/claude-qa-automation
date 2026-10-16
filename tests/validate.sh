@@ -335,16 +335,24 @@ AGENT_RULES = {
         "Until the evidence rules the product out": "must not rule out a product defect for timeouts or reruns without evidence",
         "list every plausible one, ranked": "must list every plausible cause when the evidence is inconclusive",
         "## Other Possible Causes": "must report other possible causes",
+        "Do not call it \"not a code defect\" without that evidence": "must not call a timeout 'not a code defect' without evidence",
+        "suspected flaky-environment (product not ruled out)": "must label timeouts as suspected flaky with the product not ruled out",
+        "**Product defect (pre-existing, confirmed):**": "must have a label for confirmed pre-existing product defects",
+        "if the evidence is inconclusive, say so and point to Other Possible Causes": "must not present a guess as the root cause",
     },
     "agents/flaky-test-triager.md": {
-        "**Intermittent product defect:**": "must recognise intermittent product defects",
+        "**Intermittent product defect (confirmed):**": "must recognise intermittent product defects",
+        "## Verdict        genuinely flaky (test) / intermittent product defect /": "must offer an intermittent product defect verdict",
+        "do not quarantine a test that catches a real bug": "must not quarantine a test that catches a real bug",
+        "never for an intermittent product defect or a likely regression": "must not add product defects to known-flaky-tests.md",
+        "Use intermittent product defect only when the product cause is confirmed": "must say when a product defect is confirmed versus inconclusive",
         "Do not call a test genuinely flaky until a product cause is ruled out": "must rule out a product cause before calling a test flaky",
     },
 }
 for path, rules in AGENT_RULES.items():
     text = read(f"{repo}/{path}")
     for phrase, message in rules.items():
-        if text and phrase not in text:
+        if phrase not in text:
             err(f"{path} {message}")
 
 # The qa-lead orchestrator must route every other agent and every skill, so nothing becomes unreachable.
