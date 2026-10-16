@@ -335,6 +335,7 @@ AGENT_RULES = {
         "Until the evidence rules the product out": "must not rule out a product defect for timeouts or reruns without evidence",
         "list every plausible one, ranked": "must list every plausible cause when the evidence is inconclusive",
         "## Other Possible Causes": "must report other possible causes",
+        "product defect (confirmed), suspected flaky/environment": "description must list the product-defect and suspected-flaky classes",
         "Do not call it \"not a code defect\" without that evidence": "must not call a timeout 'not a code defect' without evidence",
         "suspected flaky/environment (product not ruled out)": "must label timeouts as suspected flaky with the product not ruled out",
         "recommend fixing it on the branch that introduced it": "must send a defect from the change under test back to its branch",
@@ -343,6 +344,8 @@ AGENT_RULES = {
     },
     "agents/flaky-test-triager.md": {
         "**Intermittent product defect (confirmed):**": "must recognise intermittent product defects",
+        "an intermittent product defect (for example a race condition) or a regression": "description must name the product-defect verdict",
+        "  - regression: fix on the branch that introduced it": "must give an action for a regression",
         "## Verdict        genuinely flaky (test) / intermittent product defect /": "must offer an intermittent product defect verdict",
         "do not quarantine a test that catches a real bug": "must not quarantine a test that catches a real bug",
         "never for an intermittent product defect or a likely regression": "must not add product defects to known-flaky-tests.md",
@@ -351,12 +354,17 @@ AGENT_RULES = {
         "If one of those commits is in the change under test, recommend fixing it on that branch": "must send a regression from the change under test back to its branch",
     },
     "agents/qa-lead.md": {
-        "offer the fix on that branch": "must route a defect from the change under test to a branch fix",
-        "only if it is a confirmed product defect": "plan example must file bugs only for confirmed product defects",
+        "offer the fix on the branch that introduced it": "must route a defect from the change under test to a branch fix",
+        "only if the user chooses it: a confirmed product defect, or a regression on a shared branch": "plan example must file bugs only for confirmed product defects or shared-branch regressions",
+        "if that change is already merged into a shared branch, offer a fix-forward change or `bug-ticket`": "must cover a defect whose change is already merged",
+    },
+    "skills/bug-ticket/SKILL.md": {
+        "An intermittent failure can still be a product defect": "must not dismiss intermittent failures as non-bugs",
     },
     "README.md": {
         "suspected flaky/environment (product not ruled out)": "trace example must use the diagnoser's suspected-flaky label",
-        "only if it is a confirmed product defect": "plan example must file bugs only for confirmed product defects",
+        "only if the user chooses it: a confirmed product defect, or a regression on a shared branch": "plan example must file bugs only for confirmed product defects or shared-branch regressions",
+        "an intermittent product defect (such as a race condition)": "must describe the triager's product-defect verdict",
     },
 }
 for path, rules in AGENT_RULES.items():

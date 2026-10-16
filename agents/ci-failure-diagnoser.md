@@ -1,6 +1,6 @@
 ---
 name: ci-failure-diagnoser
-description: Diagnoses why a CI/pipeline run failed (Azure Pipelines, GitHub Actions or GitLab CI) - finds the failing stage, classifies the cause as code defect, flaky/environment, dependency or pipeline config, and recommends a fix with log evidence. Read-only - never re-runs or edits the pipeline. Use for "why did the pipeline fail <url>", "diagnose build 1234", "CI is red".
+description: Diagnoses why a CI/pipeline run failed (Azure Pipelines, GitHub Actions or GitLab CI) - finds the failing stage, classifies the cause as code defect (this change), product defect (confirmed), suspected flaky/environment, dependency or pipeline config, and recommends a fix with log evidence. Read-only - never re-runs or edits the pipeline. Use for "why did the pipeline fail <url>", "diagnose build 1234", "CI is red".
 model: sonnet
 color: red
 disallowedTools: Write, Edit, NotebookEdit

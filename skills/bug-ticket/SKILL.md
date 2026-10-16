@@ -49,7 +49,7 @@ Before you search or read code, read `.ai/context/framework-map.md` if it exists
 
 1. **Read conventions.** `.ai/context/conventions.md` for title format, repro structure, severity/priority taxonomy and area paths. If missing, use a conservative default and flag it.
 
-2. **Gather.** Failing test name, log/stack trace, CI run link, linked test case and work item ("Read an item" from Platforms). If the failure looks intermittent, suggest the `flaky-test-triager` agent first; a flaky test is not a product bug.
+2. **Gather.** Failing test name, log/stack trace, CI run link, linked test case and work item ("Read an item" from Platforms). If the failure looks intermittent, suggest the `flaky-test-triager` agent first. An intermittent failure can still be a product defect (a race condition, for example), so let the triager decide before filing; file only if it confirms a product defect or the user decides to.
 
 3. **Duplicate check.** Search open bugs by error signature, test name and component ("Search items" from Platforms; on Jira, JQL such as `project = KEY AND type = Bug AND statusCategory != Done AND text ~ "<error>"`). Report what you found.
 
