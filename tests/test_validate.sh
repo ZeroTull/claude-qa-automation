@@ -569,8 +569,20 @@ expect_failure "score table with above on a middle row" "the score table's share
   "for f in agents/test-maintainer.md tests/snapshots/test-maintainer.md; do edit \"\$f\" -e 's#^| 2% to under 5% | 7 | Good |\$#| above 2% to under 5% | 7 | Good |#'; done"
 expect_failure "score table band mismatch" "a score table row has the wrong band for its score" \
   "for f in agents/test-maintainer.md tests/snapshots/test-maintainer.md; do edit \"\$f\" -e 's#^| 5% to under 10% | 6 | Fair |\$#| 5% to under 10% | 6 | Good |#'; done"
-expect_failure "score table bound moved in agent and snapshot" "the score table row '| 25% to under 40% | 3 | Poor |' is missing or changed" \
+expect_failure "score table bound moved in agent and snapshot" "the Score section must contain exactly the 11 score table rows, in order" \
   "for f in agents/test-maintainer.md tests/snapshots/test-maintainer.md; do edit \"\$f\" -e 's#^| 15% to under 25% | 4 | Poor |\$#| 15% to under 26% | 4 | Poor |#' -e 's#^| 25% to under 40% | 3 | Poor |\$#| 26% to under 40% | 3 | Poor |#'; done"
+expect_failure "live table rewritten, verbatim rows parked elsewhere" "the Score section must contain exactly the 11 score table rows, in order" \
+  "python3 - <<'MOVE'
+import re
+for p in ['agents/test-maintainer.md', 'tests/snapshots/test-maintainer.md']:
+    s = open(p).read()
+    rows = [l for l in s.split(chr(10)) if re.match(r'^[|] .+ [|] [0-9]+ [|] (Excellent|Good|Fair|Poor|Broken) [|]\$', l)]
+    s = s.replace(rows[7], '|25% to under 40%|4|Poor|')
+    s += chr(10) + chr(10).join(rows) + chr(10)
+    open(p, 'w').write(s)
+MOVE"
+expect_failure "second mapping outside the Score section" "a share-to-band mapping outside the Score section" \
+  "for f in agents/test-maintainer.md tests/snapshots/test-maintainer.md; do printf '\\n|25%% to under 40%%|4|Poor|\\n' >> \"\$f\"; done"
 expect_failure "senior snapshot emptied" "tests/snapshots/senior-automation-qa-engineer.md missing or empty" \
   ": > tests/snapshots/senior-automation-qa-engineer.md"
 expect_failure "senior snapshot missing" "tests/snapshots/senior-automation-qa-engineer.md missing or empty" \

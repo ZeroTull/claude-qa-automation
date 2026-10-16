@@ -464,7 +464,7 @@ AGENT_RULES = {
         "## Scoring": "must define how scores are given",
         "count the items affected by at least one of that category's countable signals": "must score each category from its own signals",
         "a test that cannot fail (no assertion, an assertion that is always true, or a failure swallowed in a catch)": "must count tests that cannot fail",
-        "except that the last row includes 100%": "must give 100% a score",
+        "and the last row includes 100%": "must give 100% a score",
         "Lower bounds are inclusive and upper bounds exclusive": "must define inclusive and exclusive bounds",
         "with two exceptions: the \"above 0%\" row excludes exactly 0%": "must name the 0% exception",
         "A category in scope whose counts you cannot produce is `n/a` with the reason": "must not score uncounted categories",
@@ -485,7 +485,10 @@ AGENT_RULES = {
         "A missing or empty CI configuration counts as 0 gates": "must score a missing CI configuration",
         "Every score cites its evidence": "must cite evidence for every score",
         "if fewer than 3 categories have a score, write \"overall n/a (categories with a score: N)\"": "must handle too few scored categories",
-        "round it down, then cap it at the lowest scored category plus 3": "must define rounding and the cap",
+        "round it down, and cap it at the lowest scored category (CI gates included) plus 3": "must define rounding and the cap",
+        "apply the Stability override first": "must apply the override before the overall score",
+        "with the same bands as the table": "must give CI scores a band",
+        "The categories in scope are the ones the request names, or all seven if it names none": "must define which categories are in scope",
         "overall X/10 (see Scoring)": "must report the overall score by the Scoring rules",
     },
     "agents/pr-reviewer.md": {
@@ -651,9 +654,22 @@ TM_ROWS = [
 # that start at 0%, touch without overlapping, and end at 100%. A row deleted from both the agent and its snapshot
 # still fails here.
 tm = read(f"{repo}/agents/test-maintainer.md")
-for row in TM_ROWS:
-    if row not in tm.split("\n"):
-        err(f"agents/test-maintainer.md: the score table row '{row}' is missing or changed")
+# The Score section (from "**Score.**" to "A guard is") must hold exactly the 11 rows, in order, and nothing else
+# apart from the header; and no other line in the file may pair a share with a band, so no second mapping exists.
+lines = tm.split("\n")
+start = next((n for n, l in enumerate(lines) if l == "**Score.**"), None)
+end = next((n for n, l in enumerate(lines) if l.startswith("A guard is")), None)
+if start is None or end is None or end < start:
+    err("agents/test-maintainer.md: the Score section ('**Score.**' to 'A guard is') is missing")
+else:
+    section = [l for l in lines[start + 1:end] if l.strip()]
+    if section != ["| Affected share | Score | Band |", "|---|---|---|"] + TM_ROWS:
+        err("agents/test-maintainer.md: the Score section must contain exactly the 11 score table rows, in order")
+    stray = [l for n, l in enumerate(lines) if not start < n < end and "%" in l
+             and re.search(r"\b(Excellent|Good|Fair|Poor|Broken)\b", l) and re.search(r"\d+%", l)
+             and not l.startswith("Score: 5 gates")]
+    if stray:
+        err(f"agents/test-maintainer.md: a share-to-band mapping outside the Score section: {stray[0][:60]}")
 rows = re.findall(r"^\| (.+?) \| (\d+) \| (Excellent|Good|Fair|Poor|Broken) \|$", tm, re.M)
 BAND = {10: "Excellent", 9: "Excellent", 8: "Good", 7: "Good", 6: "Fair", 5: "Fair", 4: "Poor", 3: "Poor",
         2: "Broken", 1: "Broken", 0: "Broken"}
