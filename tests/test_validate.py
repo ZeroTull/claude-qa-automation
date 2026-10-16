@@ -29,7 +29,8 @@ class MutationError(Exception):
     """A mutation did not apply: the text or file it targets is gone, so the case would test nothing."""
 
 
-# Files are read and written with newline="" so a mutation changes only the bytes it means to.
+# Files are read and written with newline="" so a mutation changes only the bytes it means to. The frontmatter helpers
+# below expect LF line endings, as every file in the repo has; a CRLF file fails them with MutationError.
 def _read(root, path):
     with open(root / path, encoding="utf-8", newline="") as f:
         return f.read()
@@ -42,11 +43,13 @@ def _write(root, path, text):
 
 
 # Each helper below returns an operation: a function that applies one change to a repo copy.
-def replace(path, old, new):
+def replace(path, old, new, every=False):
+    """Replaces old, which must occur exactly once; every=True replaces all of several occurrences (sed's g flag)."""
     def op(root):
         text = _read(root, path)
-        if old not in text:
-            raise MutationError(f"{path}: {old!r} not found")
+        n = text.count(old)
+        if n == 0 or (n > 1 and not every):
+            raise MutationError(f"{path}: {old!r} found {n} times")
         _write(root, path, text.replace(old, new))
     return op
 
@@ -287,9 +290,9 @@ FAILURES = [
          append("templates/CLAUDE.md", "`new-agent`\n"),
          append("README.md", "`new-agent`\n")),
     fail("skill the lead does not route", "agents/qa-lead.md does not route skill `test-cases`",
-         replace("agents/qa-lead.md", "`test-cases`", "`x`")),
+         replace("agents/qa-lead.md", "`test-cases`", "`x`", every=True)),
     fail("framework-map the lead does not route", "agents/qa-lead.md does not route skill `framework-map`",
-         replace("agents/qa-lead.md", "`framework-map`", "`x`")),
+         replace("agents/qa-lead.md", "`framework-map`", "`x`", every=True)),
     fail("QA entry without the project map block",
          "agents/test-maintainer.md: does not contain the block from templates/project-map.md",
          replace("agents/test-maintainer.md", "- If the map and the code disagree, the code wins; say what differs.", "- Trust the map.")),
@@ -798,7 +801,7 @@ def copy_repo(dst):
 
 
 def run_validate(*args, env=None):
-    return subprocess.run([str(VALIDATE), *map(str, args)], capture_output=True, text=True,
+    return subprocess.run([str(VALIDATE), *map(str, args)], capture_output=True, encoding="utf-8", errors="replace",
                           env={**os.environ, **(env or {})})
 
 
@@ -820,14 +823,14 @@ class ValidateTest(unittest.TestCase):
             label, expected, ops = case
             try:
                 return label, expected, run_validate(self.mutated(f"{i}_{label}", ops))
-            except (MutationError, OSError) as e:
+            except Exception as e:  # reported against this case's label, not as an abort of the whole test
                 return label, expected, e
         with ThreadPoolExecutor(max_workers=os.cpu_count() or 4) as pool:
             return list(pool.map(one, range(len(cases)), cases))
 
     def assert_rejected(self, result, expected):
         if isinstance(result, Exception):
-            self.fail(f"mutation did not apply: {result}")
+            self.fail(f"mutation did not apply: {result!r}")
         self.assertNotEqual(result.returncode, 0, "validate.sh passed")
         self.assertIn(expected, result.stdout)
 

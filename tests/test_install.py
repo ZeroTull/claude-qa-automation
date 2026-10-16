@@ -38,8 +38,10 @@ def file_mode(path):
 
 
 def count_links(folder):
-    return sum(1 for _, dirs, files in os.walk(folder) for n in dirs + files
-               if os.path.islink(os.path.join(_, n)))
+    if not os.path.isdir(folder):
+        raise FileNotFoundError(folder)  # a missing folder must not count as "no links"
+    return sum(1 for root, dirs, files in os.walk(folder) for name in dirs + files
+               if os.path.islink(os.path.join(root, name)))
 
 
 def copy_repo(dst):
@@ -70,40 +72,30 @@ class Result:
 
 
 class InstallTest(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        cls._class_tmp = tempfile.TemporaryDirectory()
-        cls.stubs = Path(cls._class_tmp.name) / "stubs"
-        cls.stubs.mkdir()
-        cls.stub_marks = Path(cls._class_tmp.name) / "marks"
-        cls.stub_marks.mkdir()
-        # az records any call, python3 always fails, xcode-none reports no Command Line Tools.
-        cls._stub("az", f'touch "{cls.stub_marks}/az-called"\n')
-        cls._stub("python3", "exit 1\n")
-        cls._stub("xcode-none", "exit 1\n")
-        cls._stub("py-stub", f'touch "{cls.stub_marks}/stub-called"\nexit 1\n')
-        # A python3 on PATH that is the macOS stub: the installer must detect it without running it.
-        cls.stubpath = Path(cls._class_tmp.name) / "stubpath"
-        cls.stubpath.mkdir()
-        (cls.stubpath / "python3").symlink_to(cls.stubs / "py-stub")
-
-    @classmethod
-    def tearDownClass(cls):
-        cls._class_tmp.cleanup()
-
-    @classmethod
-    def _stub(cls, name, body):
-        path = cls.stubs / name
-        path.write_text("#!/bin/sh\n" + body)
-        path.chmod(0o755)
-
     def setUp(self):
         tmp = tempfile.TemporaryDirectory()
         self.addCleanup(tmp.cleanup)
         self.tmp = Path(tmp.name)
         self.home = self.tmp / "home"
-        # Never let a test fall back to the real ~/.claude or ~/.copilot.
-        self.env = {**os.environ, "CLAUDE_HOME": str(self.home), "COPILOT_HOME": str(self.tmp / "copilot-default")}
+        # Never let a test fall back to the real ~/.claude or ~/.copilot, or read anything else under the real HOME.
+        self.env = {**os.environ, "HOME": str(self.tmp / "home-root"), "CLAUDE_HOME": str(self.home),
+                    "COPILOT_HOME": str(self.tmp / "copilot-default")}
+        # Per-test stubs, so the "never runs" markers start empty in every test.
+        self.stubs = self.tmp / "stubs"
+        self.stub_marks = self.tmp / "marks"
+        self.stub_marks.mkdir()
+        # az records any call, python3 always fails, xcode-none reports no Command Line Tools.
+        self._stub("az", f'touch "{self.stub_marks}/az-called"\n')
+        self._stub("python3", "exit 1\n")
+        self._stub("xcode-none", "exit 1\n")
+        self._stub("py-stub", f'touch "{self.stub_marks}/stub-called"\nexit 1\n')
+        # A python3 on PATH that is the macOS stub: the installer must detect it without running it.
+        self.stubpath = self.tmp / "stubpath"
+        self.stubpath.mkdir()
+        (self.stubpath / "python3").symlink_to(self.stubs / "py-stub")
+
+    def _stub(self, name, body):
+        self.write(self.stubs / name, "#!/bin/sh\n" + body, 0o755)
 
     # Runs install.sh and returns its exit code and combined stdout and stderr.
     def run_install(self, *args, env=None, script=INSTALL, cwd=None, umask=-1):

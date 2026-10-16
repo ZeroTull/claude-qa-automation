@@ -23,3 +23,16 @@ jobs:
         run: tests/validate.sh
       - name: Test validator and installer
         run: python3 -m unittest discover -s tests -v
+
+  # The README promises Python 3.9 or newer; this job keeps that floor honest.
+  python39:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.9"
+      - name: Validate catalog, entries and settings
+        run: tests/validate.sh
+      - name: Test validator and installer
+        run: python3 -m unittest discover -s tests -v
