@@ -331,9 +331,16 @@ mkdir -p "$fullp/.claude"
 echo '{"permissions": {"deny": []}}' >"$fullp/.claude/settings.json"
 for i in $(seq 0 999); do mkdir -p "$full/backups/qa-20990101-000000-$(printf '%03d' "$i")"; done
 out="$(CLAUDE_HOME="$full" BACKUP_STAMP=20990101-000000 "$REPO/install.sh" --project "$fullp" --update 2>&1)"; rc=$?
-assert "1000 backups in one second fails only the settings step" grep -q "FAILED .*settings.json (could not back it up" <<<"$out"
+assert "1000 backups in one second fails only the settings step" grep -q "FAILED .*settings.json (no free backup folder" <<<"$out"
+assert "it names no empty backup path" out_lacks "back it up to ,"
+assert "the agents are still copied" grep -q "copied .*agents/" <<<"$out"
 assert "it still finishes the install" grep -q "Next: open Claude Code" <<<"$out"
 assert "it leaves the file unchanged" test "$(deny_count "$fullp/.claude/settings.json")" = 0
+echo '{"permissions": {"deny": []}}' >"$full/settings.json"
+out="$(CLAUDE_HOME="$full" BACKUP_STAMP=20990101-000000 "$REPO/install.sh" --settings 2>&1)"; rc=$?
+assert "--settings with no free backup folder fails" test "$rc" = 1
+assert "--settings says the file was left unchanged" grep -q "no free backup folder; settings.json was left unchanged" <<<"$out"
+assert "--settings leaves it unchanged" test "$(deny_count "$full/settings.json")" = 0
 bad="$TMP/bad-utf8-home"
 mkdir -p "$bad"
 printf '{"a": "\377"}\n' >"$bad/settings.json"

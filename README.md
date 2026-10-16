@@ -63,9 +63,9 @@ This installs into `~/.copilot` and doesn't touch `~/.claude`.
 ./install.sh --project ~/path/to/work-repo
 ```
 
-This copies the agents and skills into `<repo>/.claude/`. It also adds `.claude/settings.json` (the deny rules) and a `CLAUDE.md` (from `templates/CLAUDE.md`) if they don't exist yet. Commit the result and the whole team gets the same agents.
+This copies the agents and skills into `<repo>/.claude/`. It also adds `.claude/settings.json` (the allow and deny lists from `settings.example.json`) and a `CLAUDE.md` (from `templates/CLAUDE.md`) if they don't exist yet. Commit the result and the whole team gets the same agents.
 
-To update later, run `git pull` here, then `./install.sh --project <repo> --update`. It replaces the entries whose content changed, including local edits, and never touches the team's settings or `CLAUDE.md`.
+To update later, run `git pull` here, then `./install.sh --project <repo> --update`. It replaces the entries whose content changed, including local edits. It adds missing deny rules to the team's `.claude/settings.json` (after a backup), and never changes the rest of its settings or `CLAUDE.md`.
 
 Then, in the work repo, start `claude` and run `/qa-conventions`, then `/framework-map`.
 

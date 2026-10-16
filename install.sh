@@ -169,7 +169,11 @@ project_settings() {
   if [[ -z "$missing" ]]; then
     echo "  ok        $target has every deny rule from settings.example.json"
   elif [[ "$update" == yes ]]; then
-    if ! { init_backup_dir && mkdir -p "$BACKUP_DIR" && cp -p "$target" "$BACKUP_DIR/project-settings.json"; }; then
+    if ! init_backup_dir; then
+      echo "  FAILED    $target (no free backup folder, see the error above; the file is unchanged)"
+      return
+    fi
+    if ! { mkdir -p "$BACKUP_DIR" && cp -p "$target" "$BACKUP_DIR/project-settings.json"; }; then
       echo "  FAILED    $target (could not back it up to $BACKUP_DIR, see the error above; the file is unchanged)"
       return
     fi
@@ -326,7 +330,10 @@ merge_settings() {
   fi
   mkdir -p "$CLAUDE_HOME"
   if [[ -e "$target" ]]; then
-    init_backup_dir
+    if ! init_backup_dir; then
+      echo "error: no free backup folder; settings.json was left unchanged" >&2
+      return 1
+    fi
     if ! { mkdir -p "$BACKUP_DIR" && cp "$target" "$BACKUP_DIR/settings.json"; }; then
       echo "error: could not back up settings.json to $BACKUP_DIR, see the error above; the file is unchanged" >&2
       return 1
