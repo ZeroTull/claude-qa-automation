@@ -508,6 +508,7 @@ else:
 if os.environ.get("QA_DUMP_PINS"):
     pins = [[p, ph, f"{p} {m}"] for p, rules in AGENT_RULES.items() for ph, m in rules.items()]
     pins += [["skills/framework-map/SKILL.md", ph, f"skills/framework-map/SKILL.md {m}"] for ph, m in MAPPER_RULES.items()]
+    pins += [["templates/defect-routing.md", ph, f"templates/defect-routing.md {m}"] for ph, m in DEFECT_ROUTES.items()]
     print(json.dumps(pins))
     sys.exit(0)
 for path, rules in AGENT_RULES.items():
@@ -605,6 +606,11 @@ if example:
     loose = [r for r in allow if r.startswith("Bash(git symbolic-ref") and r != "Bash(git symbolic-ref --short refs/remotes/origin/HEAD)"]
     if loose:
         err(f"settings.example.json allows a git symbolic-ref form that can write refs: {', '.join(loose)}")
+    if "Bash(git remote -v)" not in allow:
+        err("settings.example.json must allow Bash(git remote -v)")
+    wide_remote = [r for r in allow if r.startswith("Bash(git remote") and r != "Bash(git remote -v)"]
+    if wide_remote:
+        err(f"settings.example.json allows a git remote form that can change remotes: {', '.join(wide_remote)}")
     missing = [r for r in required if r not in deny]
     if missing:
         err(f"settings.example.json misses deny rules: {', '.join(missing)}")

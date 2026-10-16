@@ -20,7 +20,7 @@ expect_failure() {
   copy="$TMP/$(echo "$label" | tr -c 'a-z0-9' '_')"
   copy_repo "$copy"
   (cd "$copy" && eval "$mutation")
-  if out="$("$REPO/tests/validate.sh" "$copy")"; then
+  if out="$(env -u QA_DUMP_PINS "$REPO/tests/validate.sh" "$copy")"; then
     echo "  FAIL  $label: validate.sh passed"
     fail=1
   elif ! grep -qF -- "$expected" <<<"$out"; then
@@ -33,7 +33,7 @@ expect_failure() {
 }
 
 echo "baseline"
-if "$REPO/tests/validate.sh" "$REPO" >/dev/null; then echo "  pass  repo is valid"; else echo "  FAIL  repo is invalid"; fail=1; fi
+if env -u QA_DUMP_PINS "$REPO/tests/validate.sh" "$REPO" >/dev/null; then echo "  pass  repo is valid"; else echo "  FAIL  repo is invalid"; fail=1; fi
 
 # Portable in-place edit (BSD and GNU sed differ on -i). Subshells in expect_failure inherit it.
 edit() { local f="$1"; shift; sed "$@" "$f" >"$f.tmp" && mv "$f.tmp" "$f"; }
@@ -496,6 +496,10 @@ expect_failure "PR description without a fork base lookup" "skills/pr-descriptio
   "edit skills/pr-description/SKILL.md -e 's|GitHub .gh pr view --json url,isCrossRepository.|GitHub|'"
 expect_failure "reviewer without the set-head hint" "agents/pr-reviewer.md must say how to set a missing origin/HEAD" \
   "edit agents/pr-reviewer.md -e 's| If .origin/HEAD. is just not set, say that .git remote set-head origin -a. sets it[.]||'"
+expect_failure "git remote -v not allowed" "settings.example.json must allow Bash(git remote -v)" \
+  "edit settings.example.json -e '/\"Bash(git remote -v)\"/d'"
+expect_failure "git remote allowed in a changing form" "allows a git remote form that can change remotes" \
+  "edit settings.example.json -e 's|\"Bash(git remote -v)\"|\"Bash(git remote -v)\", \"Bash(git remote *)\"|'"
 expect_failure "personal entry in the QA repo" "unknown group 'personal'" \
   "edit catalog.tsv -e 's/^pr-reviewer\tagent\tqa/pr-reviewer\tagent\tpersonal/'"
 expect_failure "machine path in settings.example.json" "settings.example.json contains a machine-specific /Users/ path" \
@@ -508,7 +512,8 @@ expect_failure "third-party entry without a lock file" "third-party.lock missing
 echo "every pinned phrase"
 # Each phrase pinned in validate.sh is deleted, one at a time, in a copy of the repo; validate.sh must then fail with
 # that pin's message. New pins are covered automatically.
-QA_DUMP_PINS=1 "$REPO/tests/validate.sh" "$REPO" >"$TMP/pins.json"
+dump_rc=0
+QA_DUMP_PINS=1 "$REPO/tests/validate.sh" "$REPO" >"$TMP/pins.json" || dump_rc=$?
 # Deletes pin number $1 (from $TMP/pins.json) from its file in the current directory. Called from eval'd mutations.
 # shellcheck disable=SC2317,SC2329
 drop_pin() {
@@ -519,7 +524,13 @@ text = open(path, encoding="utf-8").read()
 open(path, "w", encoding="utf-8").write(text.replace(phrase, ""))
 DROP
 }
-n_pins=$(python3 -c 'import json,sys; print(len(json.load(open(sys.argv[1]))))' "$TMP/pins.json")
+n_pins=$(python3 -c 'import json,sys; print(len(json.load(open(sys.argv[1]))))' "$TMP/pins.json" 2>/dev/null || echo 0)
+# A failed or shrunken dump must fail here, not pass by checking nothing. Raise the floor when pins are added.
+min_pins=130
+if [[ $dump_rc -ne 0 || "$n_pins" -lt $min_pins ]]; then
+  echo "  FAIL  pin dump failed or lists only $n_pins pins (expected at least $min_pins)"
+  fail=1
+fi
 assert_pins=0
 for ((i = 0; i < n_pins; i++)); do
   expected=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))[int(sys.argv[2])][2])' "$TMP/pins.json" "$i")
