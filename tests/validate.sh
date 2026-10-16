@@ -338,7 +338,9 @@ AGENT_RULES = {
         "product defect (confirmed), suspected flaky/environment": "description must list the product-defect and suspected-flaky classes",
         "Do not call it \"not a code defect\" without that evidence": "must not call a timeout 'not a code defect' without evidence",
         "suspected flaky/environment (product not ruled out)": "must label timeouts as suspected flaky with the product not ruled out",
-        "recommend fixing it on the branch that introduced it": "must send a defect from the change under test back to its branch",
+        "For a code or product defect from this change, recommend fixing it on the branch that introduced it": "must send a defect from the change under test back to its branch",
+        "For a pre-existing confirmed product defect, recommend `/bug-ticket`": "must file only pre-existing product defects",
+        "list the candidates, product first": "must list the product cause first",
         "**Product defect (pre-existing, confirmed):**": "must have a label for confirmed pre-existing product defects",
         "if the evidence is inconclusive, say so and point to Other Possible Causes": "must not present a guess as the root cause",
     },
@@ -356,16 +358,18 @@ AGENT_RULES = {
         "If one of those commits is in the change under test, recommend fixing it on that branch": "must send a regression from the change under test back to its branch",
     },
     "agents/qa-lead.md": {
-        "offer the fix on the branch that introduced it": "must route a defect from the change under test to a branch fix",
-        "for a confirmed product defect, or a regression on a shared branch if the user chooses it": "plan example must file bugs only for confirmed product defects or shared-branch regressions",
+        "If it is a code or product defect from the change under test, offer the fix on the branch that introduced it": "must route a defect from the change under test to a branch fix",
+        "If it is a pre-existing confirmed product defect, offer `bug-ticket`": "must offer bug-ticket only for pre-existing product defects",
+        "for a pre-existing confirmed product defect, or a regression on a shared branch if the user chooses it": "plan example must file bugs only for confirmed product defects or shared-branch regressions",
         "if that change is already merged into a shared branch, offer a fix-forward change or `bug-ticket`": "must cover a defect whose change is already merged",
     },
     "skills/bug-ticket/SKILL.md": {
         "An intermittent failure can still be a product defect": "must not dismiss intermittent failures as non-bugs",
+        "a defect from the change under test goes back to its branch instead": "must not file a defect from the change under test",
     },
     "README.md": {
         "suspected flaky/environment (product not ruled out)": "trace example must use the diagnoser's suspected-flaky label",
-        "for a confirmed product defect, or a regression on a shared branch if the user chooses it": "plan example must file bugs only for confirmed product defects or shared-branch regressions",
+        "for a pre-existing confirmed product defect, or a regression on a shared branch if the user chooses it": "plan example must file bugs only for confirmed product defects or shared-branch regressions",
         "an intermittent product defect (such as a race condition)": "must describe the triager's product-defect verdict",
     },
 }

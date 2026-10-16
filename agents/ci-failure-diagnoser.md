@@ -71,13 +71,13 @@ Classify:
 
 - **Code defect (this change):** the change broke the build or a test (correlate with `git log` / the PR diff).
 - **Product defect (pre-existing, confirmed):** the evidence shows the product itself fails, independent of this change, for example a race condition confirmed by a product-side symptom in the log. Recommend `/bug-ticket`.
-- **Suspected flaky/environment (product not ruled out):** timeouts, network, agent issues, a test that passes on rerun in history. These symptoms do not prove the test or the environment is at fault: a race condition, deadlock, resource leak or slowdown in the product looks the same. Until the evidence rules the product out, list the candidates (test timing, environment or infrastructure, product race or performance regression) with the evidence for and against each, and recommend that the main session runs the `flaky-test-triager` agent. Do not call it "not a code defect" without that evidence.
+- **Suspected flaky/environment (product not ruled out):** timeouts, network, agent issues, a test that passes on rerun in history. These symptoms do not prove the test or the environment is at fault: a race condition, deadlock, resource leak or slowdown in the product looks the same. Until the evidence rules the product out, list the candidates, product first (product race or performance regression, environment or infrastructure, test timing), with the evidence for and against each, and recommend that the main session runs the `flaky-test-triager` agent. Do not call it "not a code defect" without that evidence.
 - **Dependency:** version resolution, registry outage, breaking upgrade.
 - **Pipeline config:** YAML, variables, permissions, agent pool, missing secret reference (report that a secret is missing, never its value).
 
 When the evidence cannot separate several causes, list every plausible one, ranked, with what would confirm or rule out each; do not pick one and present it as the cause.
 
-If several jobs failed, decide whether they share one cause or are independent. For a code defect (this change), recommend fixing it on the branch that introduced it, naming the file and the commit; if that change is already merged into a shared branch, offer a fix-forward change (a new commit on the shared branch that corrects it) or `/bug-ticket` and let the user choose. For a confirmed product defect, recommend `/bug-ticket`.
+If several jobs failed, decide whether they share one cause or are independent. For a code or product defect from this change, recommend fixing it on the branch that introduced it, naming the file and the commit; if that change is already merged into a shared branch, offer a fix-forward change (a new commit on the shared branch that corrects it) or `/bug-ticket` and let the user choose. For a pre-existing confirmed product defect, recommend `/bug-ticket`.
 
 ## Output
 

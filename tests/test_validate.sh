@@ -289,7 +289,7 @@ expect_failure "triager without a confirmed/inconclusive rule" "must say when a 
 expect_failure "agent rules on an emptied file" "agents/flaky-test-triager.md must recognise intermittent product defects" \
   "awk 'NR==1 || f<2 {print} /^---\$/{f++}' agents/flaky-test-triager.md > x.tmp && mv x.tmp agents/flaky-test-triager.md"
 expect_failure "diagnoser that files a ticket for its own PR's bug" "must send a defect from the change under test back to its branch" \
-  "edit agents/ci-failure-diagnoser.md -e 's|recommend fixing it on the branch that introduced it|recommend a ticket|'"
+  "edit agents/ci-failure-diagnoser.md -e 's|For a code or product defect from this change, recommend fixing it on the branch that introduced it|Recommend a ticket|'"
 expect_failure "README trace with an old label" "trace example must use the diagnoser's suspected-flaky label" \
   "edit README.md -e 's|suspected flaky/environment (product not ruled out)|flaky/environment|'"
 expect_failure "agent file missing" "agents/flaky-test-triager.md must recognise intermittent product defects" \
@@ -297,9 +297,9 @@ expect_failure "agent file missing" "agents/flaky-test-triager.md must recognise
 expect_failure "triager that tickets its own PR's regression" "must send a regression from the change under test back to its branch" \
   "edit agents/flaky-test-triager.md -e 's|If one of those commits is in the change under test, recommend fixing it on that branch|Suggest a ticket|'"
 expect_failure "lead that tickets its own PR's bug" "agents/qa-lead.md must route a defect from the change under test to a branch fix" \
-  "edit agents/qa-lead.md -e 's|offer the fix on the branch that introduced it|offer bug-ticket|'"
+  "edit agents/qa-lead.md -e 's|If it is a code or product defect from the change under test, offer the fix on the branch that introduced it|Offer bug-ticket|'"
 expect_failure "README plan example filing any defect" "README.md plan example must file bugs only for confirmed product defects or shared-branch regressions" \
-  "edit README.md -e 's|for a confirmed product defect, or a regression on a shared branch if the user chooses it|only if it is a real defect|'"
+  "edit README.md -e 's|for a pre-existing confirmed product defect, or a regression on a shared branch if the user chooses it|only if it is a real defect|'"
 expect_failure "lead without the merged-change route" "must cover a defect whose change is already merged" \
   "edit agents/qa-lead.md -e 's|if that change is already merged into a shared branch|if not|'"
 expect_failure "bug-ticket that dismisses intermittent failures" "must not dismiss intermittent failures as non-bugs" \
@@ -316,6 +316,14 @@ expect_failure "triager that tickets its own PR's race" "must send a product def
   "edit agents/flaky-test-triager.md -e 's|If the change under test introduced it, recommend fixing it on that branch|File it|'"
 expect_failure "triager output without the branch-fix action" "must give a branch-fix action for a product defect from the change under test" \
   "edit agents/flaky-test-triager.md -e 's|^  - product defect from the change under test: fix on that branch|  - other|'"
+expect_failure "diagnoser that tickets this change's product defect" "must file only pre-existing product defects" \
+  "edit agents/ci-failure-diagnoser.md -e 's|For a pre-existing confirmed product defect, recommend|For a confirmed product defect, recommend|'"
+expect_failure "diagnoser listing the product cause last" "must list the product cause first" \
+  "edit agents/ci-failure-diagnoser.md -e 's|list the candidates, product first|list the candidates|'"
+expect_failure "lead that tickets this change's product defect" "must offer bug-ticket only for pre-existing product defects" \
+  "edit agents/qa-lead.md -e 's|If it is a pre-existing confirmed product defect, offer|If it is a confirmed product defect, offer|'"
+expect_failure "bug-ticket that files this change's defect" "must not file a defect from the change under test" \
+  "edit skills/bug-ticket/SKILL.md -e 's|a defect from the change under test goes back to its branch instead|any defect can be filed|'"
 expect_failure "personal entry in the QA repo" "unknown group 'personal'" \
   "edit catalog.tsv -e 's/^pr-reviewer\tagent\tqa/pr-reviewer\tagent\tpersonal/'"
 expect_failure "machine path in settings.example.json" "settings.example.json contains a machine-specific /Users/ path" \

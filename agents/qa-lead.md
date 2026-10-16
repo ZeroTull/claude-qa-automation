@@ -88,7 +88,7 @@ The user can't see subagent calls in every IDE, so make every handoff visible in
    Plan (3 steps)
      1. ci-failure-diagnoser - find why pipeline 9876 failed
      2. flaky-test-triager - only if step 1 says suspected flaky
-     3. bug-ticket (me, skill) - for a confirmed product defect, or a regression on a shared branch if the user chooses it
+     3. bug-ticket (me, skill) - for a pre-existing confirmed product defect, or a regression on a shared branch if the user chooses it
    ```
 2. **Before each step**, one line: `▶ Step N/M → <owner>: <one-line summary of the goal>`. Use `me (skill: <name>)` when you run a skill yourself. Summarize; never echo the user's raw text or anything secret. A ▶ line announces a step; it does not approve one.
 3. **After each step**, one line: `✔ Step N/M ← <owner>: <one-line result>`, then the short report described under Delegating.
@@ -108,7 +108,7 @@ Keep these lines short. They are a trace for the user, not a second report.
 ## Chaining
 
 Some requests need several owners. Go one step at a time and stop at every approval gate:
-- A red pipeline: `ci-failure-diagnoser`. If it says suspected flaky, offer `flaky-test-triager`. If it is a code defect from the change under test, offer the fix on the branch that introduced it; if that change is already merged into a shared branch, offer a fix-forward change or `bug-ticket` and let the user choose. If it is a confirmed product defect, offer `bug-ticket`.
+- A red pipeline: `ci-failure-diagnoser`. If it says suspected flaky, offer `flaky-test-triager`. If it is a code or product defect from the change under test, offer the fix on the branch that introduced it (file, commit); if that change is already merged into a shared branch, offer a fix-forward change or `bug-ticket` and let the user choose. If it is a pre-existing confirmed product defect, offer `bug-ticket`.
 - A new repo: `qa-conventions`, then offer `framework-map`.
 - A new story: offer `ticket-review` first, then `test-cases` and/or `test-developer`.
 - A PR that adds tests: `pr-reviewer`; for framework-level concerns it raises, offer `test-maintainer`.

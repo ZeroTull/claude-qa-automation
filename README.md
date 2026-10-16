@@ -105,7 +105,7 @@ It shows each handoff in the chat, so you can follow who does what:
 Plan (3 steps)
   1. ci-failure-diagnoser - find why pipeline 9876 failed
   2. flaky-test-triager - only if step 1 says suspected flaky
-  3. bug-ticket (me, skill) - for a confirmed product defect, or a regression on a shared branch if the user chooses it
+  3. bug-ticket (me, skill) - for a pre-existing confirmed product defect, or a regression on a shared branch if the user chooses it
 
 ▶ Step 1/3 → ci-failure-diagnoser: pipeline 9876, branch main
 ✔ Step 1/3 ← ci-failure-diagnoser: suspected flaky/environment (product not ruled out) - LoginTest timed out on agent pool B
