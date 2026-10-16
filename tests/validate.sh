@@ -409,6 +409,9 @@ AGENT_RULES = {
         "for a pre-existing confirmed product defect, or a regression from a merged change if the user chooses it": "plan example must file bugs only for confirmed product defects or shared-branch regressions",
     },
     "agents/senior-automation-qa-engineer.md": {
+        "For what is wrong with an existing suite use test-maintainer": "description must route suite audits to test-maintainer",
+        "leave code changes to the main conversation after the user approves them": "must leave code changes to the main conversation",
+        "## What you draw on": "must keep the reference section",
         "## Method": "must follow a method",
         "State every other fact as an assumption, together with how the answer would change without it, except facts only the user can settle": "must mark assumptions",
         "Do not dress up one option as several": "must not dress up one option as several",
@@ -519,6 +522,7 @@ AGENT_RULES = {
     },
     "README.md": {
         "the five JVM settings the rule names": "must describe the closed JVM list",
+        "which agent or skill takes the first phase (its Phased Plan says who takes each phase)": "must describe the strategy Next Step",
         "a phased plan and measurable success criteria": "must describe the strategy report",
         "we don't recommend a wildcard allow rule for it": "must not recommend a git fetch allow rule",
         "quotes only what the allow-list in `templates/safety.md` permits": "must point to the full build-file allow-list",
@@ -577,6 +581,18 @@ if mode == "dump-pins":
 pin_count = read(f"{repo}/tests/pin-count").strip()
 if pin_count != str(len(pins)):
     err(f"tests/pin-count says {pin_count or 'nothing'}, but this script defines {len(pins)} pins; update both together")
+# Section snapshots: a whole section of an entry must equal a file under tests/snapshots/, so every rule in it is
+# covered, not only the pinned phrases. Change both together when a change is intended.
+SNAPSHOTS = [("agents/senior-automation-qa-engineer.md", "## Method\n", "## What you draw on\n",
+              "tests/snapshots/senior-method-report.md")]
+for path, start, end, snap in SNAPSHOTS:
+    text = read(f"{repo}/{path}")
+    want = read(f"{repo}/{snap}")
+    i, j = text.find("\n" + start), text.find("\n" + end)
+    if not want:
+        err(f"{snap} missing or empty")
+    elif i < 0 or j < 0 or text[i + 1:j + 1] != want:
+        err(f"{path}: the section from '{start.strip()}' to '{end.strip()}' differs from {snap}; update both when the change is intended")
 for path, rules in AGENT_RULES.items():
     text = read(f"{repo}/{path}")
     for phrase, message in rules.items():

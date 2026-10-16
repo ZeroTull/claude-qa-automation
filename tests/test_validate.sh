@@ -539,6 +539,12 @@ expect_failure "tag fetch not denied" "misses deny rules: Bash(git fetch *:refs/
   "edit settings.example.json -e '/refs.tags/d'"
 expect_failure "agent fetch form denied" "denies the one git fetch form the agents use" \
   "edit settings.example.json -e 's|\"Bash(git diff [*]--output[*])\"|\"Bash(git diff *--output*)\", \"Bash(git fetch origin *)\"|'"
+expect_failure "senior method line deleted" "agents/senior-automation-qa-engineer.md: the section from '## Method' to '## What you draw on' differs from tests/snapshots/senior-method-report.md" \
+  "edit agents/senior-automation-qa-engineer.md -e '/what it depends on, its exit criterion/d'"
+expect_failure "senior report line changed" "differs from tests/snapshots/senior-method-report.md" \
+  "edit agents/senior-automation-qa-engineer.md -e 's|metric . definition . source . baseline . target . window|metric|'"
+expect_failure "senior snapshot missing" "tests/snapshots/senior-method-report.md missing or empty" \
+  "rm tests/snapshots/senior-method-report.md"
 expect_failure "personal entry in the QA repo" "unknown group 'personal'" \
   "edit catalog.tsv -e 's/^pr-reviewer\tagent\tqa/pr-reviewer\tagent\tpersonal/'"
 expect_failure "machine path in settings.example.json" "settings.example.json contains a machine-specific /Users/ path" \
