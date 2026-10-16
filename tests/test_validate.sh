@@ -391,7 +391,7 @@ expect_failure "JVM flags quoted wholesale" "templates/safety.md must quote only
 expect_failure "profile activation values quoted" "templates/safety.md must redact profile activation values" \
   "edit templates/safety.md -e 's|; for a .<property>. activation keep its .<name>. and write its .<value>. as .<redacted>.||'"
 expect_failure "any value under a version name" "templates/safety.md must allow sensitive-named versions only for version-shaped values" \
-  "edit templates/safety.md -e 's|, but only if the value looks like a version (digits, dots, a range, or a .[$]{...}. reference with nothing else in the value)[;] a secret with that shape would still pass, so check that the key really names a version||'"
+  "edit templates/safety.md -e 's| and the value looks like a version (digits, dots, a range, or a .[$]{...}. reference with nothing else in the value)||'"
 expect_failure "suite files outside the rule" "templates/safety.md must cover test suite files" \
   "edit templates/safety.md -e 's| and TestNG suite files (.testng[*].xml. or any XML with a .<suite>. root)||'"
 expect_failure "JVM list only inside argLine" "templates/safety.md must apply the JVM list wherever the key appears" \
@@ -409,9 +409,15 @@ expect_failure "maven.config -D pairs quoted" "templates/safety.md must redact -
 expect_failure "build script literals quoted" "templates/safety.md must redact string literals in build scripts" \
   "edit templates/safety.md -e 's| This includes string literals and variable assignments in build scripts (.val token = \"<redacted>\".)[.]||'"
 expect_failure "free-text names quoted" "templates/safety.md must quote names only when they look like identifiers" \
-  "edit templates/safety.md -e 's| Names and ids that the list allows are quoted only when they look like identifiers (letters, digits, dots, dashes, underscores)||'"
+  "edit templates/safety.md -e 's|quoted only when they look like identifiers|quoted|'"
 expect_failure "project settings-security.xml readable" "settings.example.json misses deny rules: Read(**/settings-security.xml)" \
   "edit settings.example.json -e '/[*][*]\\/settings-security[.]xml/d'"
+expect_failure "README with a partial allow-list" "README.md must point to the full build-file allow-list" \
+  "edit README.md -e 's|quotes only what the allow-list in .templates/safety.md. permits|quotes only|'"
+expect_failure "README promising a byte-identical merge" "README.md must say the settings merge rewrites the file" \
+  "edit README.md -e 's| The file is rewritten as JSON, so its values stay the same but number spelling, escapes and line endings can change[.]||'"
+expect_failure "versions under any property name" "templates/safety.md must allow sensitive-named versions only for version properties" \
+  "edit templates/safety.md -e 's|but only if the property name ends in .version. (such as .auth-lib.version.) and|but only if|'"
 expect_failure "personal entry in the QA repo" "unknown group 'personal'" \
   "edit catalog.tsv -e 's/^pr-reviewer\tagent\tqa/pr-reviewer\tagent\tpersonal/'"
 expect_failure "machine path in settings.example.json" "settings.example.json contains a machine-specific /Users/ path" \

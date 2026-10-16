@@ -337,7 +337,8 @@ AGENT_RULES = {
     "templates/safety.md": {
         "quote only what this list allows. For anything else, name the element, property or key and write `<redacted>`": "must quote only allow-listed build-file values",
         "dependency, plugin and parent coordinates and versions, and the Java release": "must allow the build-file details diagnosis needs",
-        "but only if the value looks like a version (digits, dots, a range, or a `${...}` reference with nothing else in the value)": "must allow sensitive-named versions only for version-shaped values",
+        "the value looks like a version (digits, dots, a range, or a `${...}` reference with nothing else in the value)": "must allow sensitive-named versions only for version-shaped values",
+        "but only if the property name ends in `version`": "must allow sensitive-named versions only for version properties",
         "wherever they appear (`argLine`, `jvmArgs`, `systemPropertyVariables`, `jvm.config`, `maven.config`)": "must apply the JVM list wherever the key appears",
         "JVM and Maven command options (`argLine`, `jvmArgs`, `.mvn/jvm.config`, `.mvn/maven.config`)": "must redact -D pairs in Maven config files",
         "This includes string literals and variable assignments in build scripts": "must redact string literals in build scripts",
@@ -403,6 +404,8 @@ AGENT_RULES = {
     },
     "README.md": {
         "the five JVM settings the rule names": "must describe the closed JVM list",
+        "quotes only what the allow-list in `templates/safety.md` permits": "must point to the full build-file allow-list",
+        "The file is rewritten as JSON, so its values stay the same": "must say the settings merge rewrites the file",
         "suspected flaky/environment (product not ruled out)": "trace example must use the diagnoser's suspected-flaky label",
         "for a pre-existing confirmed product defect, or a regression from a merged change if the user chooses it": "plan example must file bugs only for confirmed product defects or shared-branch regressions",
         "an intermittent product defect (such as a race condition)": "must describe the triager's product-defect verdict",

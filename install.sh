@@ -6,7 +6,8 @@
 #   ./install.sh --project <path> [--update] copy the agents and skills into <path>/.claude for a team
 #   ./install.sh [--copilot] --uninstall     remove what the install added and restore what it replaced
 # It never touches ~/.claude/CLAUDE.md. It changes ~/.claude/settings.json only with --settings, and a team repo's
-# .claude/settings.json only with --project --update, both after a backup and only to add deny rules.
+# .claude/settings.json only with --project --update, both after a backup and only to add deny rules. The file is
+# rewritten as JSON, so values stay the same but number spelling, escapes and line endings can change.
 # Anything a link install replaces is moved to <target>/backups/qa-<timestamp>-NNN/ first. --project --update
 # overwrites the copied agents and skills in place (the team repo's git history is their backup).
 set -euo pipefail
@@ -140,7 +141,7 @@ copy_one() {
 }
 
 # A team repo's .claude/settings.json: created from settings.example.json if absent. If it exists, it is checked for
-# the deny rules from settings.example.json, and --update adds the missing ones (nothing else in the file changes).
+# the deny rules from settings.example.json, and --update adds the missing ones (the file is rewritten as JSON, with the same values and indentation).
 project_settings() {
   local target="$1" update="$2" missing errfile
   if [[ -L "$target" || ! -e "$target" ]]; then
