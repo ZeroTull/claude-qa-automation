@@ -449,7 +449,7 @@ expect_failure "PR description with a double origin prefix" "skills/pr-descripti
 expect_failure "PR description without the default-branch fallback" "skills/pr-description/SKILL.md must fall back to the repo's default branch" \
   "edit skills/pr-description/SKILL.md -e 's|git symbolic-ref --short refs/remotes/origin/HEAD|origin/main|'"
 expect_failure "PR description on a stale base" "skills/pr-description/SKILL.md must refresh the base before diffing" \
-  "edit skills/pr-description/SKILL.md -e 's|Run .git fetch origin <target>:refs/remotes/origin/<target>. first; if that fails, say the base may be out of date[.] ||'"
+  "edit skills/pr-description/SKILL.md -e 's|Run .git fetch <remote> <target>:refs/remotes/<remote>/<target>. first; if that fails, say the base may be out of date[.] ||'"
 expect_failure "reviewer fetching two refspecs at once" "agents/pr-reviewer.md must fetch PR branches in the allowed form" \
   "edit agents/pr-reviewer.md -e 's|fetch each branch with its own command, in the form the Rules allow|fetch both branches|'"
 expect_failure "reviewer without a GitHub base lookup" "agents/pr-reviewer.md must name the GitHub target branch command" \
@@ -480,6 +480,14 @@ expect_failure "reviewer reading the head owner as the base" "agents/pr-reviewer
   "edit agents/pr-reviewer.md -e 's|.gh pr view --json url,isCrossRepository.|gh pr view --json headRepositoryOwner|'"
 expect_failure "reviewer expecting a diff from az repos pr show" "agents/pr-reviewer.md must not expect a diff from az repos pr show" \
   "edit agents/pr-reviewer.md -e 's|; for Azure DevOps the diff comes from the MCP or the local fetch below||'"
+expect_failure "short fetch options not denied" "settings.example.json misses deny rules: Bash(git fetch * -*)" \
+  "edit settings.example.json -e '/git fetch [*] -[*]/d'"
+expect_failure "leading fetch options not denied" "settings.example.json misses deny rules: Bash(git fetch -*)" \
+  "edit settings.example.json -e '/\"Bash(git fetch -[*])\"/d'"
+expect_failure "PR description fetching a fork base from origin" "skills/pr-description/SKILL.md must handle PRs from forks" \
+  "edit skills/pr-description/SKILL.md -e 's|unless the PR comes from a fork whose base repository is another remote|always|'"
+expect_failure "PR description without lookup commands" "skills/pr-description/SKILL.md must name the per-platform target lookups" \
+  "edit skills/pr-description/SKILL.md -e 's|.glab mr view -F json. (.target_branch.)|glab|'"
 expect_failure "personal entry in the QA repo" "unknown group 'personal'" \
   "edit catalog.tsv -e 's/^pr-reviewer\tagent\tqa/pr-reviewer\tagent\tpersonal/'"
 expect_failure "machine path in settings.example.json" "settings.example.json contains a machine-specific /Users/ path" \

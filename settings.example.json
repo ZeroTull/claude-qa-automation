@@ -79,6 +79,8 @@
       "Bash(glab ci get *--with-variables*)",
       "Bash(git fetch *--*)",
       "Bash(git fetch *+*)",
+      "Bash(git fetch * -*)",
+      "Bash(git fetch -*)",
       "Bash(git diff *--output*)"
     ]
   }
