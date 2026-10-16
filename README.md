@@ -119,7 +119,7 @@ A printed plan is not approval: it still stops at every gate. It ends a request 
 ### How approvals work
 
 - **Skills** stop at each gate ("Proceed with these 4 tests?") and continue when you answer.
-- **Agents** can't pause mid-task, so they finish with a report and a question such as "Which findings should be implemented?". The `pr-reviewer` and `test-maintainer` reports end with "Apply Rules" for the main conversation. Answer in the same chat ("apply 1, 3 and 5"), and Claude applies only those items, following those rules, then runs the impacted tests.
+- **Agents** can't pause mid-task, so they finish with a report and a question such as "Which findings should be implemented?". `senior-automation-qa-engineer` ends with a Next Step: one question, the default if you agree, and which agent or skill takes each phase. The `pr-reviewer` and `test-maintainer` reports end with "Apply Rules" for the main conversation. Answer in the same chat ("apply 1, 3 and 5"), and Claude applies only those items, following those rules, then runs the impacted tests.
 
 Nothing is written, run, posted to a tracker or pushed until you say so.
 
