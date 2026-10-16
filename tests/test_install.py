@@ -553,6 +553,16 @@ class InstallTest(unittest.TestCase):
                     self.check_out(f"{sub} {args}: names the folder", out,
                                    rf"^error: cannot read and write .*\.claude/{sub} - fix its permissions")
                     self.check(f"{sub} {args}: copies nothing", not any((proj / ".claude" / "agents").iterdir()))
+        complete = self.tmp / "proj-locked-complete"
+        complete.mkdir()
+        self.run_install("--project", complete)
+        agents = complete / ".claude" / "agents"
+        agents.chmod(0o555)
+        self.addCleanup(agents.chmod, 0o755)
+        out = self.run_install("--project", complete)
+        self.check("a complete install in a read-only folder: still refused", out.rc == 1, out.out)
+        self.check_out("a complete install in a read-only folder: names the folder", out,
+                       r"^error: cannot read and write .*\.claude/agents - fix its permissions")
 
     def test_project_reports_a_failed_copy(self):
         # A cp that fails only for one skill, as a full disk or an I/O error would.
