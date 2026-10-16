@@ -415,11 +415,15 @@ expect_failure "safety rule that hides versions again" "templates/safety.md must
 expect_failure "version element quoted without a shape check" "templates/safety.md must shape-check every version value" \
   "edit templates/safety.md -e 's|version values (a .<version>. element, a .version =. setting, or a property whose name ends in .version.|version properties (|'"
 expect_failure "undefined version range" "templates/safety.md must define a version range" \
-  "edit templates/safety.md -e 's|a range made only of digits, dots, commas, spaces, .[*]., .\\[., .\\]., .(. and .).|a range|'"
+  "edit templates/safety.md -e 's|a range that contains .\\[., .(., .,. or .[*]. and only digits, dots, commas, spaces|a range of digits, dots, commas, spaces|'"
 expect_failure "odd version values quoted" "templates/safety.md must redact version values that do not look like versions" \
   "edit templates/safety.md -e 's| Write any other version value as .<redacted>.[.]||'"
 expect_failure "open-ended version qualifiers" "templates/safety.md must allow only a closed list of version qualifiers" \
   "edit templates/safety.md -e 's|optionally followed by exactly one of|optionally followed by a qualifier such as|'"
+expect_failure "digits-only versions quoted" "templates/safety.md must redact digits-only versions" \
+  "edit templates/safety.md -e 's| a value of digits only is not a version and is .<redacted>.[;]||'"
+expect_failure "credential-looking names undefined" "templates/safety.md must say what a credential-looking name is" \
+  "edit templates/safety.md -e 's| (a known token prefix such as .ghp_., .github_pat_., .glpat-., .AKIA. or .xox., or a long run of mixed letters and digits)||'"
 expect_failure "personal entry in the QA repo" "unknown group 'personal'" \
   "edit catalog.tsv -e 's/^pr-reviewer\tagent\tqa/pr-reviewer\tagent\tpersonal/'"
 expect_failure "machine path in settings.example.json" "settings.example.json contains a machine-specific /Users/ path" \

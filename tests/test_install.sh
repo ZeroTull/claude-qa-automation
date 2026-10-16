@@ -23,7 +23,9 @@ run() {
 
 # True if the last install output does not contain $1. Called through assert.
 # shellcheck disable=SC2317,SC2329
-out_lacks() { ! grep -q -- "$1" <<<"$out"; }
+# Fixed-string and byte-wise (LC_ALL=C), so a pattern such as '\377' or a raw byte is matched literally and a
+# grep error can never pass as "not found".
+out_lacks() { ! LC_ALL=C grep -qF -- "$1" <<<"$out"; }
 
 # True if file $2 does not contain $1. Called through assert.
 # shellcheck disable=SC2317,SC2329
@@ -322,6 +324,12 @@ assert "a non-UTF-8 settings.json gives a one-line reason" grep -q "settings.jso
 assert "a non-UTF-8 settings.json is not echoed" out_lacks "0xff"
 assert "a non-UTF-8 settings.json is not echoed as an escape" out_lacks '\377'
 assert "a non-UTF-8 settings.json is not echoed raw" out_lacks "$(printf '\377')"
+saved_out="$out"
+out="leaked \\377 here"
+assert "out_lacks detects a leaked escape" test "$(out_lacks '\377' && echo missed || echo found)" = found
+out="leaked $(printf '\377') here"
+assert "out_lacks detects a leaked raw byte" test "$(out_lacks "$(printf '\377')" && echo missed || echo found)" = found
+out="$saved_out"
 badp="$TMP/proj-bad-utf8"
 mkdir -p "$badp/.claude"
 printf '{"a": "\377"}\n' >"$badp/.claude/settings.json"

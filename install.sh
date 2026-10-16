@@ -333,7 +333,10 @@ merge_settings() {
     fi
     echo "  backed up settings.json"
   fi
-  settings_tool merge
+  if ! settings_tool merge; then
+    echo "error: could not add the deny rules; settings.json was left unchanged" >&2
+    return 1
+  fi
   echo "  added     $(wc -l <<<"$missing" | tr -d ' ') deny rule(s) to settings.json"
 }
 
