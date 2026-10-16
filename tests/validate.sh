@@ -462,13 +462,18 @@ AGENT_RULES = {
     },
     "agents/test-maintainer.md": {
         "## Scoring": "must define how scores are given",
-        "count the items affected by at least one of that category's signals": "must score from counts",
-        "| 0%, no guard | 9 | Excellent |": "must score a clean category without a guard",
-        "| 80% or more | 0 | Broken |": "must map every share to a score",
+        "count the items affected by at least one countable signal": "must score from counts",
+        "go into the report as evidence and do not change the share": "must keep judgement signals out of the share",
+        "Compare the exact fraction (affected / total) with the bounds below": "must compare exact fractions",
+        "If the total is zero, the category is `n/a` with the reason": "must handle an empty denominator",
+        "A guard is a checkable artifact that fails the build when the problem comes back": "must define a guard",
+        "the flaky rate is the share of test executions on the default branch in the last 30 days": "must define the flaky rate",
+        "Without a run history there is no override, and the report says so": "must handle a missing run history",
         "**CI gates use their own scale**": "must say CI gates use their own scale",
         "A gate counts only if it runs in CI on the default branch and fails the pipeline when violated": "must define when a gate counts",
+        "A missing or empty CI configuration counts as 0 gates": "must score a missing CI configuration",
         "Every score cites its evidence": "must cite evidence for every score",
-        "if fewer than 3 categories are scored, write \"overall n/a": "must handle too few scored categories",
+        "if fewer than 3 categories have a score, write \"overall n/a": "must handle too few scored categories",
         "round it down, then cap it at the lowest scored category plus 3": "must define rounding and the cap",
         "overall X/10 (see Scoring)": "must report the overall score by the Scoring rules",
     },
@@ -617,6 +622,25 @@ for path, snap in SNAPSHOTS:
         a, b = text.split(b"\n"), want.split(b"\n")
         line = next((n for n, (x, y) in enumerate(zip(a, b), 1) if x != y), min(len(a), len(b)) + 1)
         err(f"{path} differs from {snap} (first difference at line {line}); update both when the change is intended")
+# The test-maintainer score table must map every share to exactly one score: scores 10 down to 0, and share ranges
+# that start at 0%, touch without overlapping, and end at 100%. A row deleted from both the agent and its snapshot
+# still fails here.
+tm = read(f"{repo}/agents/test-maintainer.md")
+rows = re.findall(r"^\| (.+?) \| (\d+) \| (?:Excellent|Good|Fair|Poor|Broken) \|$", tm, re.M)
+if [int(r[1]) for r in rows] != list(range(10, -1, -1)):
+    err("agents/test-maintainer.md: the score table must list scores 10 down to 0, once each")
+else:
+    labels = [r[0] for r in rows]
+    bounds = []
+    for label in labels[2:]:
+        m = re.fullmatch(r"(?:above )?(\d+)% to (?:under )?(\d+)%", label)
+        bounds.append((int(m.group(1)), int(m.group(2))) if m else None)
+    ok = (labels[0] == "exactly 0%, with a guard" and labels[1] == "exactly 0%, no guard"
+          and None not in bounds and bounds[0][0] == 0 and labels[2].startswith("above 0%")
+          and all(bounds[k][1] == bounds[k + 1][0] for k in range(len(bounds) - 1))
+          and bounds[-1][1] == 100 and labels[-1] == f"{bounds[-1][0]}% to 100%")
+    if not ok:
+        err("agents/test-maintainer.md: the score table's share ranges must start at 0%, touch without overlapping, and end at 100%")
 for path, rules in AGENT_RULES.items():
     text = read(f"{repo}/{path}")
     for phrase, message in rules.items():

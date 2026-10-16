@@ -553,6 +553,12 @@ expect_failure "senior agent converted to CRLF" "agents/senior-automation-qa-eng
   "python3 -c 'import sys; p=sys.argv[1]; d=open(p,\"rb\").read(); open(p,\"wb\").write(d.replace(b\"\\n\", b\"\\r\\n\"))' agents/senior-automation-qa-engineer.md"
 expect_failure "test-maintainer band edited" "agents/test-maintainer.md differs from tests/snapshots/test-maintainer.md" \
   "edit agents/test-maintainer.md -e 's#^| 2% to under 5% | 7 | Good |#| 2% to under 5% | 8 | Good |#'"
+expect_failure "score table row deleted from agent and snapshot" "the score table must list scores 10 down to 0, once each" \
+  "for f in agents/test-maintainer.md tests/snapshots/test-maintainer.md; do edit \"\$f\" -e '/^| 40% to under 60% | 2 | Broken |\$/d'; done"
+expect_failure "score table bounds overlap" "the score table's share ranges must start at 0%, touch without overlapping, and end at 100%" \
+  "for f in agents/test-maintainer.md tests/snapshots/test-maintainer.md; do edit \"\$f\" -e 's#^| 10% to under 15% | 5 | Fair |\$#| 8% to under 15% | 5 | Fair |#'; done"
+expect_failure "score table missing 0% guard row" "the score table's share ranges must start at 0%" \
+  "for f in agents/test-maintainer.md tests/snapshots/test-maintainer.md; do edit \"\$f\" -e 's#^| exactly 0%, with a guard | 10 | Excellent |\$#| 0% to under 0% | 10 | Excellent |#'; done"
 expect_failure "senior snapshot emptied" "tests/snapshots/senior-automation-qa-engineer.md missing or empty" \
   ": > tests/snapshots/senior-automation-qa-engineer.md"
 expect_failure "senior snapshot missing" "tests/snapshots/senior-automation-qa-engineer.md missing or empty" \
