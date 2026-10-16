@@ -18,10 +18,8 @@ jobs:
         if: runner.os == 'macOS'
         run: brew install shellcheck
       - name: Shellcheck
-        run: shellcheck install.sh tests/*.sh
+        run: shellcheck install.sh tests/validate.sh
       - name: Validate catalog, entries and settings
         run: tests/validate.sh
-      - name: Test validator
-        run: tests/test_validate.sh
-      - name: Test installer
-        run: tests/test_install.sh
+      - name: Test validator and installer
+        run: python3 -m unittest discover -s tests -v

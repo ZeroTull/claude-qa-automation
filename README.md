@@ -201,11 +201,10 @@ The agents never handle tokens. Authentication stays in tools that manage it the
 ## Development
 
 ```bash
-tests/validate.sh        # catalog, frontmatter, safety and platform blocks, platform commands, docs, settings
-tests/test_validate.sh   # validate.sh rejects broken inputs
-tests/test_install.sh    # installer behavior in a temp directory
+tests/validate.sh                        # catalog, frontmatter, safety and platform blocks, platform commands, docs, settings
+python3 -m unittest discover -s tests    # validate.sh rejects broken inputs; installer behavior in temp directories
 ```
 
-The scripts need only `bash` and `python3` (standard library, 3.9 or newer). Frontmatter is checked by a strict parser for the YAML subset the entries use, and anything outside it is rejected with a message. CI runs all three scripts plus `shellcheck` on Linux and macOS for every PR.
+The scripts and tests need only `bash` and `python3` (standard library, 3.9 or newer). `tests/test_validate.py` breaks one thing per case in a copy of the repo and expects a given message; `tests/test_install.py` runs `install.sh` against temporary `CLAUDE_HOME`, `COPILOT_HOME` and project folders, never the real ones. Frontmatter is checked by a strict parser for the YAML subset the entries use, and anything outside it is rejected with a message. CI runs `validate.sh`, both test modules and `shellcheck` on Linux and macOS for every PR.
 
 This repo was split from a personal Claude Code setup (now [claude-dev](https://github.com/ZeroTull/claude-dev)), which keeps the global rules, settings and development agents.
