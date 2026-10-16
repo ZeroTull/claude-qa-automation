@@ -173,7 +173,7 @@ project_settings() {
       echo "  FAILED    $target (no free backup folder, see the error above; the file is unchanged)"
       return
     fi
-    if ! { mkdir -p "$BACKUP_DIR" && cp -p "$target" "$BACKUP_DIR/project-settings.json"; }; then
+    if ! { mkdir -p "$BACKUP_DIR" && cp -p "$target" "$BACKUP_DIR/project-settings.json" && chmod go-w "$BACKUP_DIR/project-settings.json"; }; then
       echo "  FAILED    $target (could not back it up to $BACKUP_DIR, see the error above; the file is unchanged)"
       return
     fi
@@ -314,6 +314,9 @@ merge_settings() {
     echo "error: --settings needs a working python3" >&2
     return 1
   fi
+  if [[ -e "$target" ]] && python3 -c 'import os,stat,sys; sys.exit(0 if os.stat(sys.argv[1]).st_mode & 0o022 else 1)' "$target"; then
+    echo "  WARNING   settings.json is writable by other users or your group; consider: chmod go-w $target"
+  fi
   if ! missing="$(settings_tool check)"; then
     echo "error: settings.json was left unchanged" >&2
     return 1
@@ -329,16 +332,14 @@ merge_settings() {
     return 1
   fi
   mkdir -p "$CLAUDE_HOME"
-  if [[ -e "$target" ]] && python3 -c 'import os,stat,sys; sys.exit(0 if os.stat(sys.argv[1]).st_mode & 0o022 else 1)' "$target"; then
-    echo "  WARNING   settings.json is writable by other users; consider: chmod go-w $target"
-  fi
   if [[ -e "$target" ]]; then
     if ! init_backup_dir; then
       echo "error: no free backup folder; settings.json was left unchanged" >&2
       return 1
     fi
-    # -p keeps the original's permissions, so a private (0600) settings.json is not backed up world-readable.
-    if ! { mkdir -p "$BACKUP_DIR" && cp -p "$target" "$BACKUP_DIR/settings.json"; }; then
+    # -p copies the original's exact mode bits; plain cp would strip bits the umask removes.
+    # go-w then keeps others from editing the backup even when the original is writable by them.
+    if ! { mkdir -p "$BACKUP_DIR" && cp -p "$target" "$BACKUP_DIR/settings.json" && chmod go-w "$BACKUP_DIR/settings.json"; }; then
       echo "error: could not back up settings.json to $BACKUP_DIR, see the error above; the file is unchanged" >&2
       return 1
     fi

@@ -102,21 +102,37 @@ assert "backs up the old settings" grep -q '"theme": "dark"' "$(latest_backup_di
 assert "keeps the file mode" test "$(python3 -c 'import os,stat,sys; print(oct(stat.S_IMODE(os.stat(sys.argv[1]).st_mode)))' "$CLAUDE_HOME/settings.json")" = "$(python3 -c 'import os,stat,sys; print(oct(stat.S_IMODE(os.stat(sys.argv[1]).st_mode)))' "$(latest_backup_dir)/settings.json")"
 run --settings
 assert "second run reports ok" grep -q "already has every deny rule" <<<"$out"
+# A strict umask makes plain cp narrow the copy (644 -> 600); -p keeps the original's bits.
+mode_home="$TMP/mode-home"
+mkdir -p "$mode_home"
+echo '{"permissions": {"deny": []}}' >"$mode_home/settings.json"
+chmod 644 "$mode_home/settings.json"
+out="$(umask 077; CLAUDE_HOME="$mode_home" "$REPO/install.sh" --settings 2>&1)"
+mbak="$(find "$mode_home/backups" -name settings.json | head -n 1)"
+assert "a settings.json is backed up under umask 077" test -n "$mbak"
+assert "the backup keeps the original's 644 under umask 077" test "$(file_mode "$mbak")" = 644
+assert "a 644 settings.json gets no warning" out_lacks "writable by other users"
 private="$TMP/private-home"
 mkdir -p "$private"
 echo '{"permissions": {"deny": []}}' >"$private/settings.json"
 chmod 600 "$private/settings.json"
 out="$(CLAUDE_HOME="$private" "$REPO/install.sh" --settings 2>&1)"
 pbak="$(find "$private/backups" -name settings.json | head -n 1)"
-assert "a private settings.json is backed up" test -n "$pbak"
-assert "its backup stays private (0600)" test "$(file_mode "$pbak")" = 600
-assert "a private settings.json gets no warning" out_lacks "writable by other users"
+assert "a 0600 settings.json backup is still 0600" test "$(file_mode "$pbak")" = 600
 open_home="$TMP/open-home"
 mkdir -p "$open_home"
 echo '{"permissions": {"deny": []}}' >"$open_home/settings.json"
 chmod 666 "$open_home/settings.json"
 out="$(CLAUDE_HOME="$open_home" "$REPO/install.sh" --settings 2>&1)"
-assert "warns when settings.json is writable by others" grep -q "WARNING   settings.json is writable by other users" <<<"$out"
+assert "warns when settings.json is writable by others" grep -q "WARNING   settings.json is writable by other users or your group" <<<"$out"
+obak="$(find "$open_home/backups" -name settings.json | head -n 1)"
+assert "the backup of a 666 settings.json is not writable by others" test "$(file_mode "$obak")" = 644
+out="$(CLAUDE_HOME="$open_home" "$REPO/install.sh" --settings 2>&1)"
+assert "warns even when every deny rule is present" grep -q "already has every deny rule" <<<"$out"
+assert "the warning comes with the ok line" grep -q "WARNING   settings.json is writable by other users or your group" <<<"$out"
+chmod 664 "$open_home/settings.json"
+out="$(CLAUDE_HOME="$open_home" "$REPO/install.sh" --settings 2>&1)"
+assert "warns when settings.json is writable by the group" grep -q "WARNING   settings.json is writable" <<<"$out"
 run
 assert "plain install no longer reports missing rules" out_lacks "lacks"
 
@@ -250,7 +266,6 @@ run --project "$proj"
 assert "exits 0" test "$rc" = 0
 assert "copies every agent and skill" test "$(find "$proj/.claude/agents" "$proj/.claude/skills" -mindepth 1 -maxdepth 1 | wc -l | tr -d ' ')" = "$((n_agents + n_skills))"
 assert "copies, does not link" test ! -L "$proj/.claude/agents/$agent"
-assert "copies keep the source file mode" test "$(file_mode "$proj/.claude/agents/$agent")" = "$(file_mode "$REPO/agents/$agent")"
 assert "creates settings.json from the example" cmp -s "$proj/.claude/settings.json" "$REPO/settings.example.json"
 assert "keeps existing CLAUDE.md" test "$(cat "$proj/CLAUDE.md")" = "# existing"
 assert "copies the framework-map skill" test -f "$proj/.claude/skills/framework-map/SKILL.md"
@@ -261,6 +276,27 @@ echo "custom" >"$proj/.claude/settings.json"
 run --project "$proj"
 assert "keeps an existing settings.json" test "$(cat "$proj/.claude/settings.json")" = "custom"
 assert "says an unreadable settings.json could not be checked" grep -q "could not check its deny rules" <<<"$out"
+# Under umask 077 plain cp would make every copy 600 or 700; -p keeps the source's 644 and 755.
+repo_copy="$TMP/repo-copy"
+mkdir -p "$repo_copy"
+cp -R "$REPO/." "$repo_copy/"
+chmod 644 "$repo_copy/agents/$agent" "$repo_copy/skills/$skill/SKILL.md" "$repo_copy/settings.example.json" "$repo_copy/templates/CLAUDE.md"
+chmod 755 "$repo_copy/skills/$skill"
+proj2="$TMP/proj-modes"
+mkdir -p "$proj2"
+out="$(umask 077; CLAUDE_HOME="$TMP/modes-home" COPILOT_HOME="$TMP/modes-copilot" "$repo_copy/install.sh" --project "$proj2" 2>&1)"
+assert "an agent copy keeps 644 under umask 077" test "$(file_mode "$proj2/.claude/agents/$agent")" = 644
+assert "a skill folder copy keeps 755 under umask 077" test "$(file_mode "$proj2/.claude/skills/$skill")" = 755
+assert "a skill file copy keeps 644 under umask 077" test "$(file_mode "$proj2/.claude/skills/$skill/SKILL.md")" = 644
+assert "the settings.json copy keeps 644 under umask 077" test "$(file_mode "$proj2/.claude/settings.json")" = 644
+assert "the CLAUDE.md copy keeps 644 under umask 077" test "$(file_mode "$proj2/CLAUDE.md")" = 644
+proj6="$TMP/proj6"
+mkdir -p "$proj6/.claude"
+echo '{"permissions": {"deny": []}}' >"$proj6/.claude/settings.json"
+chmod 644 "$proj6/.claude/settings.json"
+out="$(umask 077; CLAUDE_HOME="$TMP/modes-home" COPILOT_HOME="$TMP/modes-copilot" "$REPO/install.sh" --project "$proj6" --update 2>&1)"
+bak6="$(sed -n 's|.*backup: \(.*project-settings.json\)).*|\1|p' <<<"$out")"
+assert "the project settings backup keeps 644 under umask 077" test "$(file_mode "$bak6")" = 644
 proj3="$TMP/proj3"
 mkdir -p "$proj3/.claude"
 printf '{"model": "x", "permissions": {"allow": ["Bash(ls)"], "deny": ["Read(**/.env)"]}}\n' >"$proj3/.claude/settings.json"
