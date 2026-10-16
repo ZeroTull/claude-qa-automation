@@ -131,13 +131,13 @@ copy_one() {
   elif [[ -e "$dest" && "$(kind "$src")" != "$(kind "$dest")" ]]; then
     echo "  SKIP      $dest (exists as a different type - remove it to install)"
   elif [[ ! -e "$dest" ]]; then
-    cp -R "$src" "$dest"
+    cp -Rp "$src" "$dest"
     echo "  copied    $dest"
   elif diff -rq "$src" "$dest" >/dev/null 2>&1; then
     echo "  ok        $dest"
   elif [[ "$update" == yes ]]; then
     rm -rf "$dest"
-    cp -R "$src" "$dest"
+    cp -Rp "$src" "$dest"
     echo "  updated   $dest (local edits and added files replaced)"
   else
     echo "  DIFFERS   $dest (--update replaces it, including local edits)"
@@ -173,7 +173,7 @@ project_settings() {
       echo "  FAILED    $target (no free backup folder, see the error above; the file is unchanged)"
       return
     fi
-    if ! { mkdir -p "$BACKUP_DIR" && cp -p "$target" "$BACKUP_DIR/project-settings.json"; }; then
+    if ! { mkdir -p "$BACKUP_DIR" && cp -p "$target" "$BACKUP_DIR/project-settings.json" && chmod go-w "$BACKUP_DIR/project-settings.json"; }; then
       echo "  FAILED    $target (could not back it up to $BACKUP_DIR, see the error above; the file is unchanged)"
       return
     fi
@@ -195,7 +195,7 @@ copy_if_absent() {
   elif [[ -e "$dest" ]]; then
     echo "  SKIP      $dest (exists - $hint)"
   else
-    cp "$src" "$dest"
+    cp -p "$src" "$dest"
     echo "  copied    $dest"
   fi
 }
@@ -306,6 +306,16 @@ except BaseException as e:
 PY
 }
 
+# Warns when a file that controls the deny rules can be edited by the group or other users.
+# Skips missing files and links (a link's target belongs to another repo, which gets the SKIP below).
+warn_if_settings_writable_by_others() {
+  local f="$1"
+  [[ -e "$f" && ! -L "$f" ]] || return 0
+  if python3 -c 'import os,sys; sys.exit(0 if os.stat(sys.argv[1]).st_mode & 0o022 else 1)' "$f"; then
+    echo "  WARNING   settings.json is writable by other users or your group; consider: chmod go-w \"$f\""
+  fi
+}
+
 # Adds the missing deny rules to ~/.claude/settings.json (backed up first). Refuses to write through a link,
 # because then the file belongs to another repo and the rules belong there.
 merge_settings() {
@@ -314,6 +324,7 @@ merge_settings() {
     echo "error: --settings needs a working python3" >&2
     return 1
   fi
+  warn_if_settings_writable_by_others "$target"
   if ! missing="$(settings_tool check)"; then
     echo "error: settings.json was left unchanged" >&2
     return 1
@@ -334,7 +345,9 @@ merge_settings() {
       echo "error: no free backup folder; settings.json was left unchanged" >&2
       return 1
     fi
-    if ! { mkdir -p "$BACKUP_DIR" && cp "$target" "$BACKUP_DIR/settings.json"; }; then
+    # -p copies the original's exact mode bits; plain cp would strip bits the umask removes.
+    # go-w then keeps others from editing the backup even when the original is writable by them.
+    if ! { mkdir -p "$BACKUP_DIR" && cp -p "$target" "$BACKUP_DIR/settings.json" && chmod go-w "$BACKUP_DIR/settings.json"; }; then
       echo "error: could not back up settings.json to $BACKUP_DIR, see the error above; the file is unchanged" >&2
       return 1
     fi
