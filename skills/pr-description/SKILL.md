@@ -56,7 +56,7 @@ Before you search or read code, read `.ai/context/framework-map.md` if it exists
 
 ## Steps
 
-1. **Diff.** `git diff $(git merge-base HEAD origin/main)...HEAD` (use the real target branch) plus `git log --oneline` for the branch. Use staged changes if the user asks.
+1. **Diff.** Find the target branch: the target of an open PR/MR for this branch if there is one, otherwise the repo's default branch (`git symbolic-ref --short refs/remotes/origin/HEAD`), otherwise ask (never assume `main`). Then `git diff $(git merge-base HEAD origin/<target>)...HEAD` plus `git log --oneline origin/<target>..HEAD` for the branch. Use staged changes if the user asks.
 
 2. **Work item.** Find the ID in the branch name or commits: Jira `KEY-123` (`feature/KEY-123-...`), ADO `AB#1234`, GitLab or GitHub `#123`. If none, ask for it; do not guess. Read its title and acceptance criteria with "Read an item" from Platforms and check the diff addresses them.
 

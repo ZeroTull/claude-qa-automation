@@ -399,6 +399,17 @@ AGENT_RULES = {
         "For a defect, offer the step from Defect routing": "must route defects with Defect routing",
         "for a pre-existing confirmed product defect, or a regression from a merged change if the user chooses it": "plan example must file bugs only for confirmed product defects or shared-branch regressions",
     },
+    "agents/pr-reviewer.md": {
+        "never assume `main`": "must take the base branch from the PR, not assume main",
+        "git symbolic-ref --short refs/remotes/origin/HEAD": "must fall back to the repo's default branch",
+        "ask the user which branch to compare against": "must ask when the base branch is unknown",
+        "The one allowed exception is `git fetch origin <branch>...`": "must state that git fetch is the only allowed git write",
+        "Name the base branch you compared against in the PR Overview": "must report the base branch",
+    },
+    "skills/pr-description/SKILL.md": {
+        "never assume `main`": "must take the target branch from the PR, not assume main",
+        "git symbolic-ref --short refs/remotes/origin/HEAD": "must fall back to the repo's default branch",
+    },
     "skills/bug-ticket/SKILL.md": {
         "An intermittent failure can still be a product defect": "must not dismiss intermittent failures as non-bugs",
         "File only what Defect routing sends here": "must file only what Defect routing sends to it",

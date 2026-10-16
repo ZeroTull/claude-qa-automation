@@ -424,6 +424,18 @@ expect_failure "digits-only versions quoted" "templates/safety.md must redact di
   "edit templates/safety.md -e 's| a value of digits only is not a version and is .<redacted>.[;]||'"
 expect_failure "credential-looking names undefined" "templates/safety.md must say what a credential-looking name is" \
   "edit templates/safety.md -e 's| (a known token prefix such as .ghp_., .github_pat_., .glpat-., .AKIA. or .xox., or a long run of mixed letters and digits)||'"
+expect_failure "reviewer that assumes main" "agents/pr-reviewer.md must take the base branch from the PR, not assume main" \
+  "edit agents/pr-reviewer.md -e 's|never assume .main.|use main|'"
+expect_failure "reviewer without a default-branch fallback" "agents/pr-reviewer.md must fall back to the repo's default branch" \
+  "edit agents/pr-reviewer.md -e 's|git symbolic-ref --short refs/remotes/origin/HEAD|origin/main|'"
+expect_failure "reviewer that guesses the base" "agents/pr-reviewer.md must ask when the base branch is unknown" \
+  "edit agents/pr-reviewer.md -e 's|ask the user which branch to compare against|use main|'"
+expect_failure "reviewer that may change git state silently" "agents/pr-reviewer.md must state that git fetch is the only allowed git write" \
+  "edit agents/pr-reviewer.md -e 's|The one allowed exception is .git fetch origin <branch>[.][.][.].|Fetching is fine|'"
+expect_failure "reviewer that hides its base" "agents/pr-reviewer.md must report the base branch" \
+  "edit agents/pr-reviewer.md -e 's|Name the base branch you compared against in the PR Overview|Review the diff|'"
+expect_failure "PR description that assumes main" "skills/pr-description/SKILL.md must take the target branch from the PR, not assume main" \
+  "edit skills/pr-description/SKILL.md -e 's|never assume .main.|use main|'"
 expect_failure "personal entry in the QA repo" "unknown group 'personal'" \
   "edit catalog.tsv -e 's/^pr-reviewer\tagent\tqa/pr-reviewer\tagent\tpersonal/'"
 expect_failure "machine path in settings.example.json" "settings.example.json contains a machine-specific /Users/ path" \
