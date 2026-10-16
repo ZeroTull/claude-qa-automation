@@ -460,6 +460,50 @@ AGENT_RULES = {
         "correlating a slowdown with the code or infrastructure change behind it": "must correlate performance regressions",
         "**Tools:**": "must keep a tool list",
     },
+    "agents/test-maintainer.md": {
+        "## Scoring": "must define how scores are given",
+        "count the items affected by at least one of that category's countable signals": "must score each category from its own signals",
+        "a test that cannot fail (no assertion, an assertion that is always true": "must count tests that cannot fail",
+        "or a failure swallowed in a catch)": "must count swallowed failures",
+        "and the last row includes 100%": "must give 100% a score",
+        "Lower bounds are inclusive and upper bounds exclusive": "must define inclusive and exclusive bounds",
+        "with two exceptions: the \"above 0%\" row excludes exactly 0%": "must name the 0% exception",
+        "A category in scope whose counts you cannot produce is `n/a` with the reason": "must not score uncounted categories",
+        "never score it from judgement": "must not score from judgement",
+        "the exact value decides, never the rounded one": "must not score a rounded share",
+        "or with no executions in the last 30 days, there is no override": "must handle an empty flaky window",
+        "The override only caps a Stability score that the counts produced": "must not score Stability from the flaky rate alone",
+        "except CI gates, which are always scored unless their configuration exists but cannot be read": "must exempt CI gates from n/a",
+        "CI gates are always scored (0 when the configuration is missing or empty)": "must always score CI gates",
+        "only a configuration that exists but cannot be read makes CI gates `n/a`": "must handle an unreadable CI configuration",
+        "which may be non-blocking by design": "must not disqualify the quarantine job for being non-blocking",
+        "A category has a guard only if every countable signal it lists has one": "must require a guard for every signal",
+        "the class is affected if at least one test method has it": "must define when a Performance item is affected",
+        "framework and JDK classes do not count": "must define inheritance depth",
+        "counting every line from its signature to its closing brace": "must define method length",
+        "`continueOnError` (Azure DevOps)": "must exclude Azure DevOps continueOnError",
+        "when this category's signal comes back": "must tie a guard to its category",
+        "go into the report as evidence and do not change the share": "must keep judgement signals out of the share",
+        "Compare the exact fraction (affected / total) with the bounds below": "must compare exact fractions",
+        "If the total is zero, the category is `n/a` with the reason": "must handle an empty denominator",
+        "A guard is a checkable artifact that fails the build": "must define a guard",
+        "the flaky rate is the share of test executions on the default branch in the last 30 days": "must define the flaky rate",
+        "Without a run history, or with no executions": "must handle a missing run history",
+        "**CI gates use their own scale**": "must say CI gates use their own scale",
+        "A gate counts only if it runs in CI on the default branch and fails the pipeline when violated": "must define when a gate counts",
+        "if the step that enforces it is marked": "must scope the exclusion to the enforcing step",
+        "A missing or empty CI configuration means 0 gates and a score of 0, in every scope": "must score a missing CI configuration",
+        "Every score cites its evidence": "must cite evidence for every score",
+        "Count every item in the scope; do not sample": "must count every item",
+        "Stability is the lower of its counted score and 4": "must define the override as a minimum",
+        "The override never raises a score": "must not raise a score through the override",
+        "if fewer than 3 categories have a score, write \"overall n/a (categories with a score: N)\"": "must handle too few scored categories",
+        "round it down, and cap it at the lowest scored category (CI gates included) plus 3": "must define rounding and the cap",
+        "apply the Stability override first": "must apply the override before the overall score",
+        "with the same bands as the table": "must give CI scores a band",
+        "The categories in scope are the ones the request names, or all seven if it names none": "must define which categories are in scope",
+        "overall X/10, or overall n/a (categories with a score: N) (see Scoring)": "must report the overall score by the Scoring rules",
+    },
     "agents/pr-reviewer.md": {
         "never assume `main`": "must take the base branch from the PR, not assume main",
         "git symbolic-ref --short refs/remotes/origin/HEAD": "must fall back to the repo's default branch",
@@ -522,6 +566,7 @@ AGENT_RULES = {
     },
     "README.md": {
         "the five JVM settings the rule names": "must describe the closed JVM list",
+        "scored from counts against fixed bands (0-2 broken, 3-4 poor, 5-6 fair, 7-8 good, 9-10 excellent, with the evidence)": "must describe the health score bands",
         "which agent, skill or the main session takes the first phase (its Phased Plan says who takes each phase)": "must describe the strategy Next Step",
         "a phased plan and measurable success criteria": "must describe the strategy report",
         "we don't recommend a wildcard allow rule for it": "must not recommend a git fetch allow rule",
@@ -583,7 +628,8 @@ if pin_count != str(len(pins)):
     err(f"tests/pin-count says {pin_count or 'nothing'}, but this script defines {len(pins)} pins; update both together")
 # Snapshots: some entries must equal a file under tests/snapshots/ byte for byte, so every rule in them is covered,
 # not only the pinned phrases. When the entry (or a shared block in it) changes on purpose, update the snapshot too.
-SNAPSHOTS = [("agents/senior-automation-qa-engineer.md", "tests/snapshots/senior-automation-qa-engineer.md")]
+SNAPSHOTS = [("agents/senior-automation-qa-engineer.md", "tests/snapshots/senior-automation-qa-engineer.md"),
+             ("agents/test-maintainer.md", "tests/snapshots/test-maintainer.md")]
 def read_bytes(path):
     try:
         with open(path, "rb") as f:
@@ -603,6 +649,70 @@ for path, snap in SNAPSHOTS:
         a, b = text.split(b"\n"), want.split(b"\n")
         line = next((n for n, (x, y) in enumerate(zip(a, b), 1) if x != y), min(len(a), len(b)) + 1)
         err(f"{path} differs from {snap} (first difference at line {line}); update both when the change is intended")
+# The exact rows of the test-maintainer score table: a changed bound or score needs a deliberate edit here too.
+TM_ROWS = [
+    "| exactly 0%, with a guard | 10 | Excellent |",
+    "| exactly 0%, no guard | 9 | Excellent |",
+    "| above 0% to under 2% | 8 | Good |",
+    "| 2% to under 5% | 7 | Good |",
+    "| 5% to under 10% | 6 | Fair |",
+    "| 10% to under 15% | 5 | Fair |",
+    "| 15% to under 25% | 4 | Poor |",
+    "| 25% to under 40% | 3 | Poor |",
+    "| 40% to under 60% | 2 | Broken |",
+    "| 60% to under 80% | 1 | Broken |",
+    "| 80% to 100%, inclusive | 0 | Broken |"
+]
+# The only lines outside the Score section that may mention a percentage, matched exactly (no prefixes), so no
+# second mapping can be added in prose or any other format.
+TM_RANGE_LINES = [
+    "Compare the exact fraction (affected / total) with the bounds below. Show the share with two decimals next to the counts (for example 10/503 = 1.99%, which scores 8); the exact value decides, never the rounded one. Lower bounds are inclusive and upper bounds exclusive, with two exceptions: the \"above 0%\" row excludes exactly 0% (which has its own rows), and the last row includes 100%. If the total is zero, the category is `n/a` with the reason (for example \"no API tests\").",
+    "A guard is a checkable artifact that fails the build when this category's signal comes back, and that you can cite by `file:line`: a lint or ArchUnit rule, or a CI job that fails on the pattern. A shared helper that does not force its use is not a guard. A category has a guard only if every countable signal it lists has one; otherwise it is \"exactly 0%, no guard\".",
+    "Stability override: the flaky rate is the share of test executions on the default branch in the last 30 days that failed and then passed on a retry. Compare its exact fraction: from 5% to 10% inclusive, Stability is the lower of its counted score and 4; above 10%, the lower of its counted score and 2. The override never raises a score. Without a run history, or with no executions in the last 30 days, there is no override, and the report says so. The override only caps a Stability score that the counts produced: without Stability counts, Stability stays `n/a` and the report gives the flaky rate as evidence."
+]
+# The test-maintainer score table must map every share to exactly one score: scores 10 down to 0, and share ranges
+# that start at 0%, touch without overlapping, and end at 100%. A row deleted from both the agent and its snapshot
+# still fails here.
+tm = read(f"{repo}/agents/test-maintainer.md")
+# The Score section (from "**Score.**" to "A guard is") must hold exactly the 11 rows, in order, and nothing else
+# apart from the header; and no other line in the file may pair a share with a band, so no second mapping exists.
+lines = tm.split("\n")
+start = next((n for n, l in enumerate(lines) if l == "**Score.**"), None)
+end = next((n for n, l in enumerate(lines) if l.startswith("A guard is")), None)
+if start is None or end is None or end < start:
+    err("agents/test-maintainer.md: the Score section ('**Score.**' to 'A guard is') is missing")
+else:
+    section = [l for l in lines[start + 1:end] if l.strip()]
+    if section != ["| Affected share | Score | Band |", "|---|---|---|"] + TM_ROWS:
+        err("agents/test-maintainer.md: the Score section must contain exactly the 11 score table rows, in order")
+    # Positive check: outside the Score section, a line may mention a percentage only if it is one of the known lines.
+    stray = [l for n, l in enumerate(lines) if not start < n < end and re.search(r"%|percent", l, re.I)
+             and l not in TM_RANGE_LINES]
+    if stray:
+        err(f"agents/test-maintainer.md: a percentage outside the Score section: {stray[0][:60]}")
+rows = re.findall(r"^\| (.+?) \| (\d+) \| (Excellent|Good|Fair|Poor|Broken) \|$", tm, re.M)
+BAND = {10: "Excellent", 9: "Excellent", 8: "Good", 7: "Good", 6: "Fair", 5: "Fair", 4: "Poor", 3: "Poor",
+        2: "Broken", 1: "Broken", 0: "Broken"}
+if [int(r[1]) for r in rows] != list(range(10, -1, -1)):
+    err("agents/test-maintainer.md: the score table must list scores 10 down to 0, once each")
+elif any(BAND[int(r[1])] != r[2] for r in rows):
+    err("agents/test-maintainer.md: a score table row has the wrong band for its score")
+else:
+    labels = [r[0] for r in rows]
+    bounds = []
+    for k, label in enumerate(labels[2:]):
+        last = k == len(labels) - 3
+        first = k == 0
+        pattern = r"(\d+)% to 100%, inclusive" if last else r"above (0)% to under (\d+)%" if first else r"(\d+)% to under (\d+)%"
+        m = re.fullmatch(pattern, label)
+        bounds.append(None if not m else (int(m.group(1)), 100 if last else int(m.group(2))))
+    ok = (labels[0] == "exactly 0%, with a guard" and labels[1] == "exactly 0%, no guard"
+          and None not in bounds and labels[2].startswith("above 0%") and bounds[0][0] == 0
+          and all(lo < hi for lo, hi in bounds)
+          and all(bounds[k][1] == bounds[k + 1][0] for k in range(len(bounds) - 1))
+          and bounds[-1][1] == 100)
+    if not ok:
+        err("agents/test-maintainer.md: the score table's share ranges must start at 0%, touch without overlapping, and end at 100%")
 for path, rules in AGENT_RULES.items():
     text = read(f"{repo}/{path}")
     for phrase, message in rules.items():

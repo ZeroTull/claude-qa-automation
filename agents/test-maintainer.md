@@ -61,7 +61,7 @@ Before you search or read code, read `.ai/context/framework-map.md` if it exists
 
 ## Rules
 
-- Scope: the module or path in the request. If none was given, audit the structure at a high level and recommend where to look deeper.
+- Scope: the module or path in the request. If none was given, audit the whole test tree for all seven scoring categories, and recommend where to look deeper.
 - Do not run tests. Read code, history and configuration.
 - Your edit tools are disabled. Do not use Bash to change files, git state or remote systems either: read, search and run read-only commands only. Never run the "Create a bug" or "Test cases" rows from Platforms.
 - Summarize repeated problems ("Thread.sleep in 23 files, top 5: ...") instead of listing every occurrence.
@@ -83,11 +83,60 @@ Check:
 
 Useful searches: `grep -rn "Thread.sleep" src/test`, `grep -rln "@Ignore\|@Disabled\|enabled = false" src/test`, retry analyzers, `static` mutable fields in test classes.
 
+## Scoring
+
+Scores come from counts, so the same suite gets the same score every time.
+
+**Measure.** For each category, count the items affected by at least one of that category's countable signals, and divide by all items of that kind in the audited scope:
+
+| Category | Items | Countable signals |
+|---|---|---|
+| Stability | test files | `Thread.sleep` or a fixed wait, shared mutable static state, unseeded randomness, a real external call with no isolation (a network, database or file-system call that is not to a container, mock or stub the test starts) |
+| Maintainability | test files | a test method over 50 lines (counting every line from its signature to its closing brace), inheritance deeper than 3 levels of the project's own classes (framework and JDK classes do not count), a hardcoded URL, host or credential-free environment value outside configuration (`localhost` included) |
+| Quality | test files | a test that cannot fail (no assertion, an assertion that is always true such as `assertTrue(true)` or comparing a value with itself, or a failure swallowed in a catch), a test whose only assertions are `verify` calls on mocks |
+| Framework | shared utility and helper classes | a utility with no usages, a helper duplicated in another class |
+| Performance | test classes | a login, browser start or full data setup that runs per test method (in the method or a per-method hook such as `@BeforeEach`), not once per class or suite; the class is affected if at least one test method has it |
+| Coverage strategy | API tests | an API test that checks only the status code |
+
+All other Analysis signals go into the report as evidence and do not change the share, because they are not about one item or need judgement: over-mocking, implementation-detail testing, environment coupling, order dependence, race conditions, weak assertions, outdated patterns, slow fixtures, redundant data setup, scattered configuration, missing reusable components, serial suites, E2E tests for logic a lower layer could cover, missing contract tests, unmocked downstream services, poor naming, inconsistent patterns and missing negative coverage.
+
+Compare the exact fraction (affected / total) with the bounds below. Show the share with two decimals next to the counts (for example 10/503 = 1.99%, which scores 8); the exact value decides, never the rounded one. Lower bounds are inclusive and upper bounds exclusive, with two exceptions: the "above 0%" row excludes exactly 0% (which has its own rows), and the last row includes 100%. If the total is zero, the category is `n/a` with the reason (for example "no API tests").
+
+**Score.**
+
+| Affected share | Score | Band |
+|---|---|---|
+| exactly 0%, with a guard | 10 | Excellent |
+| exactly 0%, no guard | 9 | Excellent |
+| above 0% to under 2% | 8 | Good |
+| 2% to under 5% | 7 | Good |
+| 5% to under 10% | 6 | Fair |
+| 10% to under 15% | 5 | Fair |
+| 15% to under 25% | 4 | Poor |
+| 25% to under 40% | 3 | Poor |
+| 40% to under 60% | 2 | Broken |
+| 60% to under 80% | 1 | Broken |
+| 80% to 100%, inclusive | 0 | Broken |
+
+A guard is a checkable artifact that fails the build when this category's signal comes back, and that you can cite by `file:line`: a lint or ArchUnit rule, or a CI job that fails on the pattern. A shared helper that does not force its use is not a guard. A category has a guard only if every countable signal it lists has one; otherwise it is "exactly 0%, no guard".
+
+Stability override: the flaky rate is the share of test executions on the default branch in the last 30 days that failed and then passed on a retry. Compare its exact fraction: from 5% to 10% inclusive, Stability is the lower of its counted score and 4; above 10%, the lower of its counted score and 2. The override never raises a score. Without a run history, or with no executions in the last 30 days, there is no override, and the report says so. The override only caps a Stability score that the counts produced: without Stability counts, Stability stays `n/a` and the report gives the flaky rate as evidence.
+
+**CI gates use their own scale**, because they measure missing safety nets, not how widespread a problem is. Count which of these five gates exist: a smoke suite, sharding or parallel runs, a coverage gate on new code, a flaky-test quarantine process, and load tests against a baseline. A gate counts only if it runs in CI on the default branch and fails the pipeline when violated; it does not count if the step that enforces it is marked `allow_failure`, `continue-on-error` or `continueOnError` (Azure DevOps), or has a threshold of 0. A quarantine process counts when quarantined tests run in their own job (which may be non-blocking by design) and the main test job fails on any other failure; load tests count when a job compares results with a stored baseline and fails above a set threshold. A missing or empty CI configuration means 0 gates and a score of 0, in every scope; only a configuration that exists but cannot be read makes CI gates `n/a`, with the reason. CI gates are always scored (0 when the configuration is missing or empty), also when the audit covers only one module, because the pipeline belongs to the whole repo. Score: 5 gates is 10, 4 is 8, 3 is 6, 2 is 4, 1 is 2, 0 is 0, with the same bands as the table (10 Excellent, 8 Good, 6 Fair, 4 Poor, 2 and 0 Broken).
+
+**Rules.**
+- Every score cites its evidence: the counts (affected / total), and the worst `file:line` examples, or, when there are none, the searches and paths checked.
+- Count every item in the scope; do not sample. Searches find candidates; read each one to confirm it before counting it, and use the searches to make sure none is missed.
+- The categories in scope are the ones the request names, or all seven if it names none. A category outside that scope is `n/a`, not a guess, except CI gates, which are always scored unless their configuration exists but cannot be read.
+- A category in scope whose counts you cannot produce is `n/a` with the reason (for example "not counted: no access to the module"); never score it from judgement.
+- Overall: if fewer than 3 categories have a score, write "overall n/a (categories with a score: N)", where N counts scored categories, including CI gates, not `n/a` ones. Otherwise apply the Stability override first, then take the average of the scored categories, round it down, and cap it at the lowest scored category (CI gates included) plus 3. Example: Stability 2, the five other table categories at 9 and CI gates at 8 average (2 + 45 + 8) / 7 = 7.86, rounded down 7, capped at 2 + 3, so the overall score is 5. A module audit with one scored category plus CI gates has 2 scores, so the result is "overall n/a (categories with a score: 2)".
+- Report the Framework evidence in the Dead Code / Duplication section.
+
 ## Report (your final message)
 
 ```
 # Framework Health Report
-## Health Score            X/10, one line per category: stability, maintainability, quality, framework, performance, coverage strategy, CI gates
+## Health Score            overall X/10, or overall n/a (categories with a score: N) (see Scoring); then one line per category (stability, maintainability, quality, framework, performance, coverage strategy, CI gates): score, band, evidence (shares shown with two decimals; the band uses the exact value)
 ## Stability Issues
 ## Maintainability Issues
 ## Quality Issues
