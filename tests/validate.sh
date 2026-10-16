@@ -223,7 +223,7 @@ MAPPER_RULES = {
     "Quoted or dotted YAML keys may be missed": "must note that quoted or dotted YAML keys may be missed",
     "The grep can still show a key that is a host name": "must say not to repeat host-name keys",
     "Never copy URLs, hosts, IP addresses or account names": "must not copy URLs, hosts or account names",
-    "`settings.xml`, `gradle.properties`, `.npmrc` and `.netrc`": "must skip Maven settings and gradle.properties by name",
+    "`settings.xml`, `settings-security.xml`, `gradle.properties`, `.npmrc` and `.netrc`": "must skip Maven settings and gradle.properties by name",
     "From build files use only what Safety allows": "must read build files only as Safety allows",
 }
 # Run the skill's YAML key pattern on a sample: it must list keys and never a host:port list item.
@@ -337,7 +337,7 @@ AGENT_RULES = {
     "templates/safety.md": {
         "quote only what this list allows. For anything else, name the element, property or key and write `<redacted>`": "must quote only allow-listed build-file values",
         "dependency, plugin and parent coordinates and versions, and the Java release": "must allow the build-file details diagnosis needs",
-        "the value looks like a version (digits, dots, a range, or a `${...}` reference with nothing else in the value)": "must allow sensitive-named versions only for version-shaped values",
+        "the value looks like a version (digits with at least one dot, a range, or a `${...}` reference with nothing else in the value)": "must allow sensitive-named versions only for version-shaped values",
         "but only if the property name ends in `version`": "must allow sensitive-named versions only for version properties",
         "wherever they appear (`argLine`, `jvmArgs`, `systemPropertyVariables`, `jvm.config`, `maven.config`)": "must apply the JVM list wherever the key appears",
         "JVM and Maven command options (`argLine`, `jvmArgs`, `.mvn/jvm.config`, `.mvn/maven.config`)": "must redact -D pairs in Maven config files",

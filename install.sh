@@ -6,7 +6,7 @@
 #   ./install.sh --project <path> [--update] copy the agents and skills into <path>/.claude for a team
 #   ./install.sh [--copilot] --uninstall     remove what the install added and restore what it replaced
 # It never touches ~/.claude/CLAUDE.md. It changes ~/.claude/settings.json only with --settings, and a team repo's
-# .claude/settings.json only with --project --update, both after a backup and only to add deny rules. The file is
+# .claude/settings.json only with --project --update, both after a backup (if the file exists) and only to add deny rules. The file is
 # rewritten as JSON, so values stay the same but number spelling, escapes and line endings can change.
 # Anything a link install replaces is moved to <target>/backups/qa-<timestamp>-NNN/ first. --project --update
 # overwrites the copied agents and skills in place (the team repo's git history is their backup).
@@ -240,17 +240,17 @@ if os.path.exists(target):
     if m:
         indent = m.group(1)
 if not isinstance(data, dict):
-    fail("settings.json has an unexpected shape: the top level is not an object")
+    fail(f"{target} has an unexpected shape: the top level is not an object")
 perms = data.get("permissions")
 if perms is None:
     perms = {}
 if not isinstance(perms, dict):
-    fail("settings.json has an unexpected shape at permissions")
+    fail(f"{target} has an unexpected shape at permissions")
 deny = perms.get("deny")
 if deny is None:
     deny = []
 if not isinstance(deny, list):
-    fail("settings.json has an unexpected shape at permissions.deny")
+    fail(f"{target} has an unexpected shape at permissions.deny")
 missing = [r for r in want if r not in deny]
 if mode == "check":
     print("\n".join(missing))
@@ -266,7 +266,8 @@ try:
     with os.fdopen(fd, "w", encoding="utf-8") as f:
         # mkstemp creates the file as 0600; keep the existing file's permissions (or the usual 0644 for a new one).
         os.chmod(tmp, stat.S_IMODE(os.stat(target).st_mode) if os.path.exists(target) else 0o644)
-        json.dump(data, f, indent=indent, ensure_ascii=False)
+        # allow_nan=False: a number too big for a float (1e400) would otherwise come back as Infinity, which is not JSON.
+        json.dump(data, f, indent=indent, ensure_ascii=False, allow_nan=False)
         f.write("\n")
     # Test-only fault injection (like the QA_* hooks above): simulates a failure after the temp file exists.
     if os.environ.get("QA_FAIL_SETTINGS_WRITE"):
@@ -280,7 +281,7 @@ except BaseException as e:
         fail(f"could not write {target}: {e.strerror}")
     if isinstance(e, ValueError):
         # Name the error type only: the message of an encoding error quotes the offending text.
-        fail(f"could not write {target}: {type(e).__name__}")
+        fail(f"could not write {target}: a value cannot be written back as JSON ({type(e).__name__})")
     raise
 PY
 }

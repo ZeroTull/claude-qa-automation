@@ -375,7 +375,7 @@ expect_failure "safety rule that quotes credentials in URLs" "templates/safety.m
 expect_failure "safety rule that quotes variable values" "templates/safety.md must allow variable names but not their values" \
   "edit templates/safety.md -e 's|names, not values, of environment variables and properties|environment variables and properties|'"
 expect_failure "mapper that reads Maven settings" "must skip Maven settings and gradle.properties by name" \
-  "edit skills/framework-map/SKILL.md -e 's|.settings.xml., .gradle.properties., ..npmrc. and ..netrc.|.npmrc|'"
+  "edit skills/framework-map/SKILL.md -e 's|.settings.xml., .settings-security.xml., .gradle.properties., ..npmrc. and ..netrc.|.npmrc|'"
 expect_failure "mapper that reads build files freely" "must read build files only as Safety allows" \
   "edit skills/framework-map/SKILL.md -e 's|From build files use only what Safety allows|From build files use anything|'"
 expect_failure "diagnoser that guesses versions" "must not guess versions it may not read" \
@@ -391,13 +391,13 @@ expect_failure "JVM flags quoted wholesale" "templates/safety.md must quote only
 expect_failure "profile activation values quoted" "templates/safety.md must redact profile activation values" \
   "edit templates/safety.md -e 's|; for a .<property>. activation keep its .<name>. and write its .<value>. as .<redacted>.||'"
 expect_failure "any value under a version name" "templates/safety.md must allow sensitive-named versions only for version-shaped values" \
-  "edit templates/safety.md -e 's| and the value looks like a version (digits, dots, a range, or a .[$]{...}. reference with nothing else in the value)||'"
+  "edit templates/safety.md -e 's| and the value looks like a version (digits with at least one dot, a range, or a .[$]{...}. reference with nothing else in the value)||'"
 expect_failure "suite files outside the rule" "templates/safety.md must cover test suite files" \
   "edit templates/safety.md -e 's| and TestNG suite files (.testng[*].xml. or any XML with a .<suite>. root)||'"
 expect_failure "JVM list only inside argLine" "templates/safety.md must apply the JVM list wherever the key appears" \
   "edit templates/safety.md -e 's|, wherever they appear (.argLine., .jvmArgs., .systemPropertyVariables., .jvm.config., .maven.config.)||'"
 expect_failure "version shape widened" "templates/safety.md must allow sensitive-named versions only for version-shaped values" \
-  "edit templates/safety.md -e 's|(digits, dots, a range, or a .[$]{...}. reference with nothing else in the value)|(any value)|'"
+  "edit templates/safety.md -e 's|(digits with at least one dot, a range, or a .[$]{...}. reference with nothing else in the value)|(any value)|'"
 expect_failure "README calls the JVM list open" "README.md must describe the closed JVM list" \
   "edit README.md -e 's|the five JVM settings the rule names|standard JVM settings|'"
 expect_failure "suite file parameters quoted" "templates/safety.md must redact suite file parameter values" \
