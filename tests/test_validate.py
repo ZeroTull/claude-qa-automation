@@ -177,8 +177,19 @@ def ok(label, *ops):
     return label, None, ops
 
 
+# pr-reviewer's branch-name rule, moved below the first command by one case.
+BRANCH_RULE = ("Branch names come from the PR's source and target, the current branch, and the `base` and `remote` inputs "
+               "below; a PR author chooses theirs. Before a branch or remote name goes into any command, check that it "
+               "matches `^[A-Za-z0-9._/-]+$` and does not start with `-`; if one does not, stop and return a one-line "
+               "request for it.")
+
+
 # Each case breaks one thing; validate.sh must fail with the message.
 FAILURES = [
+    fail("branch-name rule after the first command", "the branch-name rule must come before '- **PR/MR:**'",
+         replace("agents/pr-reviewer.md", "\n\n" + BRANCH_RULE, ""),
+         replace("agents/pr-reviewer.md", "**Optional inputs from the main session**",
+                 BRANCH_RULE + "\n\n**Optional inputs from the main session**")),
     fail("missing frontmatter", "missing frontmatter block", drop_head("agents/pr-reviewer.md", 5)),
     fail("colon in description", "invalid YAML",
          replace("agents/pr-reviewer.md", "description: Reviews", "description: Note: reviews")),

@@ -76,23 +76,22 @@ Before you search or read code, read `.ai/context/framework-map.md` if it exists
 
 Input: a PR/MR link or number (Azure DevOps, GitHub or GitLab), or "current branch". If it is missing, return a one-line request for it.
 
+Branch names come from the PR's source and target, the current branch, and the `base` and `remote` inputs below; a PR author chooses theirs. Before a branch or remote name goes into any command, check that it matches `^[A-Za-z0-9._/-]+$` and does not start with `-`; if one does not, stop and return a one-line request for it.
+
 - **PR/MR:** use "Read a PR/MR" from Platforms for the PR's details, including its real target branch, and the platform's diff (`gh pr diff N`, `glab mr diff N --raw`; for Azure DevOps the diff comes from the MCP or the local fetch below). To read the diff locally instead, take `<target>` from the PR itself (never assume `main`: it may be `develop` or a release branch). For a PR from a fork, use "Read a PR/MR" instead, because the source branch is not on `origin`. Otherwise fetch each branch with its own command, in the form the Rules allow (`git fetch origin <source>:refs/remotes/origin/<source>`, then `git fetch origin <target>:refs/remotes/origin/<target>`), then `git diff origin/<target>...origin/<source>`.
 - **Current branch:** find `<base>`, the base branch as a bare name such as `develop` (no `origin/` prefix):
   1. the target of the PR/MR for this branch: GitHub `gh pr view --json baseRefName -q .baseRefName`; GitLab `glab mr view -F json` (the `target_branch` field); Azure DevOps `az repos pr list --source-branch <branch> --status active --query "[0].targetRefName" -o tsv` (`targetRefName` without `refs/heads/`). If the lookup prints nothing, or reports that no pull request or merge request exists for the branch (for example gh prints `no pull requests found for branch` and glab `no open merge request available`), there is no open PR/MR: go to step 2. Any other error (not logged in, no network) means the PR target is unknown, so do not fall back to the default branch: go to step 3. On a detached HEAD there is no branch to look up, so go to step 2.
-  2. otherwise the repo's default branch: `git symbolic-ref --short refs/remotes/origin/HEAD` prints `origin/develop`, so `<base>` is `develop`.
+  2. otherwise the repo's default branch: `git symbolic-ref --short refs/remotes/origin/HEAD` prints `origin/develop`, so `<base>` is `develop` (with a `remote` input, use `refs/remotes/<remote>/HEAD`).
   3. if neither works, do not guess: stop and return a one-line request for the base branch (you cannot wait for an answer). If `origin/HEAD` is just not set, say that `git remote set-head origin -a` sets it.
 
   Set `<remote>` to `origin`, unless the PR targets a branch on another remote (a fork, where the base lives on `upstream`): then use that remote instead of `origin` below, or use "Read a PR/MR". To tell, compare the PR's base repository with the URLs in `git remote -v`. The PR's own URL names the base repository (`gh pr view --json url,isCrossRepository` gives `https://github.com/<base-owner>/<repo>/pull/N`, and `isCrossRepository` is true for a fork).
 
-  Then `git fetch <remote> <base>:refs/remotes/<remote>/<base>` and `git diff $(git merge-base HEAD <remote>/<base>)...HEAD`. If the fetch fails or is not allowed, say the diff may be out of date, or use "Read a PR/MR" when there is an open PR. (The fetch is not pre-approved, so Claude may ask the user first.)
+  Then `git fetch <remote> <base>:refs/remotes/<remote>/<base>` and `git diff $(git merge-base HEAD <remote>/<base>)...HEAD`. If the fetch fails or is not allowed, say the diff may be out of date, or use "Read a PR/MR" when there is an open PR. With a `base` or `remote` input from the main session, a failed fetch instead stops the review with a one-line report. (The fetch is not pre-approved, so Claude may ask the user first.)
 
 **Optional inputs from the main session** (the `qa-lead` MR review loop sends them):
 - `base <name>`: use it as `<base>` for "current branch" and skip the lookup above.
 - `remote <name>`: use it as `<remote>` (the remote that holds the base branch) instead of deciding it above.
 - `cycle N of M`, with the previous cycle's findings as records `ID | severity | path:line | one-line issue | applied or declined`: check each applied record against the code and report any that is not resolved as a finding. Raise a declined finding again only if you now judge it CRITICAL or HIGH, and name the ID it was declined as. Number your findings `C<N>-<n>` (for example `C2-1`) instead of 1, 2, 3, and put `Cycle N of M` in the PR Overview.
-
-Before a branch or remote name goes into any command, check that it matches `^[A-Za-z0-9._/-]+$` and does not start with `-`; if one does not, stop and return a one-line request for it.
-
 In the PR Overview, name the base branch and how you found it (PR target, repo default, or the user), so a wrong scope is visible.
 
 Also read existing PR/MR comments, the linked work item or Jira issue (if any) and `.ai/context/*.md` (coding standards, testing rules, known issues) if present.

@@ -418,6 +418,10 @@ AGENT_RULES = {
         "Pushes always go to `origin`, your own copy": "must push to the user's own remote",
         "If either fails, stop and report: do not review against a stale base": "must stop when the base cannot be fetched",
         "and never more than 20": "must cap the cycle limit",
+        "Never commit on `<target>`": "must not commit on the target branch",
+        "before any commit": "must create the branch before committing",
+        "but do not unstage them without approval": "must not unstage without approval",
+        "--head <fork-owner>:<branch>": "must name the fork head for GitHub",
         "`ID | severity | path:line | one-line issue | applied or declined`, so it can check the fixes": "must pass previous findings as records",
         "\"remote <remote>\"": "must pass the base remote to the reviewer",
         "Run `git diff --cached --name-only`": "must check the staged files before committing",
@@ -542,6 +546,8 @@ AGENT_RULES = {
         "Raise a declined finding again only if you now judge it CRITICAL or HIGH": "must not re-raise declined findings without cause",
         "Number your findings `C<N>-<n>`": "must number findings by cycle",
         "`remote <name>`: use it as `<remote>`": "must accept the base remote from the main session",
+        "the PR's source and target, the current branch, and the `base` and `remote` inputs": "must check every branch name source",
+        "a failed fetch instead stops the review with a one-line report": "must stop on a failed fetch in the loop",
         "check each applied record against the code": "must check applied findings against the code",
         "and name the ID it was declined as": "must link a re-raised finding to its original",
         "#<n> (or C<N>-<n> in a cycle)": "must give every finding an ID",
@@ -770,6 +776,14 @@ if lead_text:
         kind, _, name = key.partition(":")
         if kind in ("agent", "skill") and name != "qa-lead" and f"`{name}`" not in lead_text:
             err(f"agents/qa-lead.md does not route {kind} `{name}`")
+
+# The branch-name allowlist must come before the first command that uses a branch name, or it guards nothing.
+NAME_RULE = "`^[A-Za-z0-9._/-]+$` and does not start with `-`"
+for path, first_use in (("agents/pr-reviewer.md", "- **PR/MR:**"), ("agents/qa-lead.md", "1. **Check the branch.**"),
+                        ("skills/pr-description/SKILL.md", "1. **Diff.**")):
+    text = read(f"{repo}/{path}")
+    if text and NAME_RULE in text and first_use in text and text.index(NAME_RULE) > text.index(first_use):
+        err(f"{path}: the branch-name rule must come before {first_use!r}")
 
 # Third-party skills are vendored unchanged: their content must match third-party.lock.
 if third_party and not has_lock:
