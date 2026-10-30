@@ -184,7 +184,7 @@ BRANCH_RULE = ("Branch names come from the PR's source and target, the current b
                "request for it.")
 
 
-LEAD_BRANCH_RULE = 'Before a branch or remote name goes into any command (here and in the Platforms table), check that it matches `^[A-Za-z0-9._/-]+$` and does not start with `-`; if one does not, stop and ask the user. Names that pass need no further quoting.'
+LEAD_BRANCH_RULE = 'Before a branch or remote name goes into any command in this loop, check that it matches `^[A-Za-z0-9._/-]+$` and does not start with `-`; if one does not, stop and ask the user. Names that pass need no further quoting. Some legal git names (with `+`, `@`, `=` or `,`) fail this check; the user can rename the branch. The push and create commands in this section are used only by this loop, not listed in Platforms.'
 DESC_BRANCH_RULE = 'Before a branch or remote name goes into any command, check that it matches `^[A-Za-z0-9._/-]+$` and does not start with `-`; if one does not, stop and ask the user.'
 
 
