@@ -86,7 +86,7 @@ Branch names come from the PR's source and target, the current branch, and the `
 
   Set `<remote>` to `origin`, unless the PR targets a branch on another remote (a fork, where the base lives on `upstream`): then use that remote instead of `origin` below, or use "Read a PR/MR". To tell, compare the PR's base repository with the URLs in `git remote -v`. The PR's own URL names the base repository (`gh pr view --json url,isCrossRepository` gives `https://github.com/<base-owner>/<repo>/pull/N`, and `isCrossRepository` is true for a fork).
 
-  Then `git fetch <remote> <base>:refs/remotes/<remote>/<base>` and `git diff $(git merge-base HEAD <remote>/<base>)...HEAD`. If the fetch fails or is not allowed, say the diff may be out of date, or use "Read a PR/MR" when there is an open PR. With a `base` or `remote` input from the main session, a failed fetch instead stops the review with a one-line report. (The fetch is not pre-approved, so Claude may ask the user first.)
+  Then `git fetch <remote> <base>:refs/remotes/<remote>/<base>` (skip it when the main session gave a `base` input: it has fetched that ref already) and `git diff $(git merge-base HEAD <remote>/<base>)...HEAD`. If the fetch fails or is not allowed, say the diff may be out of date, or use "Read a PR/MR" when there is an open PR. With a `base` or `remote` input from the main session, a failed fetch instead stops the review with a one-line report. (The fetch is not pre-approved, so Claude may ask the user first.)
 
 **Optional inputs from the main session** (the `qa-lead` MR review loop sends them):
 - `base <name>`: use it as `<base>` for "current branch" and skip the lookup above.

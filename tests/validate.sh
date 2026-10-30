@@ -410,9 +410,9 @@ AGENT_RULES = {
         "| Open a new PR or MR | MR review loop": "must route new PRs and MRs to the review loop",
         "Use the cycle limit the user gave, otherwise 5": "must cap the review loop",
         "and \"cycle N of <limit>\"": "must tell the reviewer the cycle number",
-                "git check-ref-format --branch": "must check a proposed branch name",
+        "git check-ref-format --branch": "must check a proposed branch name",
         "`^[A-Za-z0-9._/-]+$` and does not start with `-`; if one does not, stop and ask the user. Names that pass": "must allowlist branch and remote names before shell use",
-        "`gh pr list --head <branch> --state open --json url`": "must look up an open GitHub PR by branch",
+        "`gh pr list --head <branch> --state open --json url,headRepositoryOwner`": "must look up an open GitHub PR by branch",
         "`glab mr list --source-branch <branch>`": "must look up an open GitLab MR by branch",
         "Pushes always go to `origin`, your own copy": "must push to the user's own remote",
         "If it fails, stop and report: do not review against a stale base": "must stop when the base cannot be fetched",
@@ -422,12 +422,17 @@ AGENT_RULES = {
         "That is the confirmed source branch for every commit below": "must name the confirmed source branch",
         "create it only after that confirmation": "must confirm the pair before creating a branch",
         "If the user names another target, go back to the fetch": "must refetch when the target changes",
-        "Look for an open PR or MR from the confirmed source branch": "must check the confirmed branch for an open PR",
+        "Unless you are on `<target>`, look for an open PR or MR from the current branch": "must check the branch for an open PR",
+        "for a fork, add `--repo <base-project>` and keep only results whose owner is `<fork-owner>`": "must look up fork PRs in the base repository",
+        "`git ls-remote --heads origin <name>` must print nothing": "must not reuse an existing branch name",
+        "and commit that `.gitignore` change as in step 4": "must commit the .gitignore change",
+        "stop until the user names the target or has run it": "must stop until the target is known",
+        "If the count fails, stop and report": "must stop when rev-list fails",
         "any other error means you cannot tell, so stop and say so": "must stop when the PR lookup fails",
         "do not run it yourself": "must not set the remote head itself",
         "`git status --porcelain=v1 -z --untracked-files=all`": "must take staging paths unquoted",
         "`git status --short --untracked-files=all` (so files inside new folders are listed one by one)": "must list files inside untracked folders",
-        "First run `git status --short`; if it lists anything, name it and stop, as in step 5": "must not create an MR with uncommitted changes",
+        "First run `git status --short --untracked-files=all`; if it lists anything, name it and stop, as in step 5": "must not create an MR with uncommitted changes",
         "anything other than the branch the user confirmed in step 1": "must commit only on the confirmed branch",
         "If the user declines that commit, stop the loop": "must stop when the first commit is declined",
         "do not create the MR until they are committed or discarded": "must not create an MR with uncommitted fixes",
@@ -565,6 +570,7 @@ AGENT_RULES = {
         "Raise a declined finding again only if you now judge it CRITICAL or HIGH": "must not re-raise declined findings without cause",
         "Number your findings `C<N>-<n>`": "must number findings by cycle",
         "`remote <name>`: use it as `<remote>`": "must accept the base remote from the main session",
+        "skip it when the main session gave a `base` input": "must not refetch a base the main session fetched",
         "the PR's source and target, the current branch, and the `base` and `remote` inputs": "must check every branch name source",
         "a failed fetch instead stops the review with a one-line report": "must stop on a failed fetch in the loop",
         "check each applied record against the code": "must check applied findings against the code",
@@ -605,6 +611,7 @@ AGENT_RULES = {
         "name the base branch and how you found it": "must report the base branch",
     },
     "skills/pr-description/SKILL.md": {
+        "and if so set `<remote>` to it": "must use the fork remote the user confirmed",
         "If the main session gives `target <name>` and `remote <name>`": "must accept the target and remote from the main session",
         "`^[A-Za-z0-9._/-]+$` and does not start with `-`; if one does not, stop and ask the user": "must allowlist branch and remote names before shell use",
         "never assume `main`": "must take the target branch from the PR, not assume main",
@@ -804,6 +811,14 @@ for path, first_use in (("agents/pr-reviewer.md", "- **PR/MR:**"), ("agents/qa-l
     text = read(f"{repo}/{path}")
     if text and NAME_RULE in text and first_use in text and text.index(NAME_RULE) > text.index(first_use):
         err(f"{path}: the branch-name rule must come before {first_use!r}")
+
+# The MR review loop's step 1 must run in this order: the PR check before the pair, the branch before any commit.
+STEP1_ORDER = ["Run `git fetch <remote> <target>", "Unless you are on `<target>`, look for an open PR", "Choose the source branch",
+               "For a new branch, create it", "If there are uncommitted changes", "Run `git rev-list --count"]
+if lead_text and all(p in lead_text for p in STEP1_ORDER):
+    positions = [lead_text.index(p) for p in STEP1_ORDER]
+    if positions != sorted(positions):
+        err("agents/qa-lead.md: MR review loop step 1 is out of order: " + " -> ".join(STEP1_ORDER))
 
 # Third-party skills are vendored unchanged: their content must match third-party.lock.
 if third_party and not has_lock:

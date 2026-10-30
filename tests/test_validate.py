@@ -177,7 +177,6 @@ def ok(label, *ops):
     return label, None, ops
 
 
-# pr-reviewer's branch-name rule, moved below the first command by one case.
 BRANCH_RULE = ("Branch names come from the PR's source and target, the current branch, and the `base` and `remote` inputs "
                "below; a PR author chooses theirs. Before a branch or remote name goes into any command, check that it "
                "matches `^[A-Za-z0-9._/-]+$` and does not start with `-`; if one does not, stop and return a one-line "
@@ -190,6 +189,9 @@ DESC_BRANCH_RULE = 'Before a branch or remote name goes into any command, check 
 
 # Each case breaks one thing; validate.sh must fail with the message.
 FAILURES = [
+    fail("MR review loop step 1 out of order", "MR review loop step 1 is out of order",
+         replace("agents/qa-lead.md", "Choose the source branch", "Pick the source branch"),
+         replace("agents/qa-lead.md", "   - Run `git rev-list --count", "   - Choose the source branch again.\n   - Run `git rev-list --count")),
     fail("qa-lead branch-name rule after the first command", "the branch-name rule must come before '1. **Check the branch.**'",
          replace("agents/qa-lead.md", LEAD_BRANCH_RULE + "\n\n", ""),
          replace("agents/qa-lead.md", "2. **Set the limit.**", LEAD_BRANCH_RULE + "\n2. **Set the limit.**")),
