@@ -189,6 +189,10 @@ DESC_BRANCH_RULE = 'Before a branch or remote name goes into any command, check 
 
 # Each case breaks one thing; validate.sh must fail with the message.
 FAILURES = [
+    fail("MR review loop step 1 anchor reworded", "MR review loop step 1 anchor missing",
+         replace("agents/qa-lead.md", "Choose the source branch", "Pick the source branch")),
+    fail("branch-name rule anchor reworded", "anchor '1. **Diff.**' for the branch-name rule order check is missing",
+         replace("skills/pr-description/SKILL.md", "1. **Diff.**", "1. **Compare.**")),
     fail("MR review loop step 1 out of order", "MR review loop step 1 is out of order",
          replace("agents/qa-lead.md", "Choose the source branch", "Pick the source branch"),
          replace("agents/qa-lead.md", "   - Run `git rev-list --count", "   - Choose the source branch again.\n   - Run `git rev-list --count")),

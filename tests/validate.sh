@@ -423,9 +423,13 @@ AGENT_RULES = {
         "create it only after that confirmation": "must confirm the pair before creating a branch",
         "If the user names another target, go back to the fetch": "must refetch when the target changes",
         "Unless you are on `<target>`, look for an open PR or MR from the current branch": "must check the branch for an open PR",
-        "for a fork, add `--repo <base-project>` and keep only results whose owner is `<fork-owner>`": "must look up fork PRs in the base repository",
-        "`git ls-remote --heads origin <name>` must print nothing": "must not reuse an existing branch name",
-        "and commit that `.gitignore` change as in step 4": "must commit the .gitignore change",
+        "keeping only results whose `headRepositoryOwner.login` is the owner in the `origin` URL": "must ignore other contributors' PRs from the same branch name",
+        "`git ls-remote --heads origin <name>` must succeed and print nothing": "must not reuse an existing branch name",
+        "If you are on `<target>` with no uncommitted changes, stop: there is nothing to review": "must not create an empty branch",
+        "If nothing is staged, say so and skip the commit": "must skip an empty commit",
+        "using only the commit sub-steps of step 4": "must commit step-1 changes without the loop's fix steps",
+        "if the user asks for more, use 20 and say so": "must clamp the cycle limit",
+        "and commit that `.gitignore` change the same way": "must commit the .gitignore change",
         "stop until the user names the target or has run it": "must stop until the target is known",
         "If the count fails, stop and report": "must stop when rev-list fails",
         "any other error means you cannot tell, so stop and say so": "must stop when the PR lookup fails",
@@ -611,6 +615,7 @@ AGENT_RULES = {
         "name the base branch and how you found it": "must report the base branch",
     },
     "skills/pr-description/SKILL.md": {
+        "skip the lookups and the fetch below": "must not refetch what the caller fetched",
         "and if so set `<remote>` to it": "must use the fork remote the user confirmed",
         "If the main session gives `target <name>` and `remote <name>`": "must accept the target and remote from the main session",
         "`^[A-Za-z0-9._/-]+$` and does not start with `-`; if one does not, stop and ask the user": "must allowlist branch and remote names before shell use",
@@ -809,13 +814,18 @@ NAME_RULE = "`^[A-Za-z0-9._/-]+$` and does not start with `-`"
 for path, first_use in (("agents/pr-reviewer.md", "- **PR/MR:**"), ("agents/qa-lead.md", "1. **Check the branch.**"),
                         ("skills/pr-description/SKILL.md", "1. **Diff.**")):
     text = read(f"{repo}/{path}")
-    if text and NAME_RULE in text and first_use in text and text.index(NAME_RULE) > text.index(first_use):
+    if text and first_use not in text:
+        err(f"{path}: anchor {first_use!r} for the branch-name rule order check is missing")
+    elif text and NAME_RULE in text and text.index(NAME_RULE) > text.index(first_use):
         err(f"{path}: the branch-name rule must come before {first_use!r}")
 
 # The MR review loop's step 1 must run in this order: the PR check before the pair, the branch before any commit.
 STEP1_ORDER = ["Run `git fetch <remote> <target>", "Unless you are on `<target>`, look for an open PR", "Choose the source branch",
                "For a new branch, create it", "If there are uncommitted changes", "Run `git rev-list --count"]
-if lead_text and all(p in lead_text for p in STEP1_ORDER):
+missing_anchors = [p for p in STEP1_ORDER if lead_text and p not in lead_text]
+if missing_anchors:
+    err(f"agents/qa-lead.md: MR review loop step 1 anchor missing: {missing_anchors!r}")
+elif lead_text:
     positions = [lead_text.index(p) for p in STEP1_ORDER]
     if positions != sorted(positions):
         err("agents/qa-lead.md: MR review loop step 1 is out of order: " + " -> ".join(STEP1_ORDER))
