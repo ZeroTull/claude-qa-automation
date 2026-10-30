@@ -184,8 +184,18 @@ BRANCH_RULE = ("Branch names come from the PR's source and target, the current b
                "request for it.")
 
 
+LEAD_BRANCH_RULE = 'Before a branch or remote name goes into any command (here and in the Platforms table), check that it matches `^[A-Za-z0-9._/-]+$` and does not start with `-`; if one does not, stop and ask the user. Names that pass need no further quoting.'
+DESC_BRANCH_RULE = 'Before a branch or remote name goes into any command, check that it matches `^[A-Za-z0-9._/-]+$` and does not start with `-`; if one does not, stop and ask the user.'
+
+
 # Each case breaks one thing; validate.sh must fail with the message.
 FAILURES = [
+    fail("qa-lead branch-name rule after the first command", "the branch-name rule must come before '1. **Check the branch.**'",
+         replace("agents/qa-lead.md", LEAD_BRANCH_RULE + "\n\n", ""),
+         replace("agents/qa-lead.md", "2. **Set the limit.**", LEAD_BRANCH_RULE + "\n2. **Set the limit.**")),
+    fail("pr-description branch-name rule after the first command", "the branch-name rule must come before '1. **Diff.**'",
+         replace("skills/pr-description/SKILL.md", DESC_BRANCH_RULE + "\n", ""),
+         replace("skills/pr-description/SKILL.md", "5. **Hand back.**", DESC_BRANCH_RULE + "\n5. **Hand back.**")),
     fail("branch-name rule after the first command", "the branch-name rule must come before '- **PR/MR:**'",
          replace("agents/pr-reviewer.md", "\n\n" + BRANCH_RULE, ""),
          replace("agents/pr-reviewer.md", "**Optional inputs from the main session**",

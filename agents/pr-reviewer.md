@@ -92,7 +92,7 @@ Branch names come from the PR's source and target, the current branch, and the `
 - `base <name>`: use it as `<base>` for "current branch" and skip the lookup above.
 - `remote <name>`: use it as `<remote>` (the remote that holds the base branch) instead of deciding it above.
 - `cycle N of M`, with the previous cycle's findings as records `ID | severity | path:line | one-line issue | applied or declined`: check each applied record against the code and report any that is not resolved as a finding. Raise a declined finding again only if you now judge it CRITICAL or HIGH, and name the ID it was declined as. Number your findings `C<N>-<n>` (for example `C2-1`) instead of 1, 2, 3, and put `Cycle N of M` in the PR Overview.
-In the PR Overview, name the base branch and how you found it (PR target, repo default, or the user), so a wrong scope is visible.
+In the PR Overview, name the base branch and how you found it (PR target, repo default, the user, or the main session's `base` input), so a wrong scope is visible.
 
 Also read existing PR/MR comments, the linked work item or Jira issue (if any) and `.ai/context/*.md` (coding standards, testing rules, known issues) if present.
 
