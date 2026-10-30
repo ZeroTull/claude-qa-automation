@@ -120,7 +120,7 @@ A printed plan is not approval: it still stops at every gate. It ends a request 
 
 Ask `qa-lead` to open a new PR or MR ("open an MR for this branch", optionally "with up to 3 review cycles") and it reviews the branch before anyone else sees it:
 
-1. It checks the branch: it stops if a PR or MR already exists or there is nothing to review, finds the target branch and asks you to confirm the source and target, and proposes a branch or a commit if needed. Branch names with characters other than letters, digits, `.`, `_`, `/` and `-` are refused; rename the branch to use the loop.
+1. It checks the branch: it stops if a PR or MR already exists or there is nothing to review, finds the target branch and asks you to confirm the source and target, and proposes a branch or a commit if needed. Branch names with characters other than letters, digits, `.`, `_`, `/` and `-` are refused, and so are names starting with `-`; rename the branch to use the loop.
 2. `pr-reviewer` reviews the branch ("cycle 1 of 5"; 5 is the default limit). You pick which findings to apply, `qa-lead` applies them and runs the impacted tests (if they fail, the loop stops and reports), then commits only the changed files after your OK, and the next cycle checks the fixes by their IDs (`C1-2`).
 3. The loop ends when the review recommends "Approve" or "Approve with minor comments". If it hits the limit, or you decline the remaining findings, it lists what is still open and asks whether to continue, create the MR anyway, or stop.
 4. The `pr-description` skill drafts the title and description, then `qa-lead` shows the push and create commands and runs them after one approval.
