@@ -407,6 +407,80 @@ AGENT_RULES = {
         "File a bug for a confirmed pre-existing product defect with no identifiable commit": "bug-ticket row must match Defect routing",
         "For a defect, offer the step from Defect routing": "must route defects with Defect routing",
         "for a pre-existing confirmed product defect, or a regression from a merged change if the user chooses it": "plan example must file bugs only for confirmed product defects or shared-branch regressions",
+        "| Open a new PR or MR | MR review loop": "must route new PRs and MRs to the review loop",
+        "Use the cycle limit the user gave, otherwise 5": "must cap the review loop",
+        "and \"cycle N of <limit>\"": "must tell the reviewer the cycle number",
+        "git check-ref-format --branch": "must check a proposed branch name",
+        "`^[A-Za-z0-9._/-]+$` and does not start with `-`; if one does not, stop and ask the user. Names that pass": "must allowlist branch and remote names before shell use",
+        "`gh pr list --head <branch> --state open --json url,headRepositoryOwner`": "must look up an open GitHub PR by branch",
+        "`glab mr list --source-branch <branch>`": "must look up an open GitLab MR by branch",
+        "Pushes always go to `origin`, your own copy": "must push to the user's own remote",
+        "If it fails, stop and report: do not review against a stale base": "must stop when the base cannot be fetched",
+        "and never more than 20": "must cap the cycle limit",
+        "Never commit on `<target>`": "must not commit on the target branch",
+        "Ask the user to confirm the pair": "must confirm the source and target branches",
+        "That is the confirmed source branch for every commit below": "must name the confirmed source branch",
+        "create it only after that confirmation": "must confirm the pair before creating a branch",
+        "If the user names another target, go back to the fetch": "must refetch when the target changes",
+        "Unless you are on `<target>`, look for an open PR or MR from the current branch": "must check the branch for an open PR",
+        "keeping only results whose `headRepositoryOwner.login` is the owner in the `origin` URL": "must ignore other contributors' PRs from the same branch name",
+        "`git ls-remote --heads origin <name>` must succeed and print nothing": "must not reuse an existing branch name",
+        "saying how many local commits it carries that are not on `<remote>/<target>` and listing them": "must not create an empty branch",
+        "If nothing is staged, say so and skip the commit": "must skip an empty commit",
+        "using only the commit sub-steps of step 4": "must commit step-1 changes without the loop's fix steps",
+        "if the user asks for more, use 20 and say so": "must clamp the cycle limit",
+        "run more cycles (20 in total at most;": "must keep extra cycles under the cap",
+        "the number of commits the MR will carry": "push approval must show the MR commit count",
+        "If the create command fails after the push succeeded, stop and report the error and the pushed branch": "must stop when creating the MR fails",
+        "say the PR or MR may exist anyway, so the user should rerun the open PR or MR lookup from step 1 before any retry": "must check for a half-created MR before a retry",
+        "If the push fails (for example, rejected as non-fast-forward), stop and report: do not run the create command, and never force-push": "must stop when the push fails",
+        "how many of them the push adds (`git rev-list --count origin/<branch>..<branch>`": "push approval must show the push count",
+        "with the commits from `git log --oneline <remote>/<target>..HEAD`": "must show the commits before confirming the pair",
+        "plus any uncommitted files that would be committed on it": "must name pending files in the confirmation",
+        "raise the limit to the new total and pass it as `cycle N of <new limit>`": "must pass a raised limit to the reviewer",
+        "and commit that `.gitignore` change the same way": "must commit the .gitignore change",
+        "stop until the user names the target or has run it": "must stop until the target is known",
+        "If the count fails, stop and report": "must stop when rev-list fails",
+        "any other error means you cannot tell, so stop and say so": "must stop when the PR lookup fails",
+        "do not run it yourself": "must not set the remote head itself",
+        "`git status --porcelain=v1 -z --untracked-files=all`": "must take staging paths unquoted",
+        "`git status --short --untracked-files=all` (so files inside new folders are listed one by one)": "must list files inside untracked folders",
+        "First run `git status --short --untracked-files=all`; if it lists anything, name it and stop, as in step 5": "must not create an MR with uncommitted changes",
+        "anything other than the branch the user confirmed in step 1": "must commit only on the confirmed branch",
+        "If the user declines that commit, stop the loop": "must stop when the first commit is declined",
+        "do not create the MR until they are committed or discarded": "must not create an MR with uncommitted fixes",
+        "with \"target <target>\" and \"remote <remote>\" from step 1": "must pass the target and remote to pr-description",
+        "If the user declines the branch, stop the loop": "must stop when the feature branch is declined",
+        "stop and ask for a feature branch instead of committing": "must check the branch before every commit",
+        "say they are not in the review or the PR or MR until committed": "must say uncommitted work is not reviewed",
+        "after showing the exact test command and getting the user's OK": "must show the test command before running it",
+        "Every finding not applied counts as declined": "must mark unapplied findings as declined",
+        "`--repo <base-project> --head <fork-project>`": "must name the fork projects for GitLab",
+        "before any commit": "must create the branch before committing",
+        "but do not unstage them without approval": "must not unstage without approval",
+        "--head <fork-owner>:<branch>": "must name the fork head for GitHub",
+        "`ID | severity | path:line | one-line issue | applied or declined`, so it can check the fixes": "must pass previous findings as records",
+        "\"base <target>\", \"remote <remote>\"": "must pass the base remote to the reviewer",
+        "Run `git diff --cached --name-only`": "must check the staged files before committing",
+        "stop and ask before staging anything": "must ask before staging a secret-bearing file",
+        "let the user choose to fix, revert or commit them": "must leave failed fixes to the user",
+        "this loop only creates": "must not create a second PR or MR for a branch",
+        "If it prints 0 and there are no uncommitted changes, stop: there is nothing to review": "must stop on a branch with nothing to review",
+        "If it returns a request instead of a report": "must stop the loop when the reviewer cannot report",
+        "Apply only the approved findings": "must apply only approved findings in the loop",
+        "run the tests named in its Suggested Test Scope": "must run the reviewer's suggested tests",
+        "Never `git add -A` or `git add .`": "must stage only named files",
+        "run `git commit -F <file>`": "must commit from a message file",
+        "If the user declines the commit, stop the loop": "must not re-review uncommitted fixes",
+        "say they were not re-reviewed": "must say when the last fixes were not re-reviewed",
+        "Write the title and the description to temporary files outside the repo": "must pass the title and description through files",
+        "--body-file <file>": "must give the GitHub create command a body file",
+        "The loop ends when the Recommendation is \"Approve\" or \"Approve with minor comments\"": "must end the loop only on an approving Recommendation",
+        "if the impacted tests fail, stop the loop and report": "must stop the loop when tests fail",
+        "Commit only after approval, then start the next cycle": "must commit loop fixes only after approval",
+        "Never describe the branch as approved in that case": "must not claim approval when the loop runs out",
+        "then run them only after the user approves that step": "must push and create the MR only after approval",
+        "Never merge, approve or mark the PR or MR as reviewed": "must not merge or approve from the loop",
     },
     "agents/senior-automation-qa-engineer.md": {
         "For what is wrong with an existing suite use test-maintainer": "description must route suite audits to test-maintainer",
@@ -505,6 +579,18 @@ AGENT_RULES = {
         "overall X/10, or overall n/a (categories with a score: N) (see Scoring)": "must report the overall score by the Scoring rules",
     },
     "agents/pr-reviewer.md": {
+        "`base <name>`: use it as `<base>`": "must accept the base branch from the main session",
+        "Raise a declined finding again only if you now judge it CRITICAL or HIGH": "must not re-raise declined findings without cause",
+        "Number your findings `C<N>-<n>`": "must number findings by cycle",
+        "`remote <name>`: use it as `<remote>`": "must accept the base remote from the main session",
+        "skip it when the main session gave a `base` input": "must not refetch a base the main session fetched",
+        "the PR's source and target, the current branch, and the `base` and `remote` inputs": "must check every branch name source",
+        "With only a `remote` input from the main session (no `base`), a failed fetch instead stops the review": "must stop on a failed fetch in the loop",
+        "check each applied record against the code": "must check applied findings against the code",
+        "and name the ID it was declined as": "must link a re-raised finding to its original",
+        "#<n> (or C<N>-<n> in a cycle)": "must give every finding an ID",
+        "`^[A-Za-z0-9._/-]+$` and does not start with `-`; if one does not, stop and return a one-line request for it": "must allowlist branch and remote names before shell use",
+        "each item names the findings it fixes, by number or ID": "must link fix plan items to findings",
         "never assume `main`": "must take the base branch from the PR, not assume main",
         "git symbolic-ref --short refs/remotes/origin/HEAD": "must fall back to the repo's default branch",
         "stop and return a one-line request for the base branch": "must ask when the base branch is unknown",
@@ -538,6 +624,10 @@ AGENT_RULES = {
         "name the base branch and how you found it": "must report the base branch",
     },
     "skills/pr-description/SKILL.md": {
+        "skip the lookups and the fetch below": "must not refetch what the caller fetched",
+        "and if so set `<remote>` to it": "must use the fork remote the user confirmed",
+        "If the main session gives `target <name>` and `remote <name>`": "must accept the target and remote from the main session",
+        "`^[A-Za-z0-9._/-]+$` and does not start with `-`; if one does not, stop and ask the user": "must allowlist branch and remote names before shell use",
         "never assume `main`": "must take the target branch from the PR, not assume main",
         "git symbolic-ref --short refs/remotes/origin/HEAD": "must fall back to the repo's default branch",
         "prints `origin/develop`, so `<target>` is `develop`": "must strip origin/ from the default branch",
@@ -574,6 +664,7 @@ AGENT_RULES = {
         "The file is rewritten as JSON, so its values stay the same": "must say the settings merge rewrites the file",
         "suspected flaky/environment (product not ruled out)": "trace example must use the diagnoser's suspected-flaky label",
         "for a pre-existing confirmed product defect, or a regression from a merged change if the user chooses it": "plan example must file bugs only for confirmed product defects or shared-branch regressions",
+        "It never merges or approves the PR, doesn't wait for the pipeline": "must say the MR review loop never merges",
         "an intermittent product defect (such as a race condition)": "must describe the triager's product-defect verdict",
     },
 }
@@ -726,6 +817,28 @@ if lead_text:
         kind, _, name = key.partition(":")
         if kind in ("agent", "skill") and name != "qa-lead" and f"`{name}`" not in lead_text:
             err(f"agents/qa-lead.md does not route {kind} `{name}`")
+
+# The branch-name allowlist must come before the first command that uses a branch name, or it guards nothing.
+NAME_RULE = "`^[A-Za-z0-9._/-]+$` and does not start with `-`"
+for path, first_use in (("agents/pr-reviewer.md", "- **PR/MR:**"), ("agents/qa-lead.md", "1. **Check the branch.**"),
+                        ("skills/pr-description/SKILL.md", "1. **Diff.**")):
+    text = read(f"{repo}/{path}")
+    if text and first_use not in text:
+        err(f"{path}: anchor {first_use!r} for the branch-name rule order check is missing")
+    elif text and NAME_RULE in text and text.index(NAME_RULE) > text.index(first_use):
+        err(f"{path}: the branch-name rule must come before {first_use!r}")
+
+# The MR review loop's step 1 must run in this order: the PR check and the commit count before the pair, the branch
+# before any commit.
+STEP1_ORDER = ["Run `git fetch <remote> <target>", "Unless you are on `<target>`, look for an open PR", "Run `git rev-list --count",
+               "Choose the source branch", "For a new branch, create it", "If there are uncommitted changes"]
+missing_anchors = [p for p in STEP1_ORDER if lead_text and p not in lead_text]
+if missing_anchors:
+    err(f"agents/qa-lead.md: MR review loop step 1 anchor missing: {missing_anchors!r}")
+elif lead_text:
+    positions = [lead_text.index(p) for p in STEP1_ORDER]
+    if positions != sorted(positions):
+        err("agents/qa-lead.md: MR review loop step 1 is out of order: " + " -> ".join(STEP1_ORDER))
 
 # Third-party skills are vendored unchanged: their content must match third-party.lock.
 if third_party and not has_lock:

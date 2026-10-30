@@ -177,8 +177,35 @@ def ok(label, *ops):
     return label, None, ops
 
 
+BRANCH_RULE = ("Branch names come from the PR's source and target, the current branch, and the `base` and `remote` inputs "
+               "below; a PR author chooses theirs. Before a branch or remote name goes into any command, check that it "
+               "matches `^[A-Za-z0-9._/-]+$` and does not start with `-`; if one does not, stop and return a one-line "
+               "request for it.")
+
+
+LEAD_BRANCH_RULE = 'Before a branch or remote name goes into any command in this loop or in the Platforms table above, check that it matches `^[A-Za-z0-9._/-]+$` and does not start with `-`; if one does not, stop and ask the user. Names that pass need no further quoting. Some legal git names (with `+`, `@`, `=` or `,`) fail this check; the user can rename the branch. The push and create commands in this section are used only by this loop, not listed in Platforms.'
+DESC_BRANCH_RULE = 'Before a branch or remote name goes into any command, check that it matches `^[A-Za-z0-9._/-]+$` and does not start with `-`; if one does not, stop and ask the user.'
+
+
 # Each case breaks one thing; validate.sh must fail with the message.
 FAILURES = [
+    fail("MR review loop step 1 anchor reworded", "MR review loop step 1 anchor missing",
+         replace("agents/qa-lead.md", "Choose the source branch", "Pick the source branch")),
+    fail("branch-name rule anchor reworded", "anchor '1. **Diff.**' for the branch-name rule order check is missing",
+         replace("skills/pr-description/SKILL.md", "1. **Diff.**", "1. **Compare.**")),
+    fail("MR review loop step 1 out of order", "MR review loop step 1 is out of order",
+         replace("agents/qa-lead.md", "Choose the source branch", "Pick the source branch"),
+         replace("agents/qa-lead.md", "   - If there are uncommitted changes", "   - Choose the source branch again.\n   - If there are uncommitted changes")),
+    fail("qa-lead branch-name rule after the first command", "the branch-name rule must come before '1. **Check the branch.**'",
+         replace("agents/qa-lead.md", LEAD_BRANCH_RULE + "\n\n", ""),
+         replace("agents/qa-lead.md", "2. **Set the limit.**", LEAD_BRANCH_RULE + "\n2. **Set the limit.**")),
+    fail("pr-description branch-name rule after the first command", "the branch-name rule must come before '1. **Diff.**'",
+         replace("skills/pr-description/SKILL.md", DESC_BRANCH_RULE + "\n", ""),
+         replace("skills/pr-description/SKILL.md", "5. **Hand back.**", DESC_BRANCH_RULE + "\n5. **Hand back.**")),
+    fail("branch-name rule after the first command", "the branch-name rule must come before '- **PR/MR:**'",
+         replace("agents/pr-reviewer.md", "\n\n" + BRANCH_RULE, ""),
+         replace("agents/pr-reviewer.md", "**Optional inputs from the main session**",
+                 BRANCH_RULE + "\n\n**Optional inputs from the main session**")),
     fail("missing frontmatter", "missing frontmatter block", drop_head("agents/pr-reviewer.md", 5)),
     fail("colon in description", "invalid YAML",
          replace("agents/pr-reviewer.md", "description: Reviews", "description: Note: reviews")),
