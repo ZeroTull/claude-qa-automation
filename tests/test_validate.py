@@ -195,7 +195,7 @@ FAILURES = [
          replace("skills/pr-description/SKILL.md", "1. **Diff.**", "1. **Compare.**")),
     fail("MR review loop step 1 out of order", "MR review loop step 1 is out of order",
          replace("agents/qa-lead.md", "Choose the source branch", "Pick the source branch"),
-         replace("agents/qa-lead.md", "   - Run `git rev-list --count", "   - Choose the source branch again.\n   - Run `git rev-list --count")),
+         replace("agents/qa-lead.md", "   - If there are uncommitted changes", "   - Choose the source branch again.\n   - If there are uncommitted changes")),
     fail("qa-lead branch-name rule after the first command", "the branch-name rule must come before '1. **Check the branch.**'",
          replace("agents/qa-lead.md", LEAD_BRANCH_RULE + "\n\n", ""),
          replace("agents/qa-lead.md", "2. **Set the limit.**", LEAD_BRANCH_RULE + "\n2. **Set the limit.**")),

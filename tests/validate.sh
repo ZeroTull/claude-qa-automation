@@ -458,7 +458,7 @@ AGENT_RULES = {
         "stop and ask before staging anything": "must ask before staging a secret-bearing file",
         "let the user choose to fix, revert or commit them": "must leave failed fixes to the user",
         "this loop only creates": "must not create a second PR or MR for a branch",
-        "If it prints 0, stop: there is nothing to review": "must stop on a branch with nothing to review",
+        "If it prints 0 and there are no uncommitted changes, stop: there is nothing to review": "must stop on a branch with nothing to review",
         "If it returns a request instead of a report": "must stop the loop when the reviewer cannot report",
         "Apply only the approved findings": "must apply only approved findings in the loop",
         "run the tests named in its Suggested Test Scope": "must run the reviewer's suggested tests",
@@ -821,9 +821,10 @@ for path, first_use in (("agents/pr-reviewer.md", "- **PR/MR:**"), ("agents/qa-l
     elif text and NAME_RULE in text and text.index(NAME_RULE) > text.index(first_use):
         err(f"{path}: the branch-name rule must come before {first_use!r}")
 
-# The MR review loop's step 1 must run in this order: the PR check before the pair, the branch before any commit.
-STEP1_ORDER = ["Run `git fetch <remote> <target>", "Unless you are on `<target>`, look for an open PR", "Choose the source branch",
-               "For a new branch, create it", "If there are uncommitted changes", "Run `git rev-list --count"]
+# The MR review loop's step 1 must run in this order: the PR check and the commit count before the pair, the branch
+# before any commit.
+STEP1_ORDER = ["Run `git fetch <remote> <target>", "Unless you are on `<target>`, look for an open PR", "Run `git rev-list --count",
+               "Choose the source branch", "For a new branch, create it", "If there are uncommitted changes"]
 missing_anchors = [p for p in STEP1_ORDER if lead_text and p not in lead_text]
 if missing_anchors:
     err(f"agents/qa-lead.md: MR review loop step 1 anchor missing: {missing_anchors!r}")
