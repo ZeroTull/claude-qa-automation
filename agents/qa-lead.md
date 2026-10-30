@@ -171,7 +171,7 @@ Before a branch or remote name goes into any command in this loop or in the Plat
    - GitHub: `gh pr create --base <target> --title "$(cat <title-file>)" --body-file <file>` (for a fork, add `--repo <base-project> --head <fork-owner>:<branch>`, where `<fork-owner>` is the owner in `<fork-project>`)
    - GitLab: `glab mr create --source-branch <branch> --target-branch <target> --title "$(cat <title-file>)" --description "$(cat <file>)" --yes` (for a fork, add `--repo <base-project> --head <fork-project>`)
    - Azure DevOps: `az repos pr create --source-branch <branch> --target-branch <target> --title "$(cat <title-file>)" --description "$(cat <file>)"`, or the Azure DevOps MCP
-   For a draft, add `--draft` (GitHub, GitLab) or `--draft true` (Azure DevOps). If the create command fails after the push succeeded, stop and report the error and the pushed branch; do not push again, and do not describe the PR or MR as created.
+   For a draft, add `--draft` (GitHub, GitLab) or `--draft true` (Azure DevOps). If the create command fails after the push succeeded, stop and report the error and the pushed branch, and say the PR or MR may exist anyway, so the user should rerun the open PR or MR lookup from step 1 before any retry; do not push again, and do not describe the PR or MR as created.
 8. **Report.** Give the PR or MR link, the number of review cycles and the final Recommendation. Post the review findings as comments only if the user asks. Do not wait for the pipeline; if it fails, the user can ask you to diagnose it (`ci-failure-diagnoser`).
 
 Never merge, approve or mark the PR or MR as reviewed: the loop's reviews are a check before the team's review, not a replacement for it.

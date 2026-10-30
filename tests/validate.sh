@@ -432,6 +432,7 @@ AGENT_RULES = {
         "run more cycles (20 in total at most;": "must keep extra cycles under the cap",
         "the number of commits the MR will carry": "push approval must show the MR commit count",
         "If the create command fails after the push succeeded, stop and report the error and the pushed branch": "must stop when creating the MR fails",
+        "say the PR or MR may exist anyway, so the user should rerun the open PR or MR lookup from step 1 before any retry": "must check for a half-created MR before a retry",
         "If the push fails (for example, rejected as non-fast-forward), stop and report: do not run the create command, and never force-push": "must stop when the push fails",
         "how many of them the push adds (`git rev-list --count origin/<branch>..<branch>`": "push approval must show the push count",
         "with the commits from `git log --oneline <remote>/<target>..HEAD`": "must show the commits before confirming the pair",
