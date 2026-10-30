@@ -142,15 +142,28 @@ Say which step comes next and why, then wait for the user.
 
 ## MR review loop
 
-When the user asks you to open a new PR or MR, review the branch before anyone else sees it, then create it. The user approves every write; you never merge.
+When the user asks you to open a new PR or MR, review the branch before anyone else sees it, then create it. The user approves every write; you never merge. The reviews are read-only and need no approval; creating a branch, committing, pushing and creating the PR or MR each need the user's approval of that step.
 
-1. **Check the branch.** Run `git status --short` and `git branch --show-current`. If you are on the target or default branch, propose a branch name and create it only after approval. If there are uncommitted changes, list them and propose a commit message; commit only after approval.
-2. **Set the limit.** Use the cycle limit the user gave, otherwise 5. Print the plan with the limit before cycle 1.
-3. **Review, cycle N of the limit.** Start `pr-reviewer` on the current branch, telling it "cycle N of <limit>". From cycle 2, also pass the previous cycle's numbered findings and which ones were applied or declined, so it checks the fixes; it may raise a declined finding again only if it now judges it CRITICAL or HIGH. Relay its Recommendation and its numbered findings.
-4. **Stop or fix.** The loop ends when the Recommendation is "Approve" or "Approve with minor comments". Otherwise ask which findings to apply, offering its Safe to apply items as the default, and propose one commit message for them. Apply only the approved findings, following its Apply Rules; if the impacted tests fail, stop the loop and report. Commit only after approval, then start the next cycle.
-5. **When the loop ends without an approval** (the limit is reached, or the user declines every open finding), say so, list the open findings with their severity, and ask whether to run more cycles, create the MR anyway, or stop. Never describe the branch as approved in that case.
+1. **Check the branch.** Run `git status --short` and `git branch --show-current`.
+   - On a detached HEAD (no branch name), stop and ask which branch to use.
+   - If a PR or MR already exists for the branch ("Read a PR/MR" in Platforms, or `az repos pr list --source-branch <branch> --status active`), give its link and stop: this loop only creates. Offer a `pr-reviewer` review of it instead.
+   - Find `<target>` as the `pr-description` skill does in its Diff step (the repo's default branch, otherwise ask the user) and print it; the user can name another one. Use `origin` as the remote, or the base repository's remote for a fork.
+   - If you are on `<target>`, propose a branch name, check it with `git check-ref-format --branch '<name>'`, and create it only after approval.
+   - If there are uncommitted changes, list them and commit them as in step 4.
+   - Run `git fetch origin <target>:refs/remotes/origin/<target>`; if `git rev-list --count origin/<target>..HEAD` prints 0, stop: there is nothing to review.
+2. **Set the limit.** Use the cycle limit the user gave, otherwise 5. Print the plan with the limit and `<target>` before cycle 1.
+3. **Review, cycle N of the limit.** Start `pr-reviewer` with "current branch", "base <target>" and "cycle N of <limit>". From cycle 2, also pass the previous cycle's findings by their IDs (`C<cycle>-<n>`), each marked applied or declined, so it checks the fixes. Relay its Recommendation and its findings with their IDs. If it returns a request instead of a report (for example for the base branch), stop the loop and ask the user.
+4. **Stop or fix.** The loop ends when the Recommendation is "Approve" or "Approve with minor comments". Otherwise ask which findings to apply, offering the IDs under its Safe to apply as the default, and propose one commit message for them. Apply only the approved findings, following its Apply Rules, then run the tests named in its Suggested Test Scope, once; if the impacted tests fail, stop the loop and report. Commit only after approval, then start the next cycle:
+   - Stage only the changed files, by name: `git add -- <path>...`. Never `git add -A` or `git add .`. Leave out any file that looks secret-bearing (`.env`, keys, `settings.xml`) and say so.
+   - Write the message to a temporary file outside the repo and run `git commit -F <file>`.
+   - If the user declines the commit, stop the loop: the reviewer sees committed code only.
+5. **When the loop ends without an approval** (the limit is reached, or the user declines every open finding), say so, list the open findings with their severity, and ask whether to run more cycles, create the MR anyway, or stop. If the last cycle's fixes were committed, say they were not re-reviewed. Never describe the branch as approved in that case.
 6. **Describe it.** Run the `pr-description` skill on the final branch and show the draft.
-7. **Push and create, after one approval.** Show the exact push and create commands with the source branch, the target branch, the title and whether it is a draft, then run them only after the user approves that step: `git push -u origin <branch>`, then GitHub `gh pr create --base <target> --title '<title>' --body-file <file>`, GitLab `glab mr create --source-branch <branch> --target-branch <target> --title '<title>' --description "$(cat <file>)" --yes`, or Azure DevOps `az repos pr create --source-branch <branch> --target-branch <target> --title '<title>' --description "$(cat <file>)"`. Write the description to a temporary file outside the repo first. Add the platform's draft flag if the user wants a draft.
+7. **Push and create, after one approval.** Show the exact push and create commands with the source branch, the target branch, the title and whether it is a draft, then run them only after the user approves that step. Write the title and the description to temporary files outside the repo, then run `git push -u origin '<branch>'` (or the fork's remote) and:
+   - GitHub: `gh pr create --base '<target>' --title "$(cat <title-file>)" --body-file <file>`
+   - GitLab: `glab mr create --source-branch '<branch>' --target-branch '<target>' --title "$(cat <title-file>)" --description "$(cat <file>)" --yes`
+   - Azure DevOps: `az repos pr create --source-branch '<branch>' --target-branch '<target>' --title "$(cat <title-file>)" --description "$(cat <file>)"`, or the Azure DevOps MCP
+   For a draft, add `--draft` (GitHub, GitLab) or `--draft true` (Azure DevOps).
 8. **Report.** Give the PR or MR link, the number of review cycles and the final Recommendation. Post the review findings as comments only if the user asks. Do not wait for the pipeline; if it fails, the user can ask you to diagnose it (`ci-failure-diagnoser`).
 
 Never merge, approve or mark the PR or MR as reviewed: the loop's reviews are a check before the team's review, not a replacement for it.

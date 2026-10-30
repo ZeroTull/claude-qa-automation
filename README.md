@@ -76,7 +76,7 @@ Then, in the work repo, start `claude` and run `/qa-conventions`, then `/framewo
 | Agent | Use it for |
 |---|---|
 | `qa-lead` | **One agent for everything.** Select it once and give it any QA task. It sends review, audit, CI-failure, flaky-test and strategy work to the specialists below. It runs the workflows (writing tests, test cases, bugs, ticket reviews, PR descriptions) itself, stopping for your approval at each step, and applies only the changes you approve. Unlike the specialists, it can edit files and use all your MCP servers. |
-| `pr-reviewer` | Review a Java PR or MR (Azure DevOps, GitHub or GitLab): correctness, conventions, performance, security, concurrency, tests. Missing tests for changed behavior block approval. It diffs against the PR's real target branch (never assumes `main`), asks when it can't find it, and names it in the report. Findings with severity, confidence and a fix plan. |
+| `pr-reviewer` | Review a Java PR or MR (Azure DevOps, GitHub or GitLab): correctness, conventions, performance, security, concurrency, tests. Missing tests for changed behavior block approval. It diffs against the PR's real target branch (never assumes `main`), returns a one-line request for it when it can't find it, and names it in the report. Findings with severity, confidence and a fix plan. |
 | `test-maintainer` | Audit a test framework for flakiness, duplication, weak assertions, dead code, slow setup, test-layer balance, contract/performance testing and CI quality gates. Gives a health report with each category scored from counts against fixed bands (0-2 broken, 3-4 poor, 5-6 fair, 7-8 good, 9-10 excellent, with the evidence), and an improvement plan. |
 | `ci-failure-diagnoser` | Find the root cause of a failed pipeline run (Azure Pipelines, GitHub Actions or GitLab CI), with log evidence. Classifies it as a code defect in this change, a confirmed product defect, a suspected flaky test or environment issue (with the product not yet ruled out), a dependency, or a pipeline config problem. It doesn't blame a timeout or rerun on the environment without evidence, and when the evidence is inconclusive it lists every plausible cause, ranked. |
 | `flaky-test-triager` | Decide whether an intermittent failure is flaky, an intermittent product defect (such as a race condition), or a real regression, based on run history. Other verdicts: a stale test after an intended change, an environment or pipeline config cause, or inconclusive. It calls a test flaky only after ruling out a product cause, and never quarantines a test that catches a real bug. |
@@ -120,10 +120,10 @@ A printed plan is not approval: it still stops at every gate. It ends a request 
 
 Ask `qa-lead` to open a new PR or MR ("open an MR for this branch", optionally "with up to 3 review cycles") and it reviews the branch before anyone else sees it:
 
-1. It checks that you're on a feature branch with everything committed, and proposes a branch or a commit if not.
-2. `pr-reviewer` reviews the branch ("cycle 1 of 5"; 5 is the default limit). You pick which findings to apply, `qa-lead` applies them, runs the impacted tests and commits after your OK, then the next cycle checks the fixes.
+1. It checks the branch: it stops if a PR or MR already exists or there is nothing to review, finds the target branch, and proposes a branch or a commit if needed.
+2. `pr-reviewer` reviews the branch ("cycle 1 of 5"; 5 is the default limit). You pick which findings to apply, `qa-lead` applies them and runs the impacted tests (if they fail, the loop stops and reports), then commits only the changed files after your OK, and the next cycle checks the fixes by their IDs (`C1-2`).
 3. The loop ends when the review recommends "Approve" or "Approve with minor comments". If it hits the limit, or you decline the remaining findings, it lists what is still open and asks whether to continue, create the MR anyway, or stop.
-4. `/pr-description` drafts the title and description, then it shows the push and create commands and runs them after one approval.
+4. The `pr-description` skill drafts the title and description, then it shows the push and create commands and runs them after one approval.
 
 It never merges or approves the PR, doesn't wait for the pipeline, and posts review comments only if you ask: the loop is a check before your team's review, not a replacement for it.
 
