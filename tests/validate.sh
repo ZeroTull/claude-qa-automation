@@ -407,6 +407,15 @@ AGENT_RULES = {
         "File a bug for a confirmed pre-existing product defect with no identifiable commit": "bug-ticket row must match Defect routing",
         "For a defect, offer the step from Defect routing": "must route defects with Defect routing",
         "for a pre-existing confirmed product defect, or a regression from a merged change if the user chooses it": "plan example must file bugs only for confirmed product defects or shared-branch regressions",
+        "| Open a new PR or MR | MR review loop": "must route new PRs and MRs to the review loop",
+        "Use the cycle limit the user gave, otherwise 5": "must cap the review loop",
+        "telling it \"cycle N of <limit>\"": "must tell the reviewer the cycle number",
+        "The loop ends when the Recommendation is \"Approve\" or \"Approve with minor comments\"": "must end the loop only on an approving Recommendation",
+        "if the impacted tests fail, stop the loop and report": "must stop the loop when tests fail",
+        "Commit only after approval, then start the next cycle": "must commit loop fixes only after approval",
+        "Never describe the branch as approved in that case": "must not claim approval when the loop runs out",
+        "then run them only after the user approves that step": "must push and create the MR only after approval",
+        "Never merge, approve or mark the PR or MR as reviewed": "must not merge or approve from the loop",
     },
     "agents/senior-automation-qa-engineer.md": {
         "For what is wrong with an existing suite use test-maintainer": "description must route suite audits to test-maintainer",
@@ -574,6 +583,7 @@ AGENT_RULES = {
         "The file is rewritten as JSON, so its values stay the same": "must say the settings merge rewrites the file",
         "suspected flaky/environment (product not ruled out)": "trace example must use the diagnoser's suspected-flaky label",
         "for a pre-existing confirmed product defect, or a regression from a merged change if the user chooses it": "plan example must file bugs only for confirmed product defects or shared-branch regressions",
+        "It never merges or approves the PR, doesn't wait for the pipeline": "must say the MR review loop never merges",
         "an intermittent product defect (such as a race condition)": "must describe the triager's product-defect verdict",
     },
 }

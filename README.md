@@ -116,6 +116,17 @@ A printed plan is not approval: it still stops at every gate. It ends a request 
 - **GitHub Copilot:** pick `qa-lead` in the Agent dropdown. The Copilot install gives it no tools list (every tool, including your MCP servers and the `agent` tool) and lists the specialists in its `agents` field, so it can run them as subagents ([custom agents](https://code.visualstudio.com/docs/copilot/customization/custom-agents)).
 - **Claude Code:** start the session as the lead with `claude --agent qa-lead`, or make it the default for a project with `"agent": "qa-lead"` in that project's `.claude/settings.json` ([subagents](https://code.claude.com/docs/en/sub-agents)). Run as the main session, it can start the specialist agents and wait for your answers. Its instructions then replace Claude Code's default system prompt for that session, so start a plain `claude` session for work outside QA.
 
+#### Opening a PR or MR: the review loop
+
+Ask `qa-lead` to open a new PR or MR ("open an MR for this branch", optionally "with up to 3 review cycles") and it reviews the branch before anyone else sees it:
+
+1. It checks that you're on a feature branch with everything committed, and proposes a branch or a commit if not.
+2. `pr-reviewer` reviews the branch ("cycle 1 of 5"; 5 is the default limit). You pick which findings to apply, `qa-lead` applies them, runs the impacted tests and commits after your OK, then the next cycle checks the fixes.
+3. The loop ends when the review recommends "Approve" or "Approve with minor comments". If it hits the limit, or you decline the remaining findings, it lists what is still open and asks whether to continue, create the MR anyway, or stop.
+4. `/pr-description` drafts the title and description, then it shows the push and create commands and runs them after one approval.
+
+It never merges or approves the PR, doesn't wait for the pipeline, and posts review comments only if you ask: the loop is a check before your team's review, not a replacement for it.
+
 ### What happens to a failure: defect routing
 
 The agents and skills that handle failures (`qa-lead`, `ci-failure-diagnoser`, `flaky-test-triager`, `/bug-ticket`, `/test-developer`) carry the same routing text, `templates/defect-routing.md`, and CI checks that each copy matches it. Here it is, copied from the template; if the two ever differ, the template is what the agents follow:
@@ -149,6 +160,7 @@ Each QA agent and skill carries the same platform table (`templates/platforms.md
 Generate missing API tests for PROJ-482
 Review this PR: https://dev.azure.com/<org>/<project>/_git/<repo>/pullrequest/123
 Review MR !57
+Open an MR for this branch          (qa-lead: review loop, then create)
 Why did pipeline 9876 fail?
 Is LoginTest#expiredPassword flaky?
 Audit the checkout module tests

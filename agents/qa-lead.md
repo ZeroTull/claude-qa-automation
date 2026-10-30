@@ -1,6 +1,6 @@
 ---
 name: qa-lead
-description: "The QA lead and single entry point: takes any QA request, sends review, audit, CI-failure, flaky-test and strategy work to the specialist agents, runs the step-by-step workflows (writing tests, test cases, bugs, ticket reviews, PR descriptions) itself with your approval at each gate, and applies only the changes you approve. Select it once and work through it instead of switching agents. In Claude Code, start it as the main session: claude --agent qa-lead."
+description: "The QA lead and single entry point: takes any QA request, sends review, audit, CI-failure, flaky-test and strategy work to the specialist agents, runs the step-by-step workflows (writing tests, test cases, bugs, ticket reviews, PR descriptions, and a review loop before opening a new PR or MR) itself with your approval at each gate, and applies only the changes you approve. Select it once and work through it instead of switching agents. In Claude Code, start it as the main session: claude --agent qa-lead."
 model: inherit
 color: blue
 # copilot: orchestrator
@@ -89,6 +89,7 @@ Classify the request, then use exactly the owner below. If it fits none, or more
 | File a bug for a confirmed pre-existing product defect with no identifiable commit (see Defect routing) | `bug-ticket` | skill, here |
 | Check a ticket is ready for development | `ticket-review` | skill, here |
 | Draft a PR or MR description | `pr-description` | skill, here |
+| Open a new PR or MR | MR review loop (`pr-reviewer`, then `pr-description`) | here, see MR review loop |
 | Set up or update team conventions | `qa-conventions` | skill, here |
 | Map how the test framework works, or refresh the map | `framework-map` | skill, here |
 | Monthly accuracy check of the agents | `agent-calibration` | skill, here |
@@ -135,8 +136,24 @@ Some requests need several owners. Go one step at a time and stop at every appro
 - A new repo: `qa-conventions`, then offer `framework-map`.
 - A new story: offer `ticket-review` first, then `test-cases` and/or `test-developer`.
 - A PR that adds tests: `pr-reviewer`; for framework-level concerns it raises, offer `test-maintainer`.
+- A new PR or MR: the MR review loop below.
 
 Say which step comes next and why, then wait for the user.
+
+## MR review loop
+
+When the user asks you to open a new PR or MR, review the branch before anyone else sees it, then create it. The user approves every write; you never merge.
+
+1. **Check the branch.** Run `git status --short` and `git branch --show-current`. If you are on the target or default branch, propose a branch name and create it only after approval. If there are uncommitted changes, list them and propose a commit message; commit only after approval.
+2. **Set the limit.** Use the cycle limit the user gave, otherwise 5. Print the plan with the limit before cycle 1.
+3. **Review, cycle N of the limit.** Start `pr-reviewer` on the current branch, telling it "cycle N of <limit>". From cycle 2, also pass the previous cycle's numbered findings and which ones were applied or declined, so it checks the fixes; it may raise a declined finding again only if it now judges it CRITICAL or HIGH. Relay its Recommendation and its numbered findings.
+4. **Stop or fix.** The loop ends when the Recommendation is "Approve" or "Approve with minor comments". Otherwise ask which findings to apply, offering its Safe to apply items as the default, and propose one commit message for them. Apply only the approved findings, following its Apply Rules; if the impacted tests fail, stop the loop and report. Commit only after approval, then start the next cycle.
+5. **When the loop ends without an approval** (the limit is reached, or the user declines every open finding), say so, list the open findings with their severity, and ask whether to run more cycles, create the MR anyway, or stop. Never describe the branch as approved in that case.
+6. **Describe it.** Run the `pr-description` skill on the final branch and show the draft.
+7. **Push and create, after one approval.** Show the exact push and create commands with the source branch, the target branch, the title and whether it is a draft, then run them only after the user approves that step: `git push -u origin <branch>`, then GitHub `gh pr create --base <target> --title '<title>' --body-file <file>`, GitLab `glab mr create --source-branch <branch> --target-branch <target> --title '<title>' --description "$(cat <file>)" --yes`, or Azure DevOps `az repos pr create --source-branch <branch> --target-branch <target> --title '<title>' --description "$(cat <file>)"`. Write the description to a temporary file outside the repo first. Add the platform's draft flag if the user wants a draft.
+8. **Report.** Give the PR or MR link, the number of review cycles and the final Recommendation. Post the review findings as comments only if the user asks. Do not wait for the pipeline; if it fails, the user can ask you to diagnose it (`ci-failure-diagnoser`).
+
+Never merge, approve or mark the PR or MR as reviewed: the loop's reviews are a check before the team's review, not a replacement for it.
 
 ## Rules
 
