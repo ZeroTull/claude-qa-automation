@@ -456,7 +456,7 @@ AGENT_RULES = {
         "stop and ask before staging anything": "must ask before staging a secret-bearing file",
         "let the user choose to fix, revert or commit them": "must leave failed fixes to the user",
         "this loop only creates": "must not create a second PR or MR for a branch",
-        "there is nothing to review": "must stop on a branch with nothing to review",
+        "If it prints 0, stop: there is nothing to review": "must stop on a branch with nothing to review",
         "If it returns a request instead of a report": "must stop the loop when the reviewer cannot report",
         "Apply only the approved findings": "must apply only approved findings in the loop",
         "run the tests named in its Suggested Test Scope": "must run the reviewer's suggested tests",
