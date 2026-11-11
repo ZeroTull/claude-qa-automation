@@ -811,7 +811,9 @@ for path, rules in AGENT_RULES.items():
             err(f"{path} {message}")
 
 # The repo is MIT licensed; the README points readers to LICENSE.
-if not read(f"{repo}/LICENSE").startswith("MIT License\n"):
+license_text = read(f"{repo}/LICENSE")
+if not (license_text.startswith("MIT License\n") and "Permission is hereby granted, free of charge," in license_text
+        and 'THE SOFTWARE IS PROVIDED "AS IS"' in license_text):
     err("LICENSE missing or not the MIT License")
 
 # The qa-lead orchestrator must route every other agent and every skill, so nothing becomes unreachable.

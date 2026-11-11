@@ -239,4 +239,4 @@ This repo was split from a personal Claude Code setup (now [claude-dev](https://
 
 ## License
 
-[MIT](LICENSE): anyone may use, copy, modify and share these agents and skills, including at work and in commercial projects, as long as the copyright and licence notice stay with copies of substantial parts. There is no warranty.
+[MIT](LICENSE): anyone may use, copy, modify and share this repository, including at work and in commercial projects, as long as the copyright and license notice stay with copies of substantial portions. There is no warranty.
