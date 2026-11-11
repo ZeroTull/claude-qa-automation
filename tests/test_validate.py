@@ -191,6 +191,10 @@ DESC_BRANCH_RULE = 'Before a branch or remote name goes into any command, check 
 FAILURES = [
     fail("license file missing", "LICENSE missing or not the MIT License", remove("LICENSE")),
     fail("license is not MIT", "LICENSE missing or not the MIT License", write("LICENSE", "Apache License\nVersion 2.0\n")),
+    fail("MIT license without its grant", "LICENSE missing or not the MIT License",
+         replace("LICENSE", "Permission is hereby granted, free of charge,", "Permission is granted,")),
+    fail("MIT license without a copyright line", "LICENSE missing or not the MIT License",
+         replace("LICENSE", "Copyright (c) 2026 Dmytro Chervanov", "")),
     fail("MIT license without its warranty disclaimer", "LICENSE missing or not the MIT License",
          replace("LICENSE", 'THE SOFTWARE IS PROVIDED "AS IS"', "THE SOFTWARE IS PROVIDED")),
     fail("MR review loop step 1 anchor reworded", "MR review loop step 1 anchor missing",
