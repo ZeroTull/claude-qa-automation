@@ -810,6 +810,10 @@ for path, rules in AGENT_RULES.items():
         if phrase not in text:
             err(f"{path} {message}")
 
+# The repo is MIT licensed; the README points readers to LICENSE.
+if not read(f"{repo}/LICENSE").startswith("MIT License\n"):
+    err("LICENSE missing or not the MIT License")
+
 # The qa-lead orchestrator must route every other agent and every skill, so nothing becomes unreachable.
 lead_text = read(f"{repo}/agents/qa-lead.md")
 if lead_text:

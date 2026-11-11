@@ -189,6 +189,7 @@ DESC_BRANCH_RULE = 'Before a branch or remote name goes into any command, check 
 
 # Each case breaks one thing; validate.sh must fail with the message.
 FAILURES = [
+    fail("licence file missing", "LICENSE missing or not the MIT License", remove("LICENSE")),
     fail("MR review loop step 1 anchor reworded", "MR review loop step 1 anchor missing",
          replace("agents/qa-lead.md", "Choose the source branch", "Pick the source branch")),
     fail("branch-name rule anchor reworded", "anchor '1. **Diff.**' for the branch-name rule order check is missing",
